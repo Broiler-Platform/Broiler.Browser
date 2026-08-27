@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Broiler.Browser</RootNamespace>
+    <AssemblyName>Broiler.Browser.Windows</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Configurations>Debug;Release;Debug-Windows;Release-Windows</Configurations>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Debug-Windows' Or '$(Configuration)' == 'Release-Windows'">win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!-- The Win32 clipboard, shared with the other desktop heads. -->
+  <ItemGroup>
+    <Compile Include="..\Broiler.App\WindowsClipboard.cs" Link="WindowsClipboard.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Broiler.Graphics\Broiler.Graphics.Windows\Broiler.Graphics.Direct2D.csproj" />
+    <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
+    <ProjectReference Include="..\..\Broiler.Media\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Windows\Broiler.Input.Windows.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Keyboard.Windows\Broiler.Input.Keyboard.Windows.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Mouse.Windows\Broiler.Input.Mouse.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

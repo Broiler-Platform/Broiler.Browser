@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Broiler.Code.Phase0.Prototype</RootNamespace>
+    <AssemblyName>Broiler.Code.Phase0.Prototype</AssemblyName>
+    <!--
+      Phase 0 action 4 says the portable classifier is composed into every host,
+      including the browser. Nothing here may reference Roslyn, Broiler.UI, or a
+      platform assembly; the project has no PackageReference at all, and that is
+      the point rather than an omission.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\traces\*.json" Link="traces\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

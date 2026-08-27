@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <!--
+    The frozen web target: the standalone Microsoft.NET.Sdk.WebAssembly profile,
+    not a Blazor project system. See docs/architecture/broiler-code.md,
+    "Web target".
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SampleReports.Web</RootNamespace>
+    <AssemblyName>SampleReports.Web</AssemblyName>
+    <WasmMainJSPath>wwwroot\main.js</WasmMainJSPath>
+    <!--
+      [JSExport] is implemented by a source generator that emits unsafe code, so
+      this target has generated compile inputs under obj\ that only exist after
+      evaluation. Diagnostics can point at them, which is why the build-input
+      manifest has to record generator-produced files as a distinct origin.
+    -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Browser-only assembly; without this, every [JSExport] raises CA1416. -->
+    <SupportedOSPlatform>browser</SupportedOSPlatform>
+    <!--
+      Trimming and AOT are declared by the publish profiles, not forced here and
+      not passed as worker-global CLI values. Phase 5 requires the worker to
+      select a profile and report which one it used in the artifact manifest.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SampleReports.Core\SampleReports.Core.csproj" />
+  </ItemGroup>
+
+</Project>

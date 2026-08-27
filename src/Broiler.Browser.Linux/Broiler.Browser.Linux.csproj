@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Broiler.Browser</RootNamespace>
+    <AssemblyName>Broiler.Browser.Linux</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Configurations>Debug;Release;Debug-Linux;Release-Linux</Configurations>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Release-Linux'">linux-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Broiler.App\LinuxInputCoordinator.cs" Link="LinuxInputCoordinator.cs" />
+    <Compile Include="..\Broiler.App\LinuxX11Clipboard.cs" Link="LinuxX11Clipboard.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
+    <ProjectReference Include="..\..\Broiler.Graphics\Broiler.Graphics.Linux\Broiler.Graphics.Linux.csproj" />
+    <ProjectReference Include="..\..\Broiler.Graphics\Broiler.Graphics.Linux.OpenGL\Broiler.Graphics.Linux.OpenGL.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Keyboard.Linux\Broiler.Input.Keyboard.Linux.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Linux\Broiler.Input.Linux.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Mouse.Linux\Broiler.Input.Mouse.Linux.csproj" />
+  </ItemGroup>
+
+</Project>

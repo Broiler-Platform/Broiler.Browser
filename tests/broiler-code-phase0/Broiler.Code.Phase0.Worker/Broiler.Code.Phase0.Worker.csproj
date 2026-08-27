@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Broiler.Code.Phase0.Worker</RootNamespace>
+    <AssemblyName>Broiler.Code.Phase0.Worker</AssemblyName>
+    <!--
+      The worker is a separate process by design and never loads into the UI
+      process, so it shares no assembly with the editor-side prototype. It also
+      references no MSBuild assembly: it drives the SDK through its command
+      line and reads structured output files, which is what keeps it honest
+      about the process boundary.
+    -->
+  </PropertyGroup>
+
+</Project>

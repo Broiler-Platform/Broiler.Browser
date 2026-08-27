@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <!--
+    Identical to the baseline probe except that it composes the Roslyn semantic
+    service. Published side by side with the control, the payload difference is
+    the download the browser IDE host would have to accept before it could
+    report a single semantic diagnostic.
+
+    Trim warnings are expected and not suppressed. Roslyn's reflection safety
+    under trimming has not been reviewed, so this probe answers "how large" and
+    explicitly not "does it work"; see the unmeasured modes in the Roslyn
+    harness report.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Probe.Wasm.Roslyn</RootNamespace>
+    <AssemblyName>Probe.Wasm.Roslyn</AssemblyName>
+    <WasmMainJSPath>wwwroot\main.js</WasmMainJSPath>
+    <PublishTrimmed>true</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);IL2026;IL2104;IL3053</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
+  </ItemGroup>
+
+</Project>

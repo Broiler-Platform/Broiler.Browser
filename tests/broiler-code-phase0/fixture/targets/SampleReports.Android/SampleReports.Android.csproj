@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android36.0</TargetFramework>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <RootNamespace>SampleReports.Android</RootNamespace>
+    <AssemblyName>SampleReports.Android</AssemblyName>
+    <ApplicationId>com.example.samplereports</ApplicationId>
+    <ApplicationTitle>Sample Reports</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <!--
+      The ABI list is a project-local property, so narrowing it for a
+      single-ABI package never becomes an MSBuild global property that reaches
+      the referenced net10.0 library and fails its restore with NETSDK1047.
+      Phase 5 requires the worker to respect this instead of injecting
+      RuntimeIdentifiers across the graph.
+    -->
+    <SampleReportsAndroidAbis Condition="'$(SampleReportsAndroidAbis)' == ''">android-arm64;android-x64</SampleReportsAndroidAbis>
+    <RuntimeIdentifiers>$(SampleReportsAndroidAbis)</RuntimeIdentifiers>
+    <!-- Phase 5 requires a directly installable Debug APK. -->
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <PublishTrimmed>false</PublishTrimmed>
+    <AndroidPackageFormat Condition="'$(Configuration)' == 'Release'">aab</AndroidPackageFormat>
+    <AndroidPackageFormat Condition="'$(Configuration)' != 'Release'">apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SampleReports.Core\SampleReports.Core.csproj" />
+  </ItemGroup>
+
+</Project>

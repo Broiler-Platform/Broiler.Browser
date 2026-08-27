@@ -1,0 +1,96 @@
+<Solution>
+  <!-- Generated from eng/solutions.json by scripts/update-solutions.ps1. -->
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/Entry points/">
+    <Project Path="src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.CSS/">
+    <Project Path="Broiler.CSS/Broiler.CSS.Dom/Broiler.CSS.Dom.csproj" />
+    <Project Path="Broiler.CSS/Broiler.CSS/Broiler.CSS.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.DOM/">
+    <Project Path="Broiler.DOM/Broiler.Dom.Html/Broiler.Dom.Html.csproj" />
+    <Project Path="Broiler.DOM/Broiler.Dom/Broiler.Dom.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.Graphics/">
+    <Project Path="Broiler.Graphics/Broiler.Graphics.Linux.OpenGL/Broiler.Graphics.Linux.OpenGL.csproj" />
+    <Project Path="Broiler.Graphics/Broiler.Graphics.Linux/Broiler.Graphics.Linux.csproj" />
+    <Project Path="Broiler.Graphics/Broiler.Graphics/Broiler.Graphics.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.HTML/">
+    <Project Path="Broiler.HTML/Source/Broiler.HTML.Core/Broiler.HTML.Core.csproj" />
+    <Project Path="Broiler.HTML/Source/Broiler.HTML.Dom/Broiler.HTML.Dom.csproj" />
+    <Project Path="Broiler.HTML/Source/Broiler.HTML.Graphics/Broiler.HTML.Graphics.csproj" />
+    <Project Path="Broiler.HTML/Source/Broiler.HTML.Image.Compat/Broiler.HTML.Image.Compat.csproj" />
+    <Project Path="Broiler.HTML/Source/Broiler.HTML.Image/Broiler.HTML.Image.csproj" />
+    <Project Path="Broiler.HTML/Source/Broiler.HTML.Orchestration/Broiler.HTML.Orchestration.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.Input/">
+    <Project Path="Broiler.Input/Broiler.Input.Keyboard.Linux/Broiler.Input.Keyboard.Linux.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Keyboard/Broiler.Input.Keyboard.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Linux/Broiler.Input.Linux.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Mouse.Linux/Broiler.Input.Mouse.Linux.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Mouse/Broiler.Input.Mouse.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Pen/Broiler.Input.Pen.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Text/Broiler.Input.Text.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input.Touch/Broiler.Input.Touch.csproj" />
+    <Project Path="Broiler.Input/Broiler.Input/Broiler.Input.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.JS/">
+    <Project Path="Broiler.JS/Broiler.DateTime/src/Broiler.DateTime/Broiler.DateTime.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.All/Broiler.JavaScript.All.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Ast/Broiler.JavaScript.Ast.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.BuiltIns/Broiler.JavaScript.BuiltIns.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Clr/Broiler.JavaScript.Clr.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Compiler/Broiler.JavaScript.Compiler.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Debugger/Broiler.JavaScript.Debugger.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.ExpressionCompiler/Broiler.JavaScript.ExpressionCompiler.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Extensions/Broiler.JavaScript.Extensions.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Globals/Broiler.JavaScript.Globals.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.JSClassGenerator/Broiler.JavaScript.JSClassGenerator.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.LinqExpressions/Broiler.JavaScript.LinqExpressions.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.ModuleExtensions/Broiler.JavaScript.ModuleExtensions.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Modules/Broiler.JavaScript.Modules.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Parser/Broiler.JavaScript.Parser.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Runtime/Broiler.JavaScript.Runtime.csproj" />
+    <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.Storage/Broiler.JavaScript.Storage.csproj" />
+    <Project Path="Broiler.JS/Broiler.Regex/Broiler.Regex/Broiler.Regex.csproj" />
+    <Project Path="Broiler.JS/Broiler.Unicode/src/UnicodeCldr.LocaleData/UnicodeCldr.LocaleData.csproj" />
+    <Project Path="Broiler.JS/Broiler.Unicode/src/UnicodeEmoji.StringProperties/UnicodeEmoji.StringProperties.csproj" />
+    <Project Path="Broiler.JS/Broiler.Unicode/src/UnicodeProperties/UnicodeProperties.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.Layout/">
+    <Project Path="Broiler.Layout/Broiler.Layout/Broiler.Layout.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.Media/">
+    <Project Path="Broiler.Media/Broiler.Media.Image.Managed/Broiler.Media.Image.Managed.csproj" />
+    <Project Path="Broiler.Media/Broiler.Media.Image/Broiler.Media.Image.csproj" />
+    <Project Path="Broiler.Media/Broiler.Media/Broiler.Media.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/Broiler.UI/">
+    <Project Path="Broiler.UI/src/Abstractions/Commands/Broiler.UI.Button/Broiler.UI.Button.csproj" />
+    <Project Path="Broiler.UI/src/Abstractions/Commands/Broiler.UI.Toolbar/Broiler.UI.Toolbar.csproj" />
+    <Project Path="Broiler.UI/src/Abstractions/Content/Broiler.UI.Label/Broiler.UI.Label.csproj" />
+    <Project Path="Broiler.UI/src/Abstractions/Layout/Broiler.UI.Panel/Broiler.UI.Panel.csproj" />
+    <Project Path="Broiler.UI/src/Abstractions/Shell/Broiler.UI.Window/Broiler.UI.Window.csproj" />
+    <Project Path="Broiler.UI/src/Abstractions/Text/Broiler.UI.Edit/Broiler.UI.Edit.csproj" />
+    <Project Path="Broiler.UI/src/Foundation/Broiler.UI.Standard/Broiler.UI.Standard.csproj" />
+    <Project Path="Broiler.UI/src/Foundation/Broiler.UI/Broiler.UI.csproj" />
+    <Project Path="Broiler.UI/src/Implementations/Standard/Commands/Broiler.UI.Button.Standard/Broiler.UI.Button.Standard.csproj" />
+    <Project Path="Broiler.UI/src/Implementations/Standard/Commands/Broiler.UI.Toolbar.Standard/Broiler.UI.Toolbar.Standard.csproj" />
+    <Project Path="Broiler.UI/src/Implementations/Standard/Content/Broiler.UI.Label.Standard/Broiler.UI.Label.Standard.csproj" />
+    <Project Path="Broiler.UI/src/Implementations/Standard/Layout/Broiler.UI.Panel.Standard/Broiler.UI.Panel.Standard.csproj" />
+    <Project Path="Broiler.UI/src/Implementations/Standard/Shell/Broiler.UI.Window.Standard/Broiler.UI.Window.Standard.csproj" />
+    <Project Path="Broiler.UI/src/Implementations/Standard/Text/Broiler.UI.Edit.Standard/Broiler.UI.Edit.Standard.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/src/">
+    <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
+    <Project Path="src/Broiler.HtmlBridge.Core/Broiler.HtmlBridge.Core.csproj" />
+    <Project Path="src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj" />
+    <Project Path="src/Broiler.HtmlBridge.Scripting/Broiler.HtmlBridge.Scripting.csproj" />
+  </Folder>
+</Solution>

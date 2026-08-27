@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Multi-targeting is one of the mutation-matrix categories: the declared
+      model keeps the list verbatim, and only a trusted worker evaluation can
+      say what each target framework actually resolves to.
+    -->
+    <TargetFrameworks>net10.0;netstandard2.0</TargetFrameworks>
+    <RootNamespace>SampleReports.Core</RootNamespace>
+    <AssemblyName>SampleReports.Core</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    A target-conditioned define. The evaluated graph differs per target
+    framework, so a language service that guesses one framework reports
+    diagnostics the authoritative build does not agree with.
+  -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <DefineConstants>$(DefineConstants);LEGACY_TARGET</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Non-code build input: an embedded resource the formatter reads. -->
+    <EmbeddedResource Include="Resources\report-template.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A linked file: on disk outside the project cone, compiled as if inside. -->
+    <Compile Include="..\..\shared\BuildStamp.cs" Link="Generated\BuildStamp.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <!--
+      A conditional item: present for one target framework only, and genuinely
+      required there — `init` accessors need IsExternalInit, which
+      netstandard2.0 does not ship.
+    -->
+    <Compile Include="Compat\CompilerFeatureShims.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- A wildcard item outside the SDK's implicit globs. -->
+    <None Include="Schemas\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

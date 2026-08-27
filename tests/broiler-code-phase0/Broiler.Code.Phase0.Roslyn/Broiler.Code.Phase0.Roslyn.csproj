@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Broiler.Code.Phase0.Roslyn</RootNamespace>
+    <AssemblyName>Broiler.Code.Phase0.Roslyn</AssemblyName>
+    <!--
+      This is the only Phase 0 project that references Roslyn, and it is a
+      measurement harness rather than a component. Keeping it separate is the
+      point: it demonstrates that the optional semantic service can be composed
+      in or left out without the rest of the prototype knowing.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Pinned deliberately. The SDK on the recorded baseline compiles with
+      5.6.0-2.26329.109, so the language service and the authoritative build do
+      not share a compiler build. Phase 3 requires that mismatch to be reported
+      rather than hidden, and the harness records both identities so the gap is
+      visible from the start.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Broiler.Browser</RootNamespace>
+    <AssemblyName>Broiler.Browser.Core</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Broiler.Graphics\Broiler.Graphics\Broiler.Graphics.csproj" />
+    <ProjectReference Include="..\..\Broiler.Media\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input\Broiler.Input.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Keyboard\Broiler.Input.Keyboard.csproj" />
+    <ProjectReference Include="..\..\Broiler.Input\Broiler.Input.Mouse\Broiler.Input.Mouse.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Shell\Broiler.UI.Window.Standard\Broiler.UI.Window.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Shell\Broiler.UI.FileDialog.Standard\Broiler.UI.FileDialog.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Shell\Broiler.UI.Dialog.Standard\Broiler.UI.Dialog.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Layout\Broiler.UI.Panel.Standard\Broiler.UI.Panel.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Content\Broiler.UI.Label.Standard\Broiler.UI.Label.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Commands\Broiler.UI.Button.Standard\Broiler.UI.Button.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Text\Broiler.UI.Edit.Standard\Broiler.UI.Edit.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.CheckBox.Standard\Broiler.UI.CheckBox.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.ComboBox.Standard\Broiler.UI.ComboBox.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.ListView.Standard\Broiler.UI.ListView.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.RadioButton.Standard\Broiler.UI.RadioButton.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Abstractions\Commands\Broiler.UI.Toolbar\Broiler.UI.Toolbar.csproj" />
+    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Commands\Broiler.UI.Toolbar.Standard\Broiler.UI.Toolbar.Standard.csproj" />
+    <ProjectReference Include="..\..\Broiler.HTML\Source\Broiler.HTML.Graphics\Broiler.HTML.Graphics.csproj" />
+    <ProjectReference Include="..\..\Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj" />
+    <ProjectReference Include="..\..\Broiler.DOM\Broiler.Dom.Html\Broiler.Dom.Html.csproj" />
+    <ProjectReference Include="..\..\Broiler.JS\Broiler.JS\Broiler.JavaScript.All\Broiler.JavaScript.All.csproj" />
+    <ProjectReference Include="..\Broiler.HtmlBridge.Scripting\Broiler.HtmlBridge.Scripting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Broiler.App\Rendering\RenderingPipeline.cs" Link="Rendering\RenderingPipeline.cs" />
+    <Compile Include="..\Broiler.App\Rendering\PageLoader.cs" Link="Rendering\PageLoader.cs" />
+    <Compile Include="..\Broiler.App\Rendering\PageRequest.cs" Link="Rendering\PageRequest.cs" />
+    <Compile Include="..\Broiler.App\Rendering\IPageLoader.cs" Link="Rendering\IPageLoader.cs" />
+    <Compile Include="..\Broiler.App\FavoritesManager.cs" Link="FavoritesManager.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Broiler.Browser.Windows" />
+    <InternalsVisibleTo Include="Broiler.Browser.Linux" />
+    <InternalsVisibleTo Include="Broiler.Browser.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Broiler.Browser.Android" />
+  </ItemGroup>
+
+</Project>

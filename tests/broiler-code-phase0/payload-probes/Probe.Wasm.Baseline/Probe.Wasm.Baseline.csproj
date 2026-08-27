@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <!--
+    The control. It composes the portable classifier only — no Roslyn — and is
+    published with the same trimmed interpreted settings as the Roslyn probe, so
+    the difference between the two published payloads is the cost of the
+    semantic service and nothing else.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Probe.Wasm.Baseline</RootNamespace>
+    <AssemblyName>Probe.Wasm.Baseline</AssemblyName>
+    <WasmMainJSPath>wwwroot\main.js</WasmMainJSPath>
+    <PublishTrimmed>true</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

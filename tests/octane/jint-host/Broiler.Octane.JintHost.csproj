@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Broiler.Octane.JintHost</RootNamespace>
+    <AssemblyName>Broiler.Octane.JintHost</AssemblyName>
+    <!--
+      Not part of any solution: this is a benchmark-harness tool, built directly
+      by scripts/run-octane-benchmarks.sh the same way the BroilerJS shell is,
+      and it references no repository project — only the Jint package.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- https://github.com/sebastienros/jint — BSD-2-Clause managed ECMAScript interpreter. -->
+    <PackageReference Include="Jint" Version="4.15.3" />
+  </ItemGroup>
+
+</Project>
