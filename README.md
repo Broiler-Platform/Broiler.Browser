@@ -1,5 +1,6 @@
 # Broiler.Browser
 
+[![CI](https://github.com/Broiler-Platform/Broiler.Browser/actions/workflows/ci.yml/badge.svg)](https://github.com/Broiler-Platform/Broiler.Browser/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Broiler.Browser is the browser application of the [Broiler](https://github.com/Broiler-Platform/Broiler)
@@ -92,6 +93,30 @@ pwsh scripts/update-solutions.ps1 -Verify
 
 A hand-edit to a `.slnx` is silently reverted by the next generator run. Add or remove
 projects by changing the reference graph, then regenerate.
+
+## Continuous integration
+
+[`ci.yml`](.github/workflows/ci.yml) runs on every push to `main` and every pull request:
+
+- **Solution manifest** — `scripts/update-solutions.ps1 -Verify`, which fails if a
+  checked-in `.slnx` no longer matches the reference graph. This is what catches a new
+  `ProjectReference` that was never folded into a solution.
+- **Build** — the Windows head on `windows-latest`, the Linux head on `ubuntu-latest`.
+- **Tests** — the suite on both hosts, because the shared chrome does clipboard and
+  file-dialog work that is easy to make accidentally platform-specific.
+- **Android head** — a separate job, since it pays for the `android` workload.
+- **Publish** — `Release-Windows` and `Release-Linux`, the runtime-identifier-pinned
+  configurations. They are project-level builds by necessity: the solutions declare only
+  `Debug` and `Release`, so a solution-level build with either fails `MSB4126`.
+
+[`release.yml`](.github/workflows/release.yml) is dispatch-only and uploads build
+artifacts for manual testing — `win-x64`, `linux-x64` and a **debug-signed**
+`android-arm64` APK. It creates no GitHub release and signs nothing for distribution;
+store-ready signed preview packages come from the monorepo's *Prepare Broiler Preview
+Package* workflow, which owns the signing material.
+
+The nested-submodule set the browser needs is defined once, in
+[`.github/actions/setup-broiler`](.github/actions/setup-broiler/action.yml).
 
 ## Repository layout
 
