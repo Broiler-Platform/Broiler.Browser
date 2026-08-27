@@ -30,3 +30,6 @@
 	path = Broiler.HTML
 	url = https://github.com/Broiler-Platform/Broiler.HTML.git
 	branch = main
+[submodule "Broiler.VM"]
+	path = Broiler.VM
+	url = https://github.com/Broiler-Platform/Broiler.VM.git
