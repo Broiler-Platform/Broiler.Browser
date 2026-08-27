@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    Standalone Broiler.HTML builds use the Graphics checkout nested inside that submodule.
+    Root builds instead use the canonical top-level Graphics checkout, which for the Win32
+    demo means the src/ layout Broiler.Graphics publishes today.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectFullPath)' == '$(MSBuildThisFileDirectory)Broiler.HTML\Source\Broiler.HTML.Graphics.Win32.Demo\Broiler.HTML.Graphics.Win32.Demo.csproj'">
+    <ProjectReference Remove="..\..\Broiler.Graphics\Broiler.Graphics.Windows\Broiler.Graphics.Direct2D.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Broiler.Graphics\src\Broiler.Graphics.Windows\Broiler.Graphics.Direct2D.csproj" />
+  </ItemGroup>
+
+  <!--
+    Broiler.HTML reaches the top-level Broiler.Media checkout through the pre-src/ layout
+    ("Broiler.Media\Broiler.Media.Image.Managed\"). That layout only ever existed inside the
+    Broiler monorepo, which vendored Broiler.Media as a plain directory; the standalone
+    Broiler-Platform/Broiler.Media repository has published its projects under src/ since its
+    first commit, so the reference as written cannot resolve against the submodule.
+
+    Delete this block once Broiler.HTML follows Broiler.Media into src/ and the gitlink here
+    is bumped past that commit.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectFullPath)' == '$(MSBuildThisFileDirectory)Broiler.HTML\Source\Broiler.HTML.Image\Broiler.HTML.Image.csproj'">
+    <ProjectReference Remove="..\..\..\Broiler.Media\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Broiler.Media\src\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
+  </ItemGroup>
+
+</Project>
