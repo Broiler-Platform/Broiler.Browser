@@ -11,6 +11,11 @@ It is a summary: it does not replace the individual component files, their revie
 attestations, their conditions, or their pending-review warnings. Read the linked file
 before relying on any component.
 
+One submodule listed below, `Broiler.VM`, is not a dependency of the browser: nothing in
+`src/` references it and it appears in no head's project graph. It is listed so the table
+stays a complete account of the submodules pinned here, not because the browser's behaviour
+depends on it.
+
 ## This repository
 
 | Scope | Status |
@@ -40,6 +45,7 @@ submodule bump — an approval is revision-scoped and does not carry forward.
 | [Broiler.JS/Broiler.Unicode](Broiler.JS/Broiler.Unicode/HUMAN_REVIEW.md) | Approved with conditions |
 | [Broiler.Layout](Broiler.Layout/HUMAN_REVIEW.md) | Approved for first preview |
 | [Broiler.UI](Broiler.UI/HUMAN_REVIEW.md) | **PENDING** |
+| [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - planning and VM-0 shells only; not in the browser's build closure |
 | Broiler.Input | **No review record in the component** |
 | Broiler.Media | **No review record in the component** |
 
