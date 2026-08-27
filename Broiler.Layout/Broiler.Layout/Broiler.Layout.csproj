@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Broiler.Layout</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Description>CSS box-model and layout engine over the canonical Broiler DOM and computed style, independent of any graphics backend.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Broiler.CSS\Broiler.CSS.Dom\Broiler.CSS.Dom.csproj" />
+    <ProjectReference Include="..\..\Broiler.CSS\Broiler.CSS\Broiler.CSS.csproj" />
+    <ProjectReference Include="..\..\Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj" />
+    <ProjectReference Include="..\..\Broiler.Graphics\src\Broiler.Graphics\Broiler.Graphics.csproj" />
+  </ItemGroup>
+
+  <!-- CssBox and the concrete layout engine remain internal. Keep only assemblies that
+       directly construct, render, inspect, or test that internal box tree. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Broiler.HTML.Dom" />
+    <InternalsVisibleTo Include="Broiler.HTML" />
+    <InternalsVisibleTo Include="Broiler.HTML.Orchestration" />
+    <!-- Rasterises a nested browsing context, so it reads EmbeddedCanvas to decide whether that
+         frame's canvas is opaque or transparent (CSS Color Adjust §2.4). -->
+    <InternalsVisibleTo Include="Broiler.HTML.Image" />
+    <InternalsVisibleTo Include="Broiler.Cli.Tests" />
+    <InternalsVisibleTo Include="Broiler.DevConsole" />
+    <InternalsVisibleTo Include="Broiler.DevConsole.Tests" />
+    <InternalsVisibleTo Include="Broiler.Layout.Tests" />
+    <!-- The style-scaling mode sets CssStyleRecalc.MaxDegreeOfParallelism (multithreading
+         item #12), the same way the tile-scaling mode sets TileParallelReplay's budget. -->
+    <InternalsVisibleTo Include="Broiler.Render.Stage.Benchmarks" />
+    <!-- The WPT runner sets NativeAnchorPlacement.Enabled around only the final
+         render during the Phase 5 native anchor-placement cutover (P5.8d.2b), and
+         installs OfflineSubresources.FetchPolicy for the whole run. -->
+    <InternalsVisibleTo Include="Broiler.Wpt" />
+    <!-- The headless layout view (the script bridge's ILayoutView) enables
+         NativeAnchorPlacement around its geometry layout so the live read model
+         carries engine-resolved anchor geometry (Phase 5 LayoutSnapshot endgame). -->
+    <InternalsVisibleTo Include="Broiler.HTML.Headless" />
+    <!-- The script bridge sets NativeAnchorPlacement.VisualViewportScale around the
+         geometry snapshot (behind DomBridge.NativeVisualViewport) so the extracted
+         BoxGeometry carries the document-root pinch-zoom scale natively instead of the
+         DOM zoom bake (Phase 5 LayoutSnapshot endgame, blocker (b) — visual-viewport). -->
+    <InternalsVisibleTo Include="Broiler.HtmlBridge.Dom" />
+  </ItemGroup>
+
+
+  <!--
+    The paged formatting context a media query is evaluated in (`Broiler.CSS.Dom.CssPagedMedia`)
+    is a pending submodule patch: the push to Broiler-Platform/Broiler.CSS answers 403, so it is
+    captured under patches/ and the gitlink is deliberately not bumped. Guarded rather than left
+    to break the build, and the probe is the source file itself because that is the exact thing
+    being depended on. Once the patch lands upstream and the pointer is bumped, the file is there
+    and this condition simply stops doing anything.
+  -->
+  <PropertyGroup>
+    <BroilerCssPagedMedia Condition="Exists('$(MSBuildThisFileDirectory)..\..\Broiler.CSS\Broiler.CSS.Dom\CssPagedMedia.cs')">true</BroilerCssPagedMedia>
+    <DefineConstants Condition="'$(BroilerCssPagedMedia)' == 'true'">$(DefineConstants);BROILER_CSS_PAGED_MEDIA</DefineConstants>
+  </PropertyGroup>
+
+</Project>

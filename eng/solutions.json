@@ -1,0 +1,46 @@
+{
+  "solutions": [
+    {
+      "path": "Broiler.Windows.Browser.slnx",
+      "description": "Windows browser application and its transitive dependencies.",
+      "roots": [
+        "src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj"
+      ],
+      "forbiddenProjectPatterns": [
+        "(?i)(^|[./])[^/]*Linux[^/]*\\.csproj$",
+        "(?i)(^|[./])[^/]*WebAssembly[^/]*\\.csproj$"
+      ]
+    },
+    {
+      "path": "Broiler.Linux.Browser.slnx",
+      "description": "Linux browser application and its transitive dependencies.",
+      "roots": [
+        "src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj"
+      ],
+      "forbiddenProjectPatterns": [
+        "(?i)(^|[./])[^/]*(Windows|Win32|MediaFoundation)[^/]*\\.csproj$",
+        "(?i)(^|[./])[^/]*WebAssembly[^/]*\\.csproj$"
+      ]
+    },
+    {
+      "path": "Broiler.Android.Browser.slnx",
+      "description": "Android browser application and its transitive dependencies.",
+      "roots": [
+        "src/Broiler.Browser.Android/Broiler.Browser.Android.csproj"
+      ],
+      "forbiddenProjectPatterns": [
+        "(?i)(^|[./])[^/]*(Windows|Win32|MediaFoundation|Linux|WebAssembly)[^/]*\\.csproj$"
+      ]
+    },
+    {
+      "path": "Broiler.Browser.Tests.slnx",
+      "description": "Browser test projects; component unit tests stay in component-owned solutions.",
+      "roots": [
+        "src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj"
+      ],
+      "forbiddenProjectPatterns": [
+        "(?i)(^|[./])[^/]*(Windows|Win32|MediaFoundation|Linux|WebAssembly)[^/]*\\.csproj$"
+      ]
+    }
+  ]
+}

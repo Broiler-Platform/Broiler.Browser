@@ -1,0 +1,145 @@
+<Project>
+  <PropertyGroup>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <BroilerBaseConfiguration Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Debug-Windows'">Debug</BroilerBaseConfiguration>
+    <BroilerBaseConfiguration Condition="'$(Configuration)' == 'Release-Linux' Or '$(Configuration)' == 'Release-Windows'">Release</BroilerBaseConfiguration>
+    <BroilerTargetOperatingSystem Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Release-Linux'">Linux</BroilerTargetOperatingSystem>
+    <BroilerTargetOperatingSystem Condition="'$(Configuration)' == 'Debug-Windows' Or '$(Configuration)' == 'Release-Windows'">Windows</BroilerTargetOperatingSystem>
+
+    <DebugSymbols Condition="'$(BroilerBaseConfiguration)' == 'Debug'">true</DebugSymbols>
+    <DebugType Condition="'$(BroilerBaseConfiguration)' == 'Debug'">portable</DebugType>
+    <Optimize Condition="'$(BroilerBaseConfiguration)' == 'Debug'">false</Optimize>
+    <DefineConstants Condition="'$(BroilerBaseConfiguration)' == 'Debug'">$(DefineConstants);DEBUG</DefineConstants>
+    <DebugType Condition="'$(BroilerBaseConfiguration)' == 'Release'">portable</DebugType>
+    <Optimize Condition="'$(BroilerBaseConfiguration)' == 'Release'">true</Optimize>
+    <DefineConstants Condition="'$(BroilerBaseConfiguration)' == 'Release'">$(DefineConstants);RELEASE</DefineConstants>
+
+    <DefineConstants Condition="'$(BroilerTargetOperatingSystem)' == 'Linux'">$(DefineConstants);LINUX</DefineConstants>
+    <DefineConstants Condition="'$(BroilerTargetOperatingSystem)' == 'Windows'">$(DefineConstants);WINDOWS</DefineConstants>
+
+    <!--
+      ════════════════════════════════════════════════════════════════════
+      Suppressed Build Warnings — Documentation
+      ════════════════════════════════════════════════════════════════════
+
+      The warnings below are suppressed because fixing them requires a
+      refactor that is too large or risky for the current project scope.
+      Each entry lists the warning code, description, reason for
+      suppression, and suggested future action.
+
+      ── Nullable Reference Type Warnings ──────────────────────────────
+      CS8600 : Converting null literal or possible null value to non-nullable type
+      CS8601 : Possible null reference assignment
+      CS8602 : Dereference of a possibly null reference
+      CS8603 : Possible null reference return
+      CS8604 : Possible null reference argument
+      CS8618 : Non-nullable property/field must contain a non-null value when exiting constructor
+      CS8619 : Nullability of reference types in value doesn't match target type
+      CS8620 : Argument cannot be used for parameter due to differences in nullability
+      CS8622 : Nullability of reference types in type of parameter doesn't match target delegate
+      CS8625 : Cannot convert null literal to non-nullable reference type
+      CS8631 : The type cannot be used as type parameter due to differences in nullability
+      CS8632 : The annotation for nullable reference types should only be used in '#nullable' context
+      CS8765 : Nullability of type of parameter doesn't match overridden member
+      CS8767 : Nullability of reference types in type of parameter doesn't match implicitly implemented member
+
+      Reason  : 1,466 warnings across 20+ projects. Fixing every instance
+                would touch hundreds of files and risk breaking existing
+                behavior.  The codebase has a mix of projects with and
+                without <Nullable>enable</Nullable>, and many APIs pass
+                null by design.
+      Future  : Incrementally enable nullable and resolve warnings on a
+                per-project basis when each project is actively maintained.
+
+      ── Source-Generator Warnings ─────────────────────────────────────
+      CS0109 : The member does not hide an accessible member. The 'new' keyword is not required.
+      CS0628 : New protected member declared in sealed type.
+
+      Reason  : Emitted by Broiler.JavaScript.JSClassGenerator in
+                generated partial classes (e.g. JSNumber.g.cs,
+                JSBigInt.g.cs).  The generator uses 'new' unconditionally
+                and creates protected constructors regardless of whether
+                the target class is sealed.
+      Future  : Update the source generator to conditionally emit 'new'
+                and adjust access modifiers based on the target class.
+
+      RS1038 : Compiler extension in assembly with CodeAnalysis.Workspaces reference.
+      RS1041 : Compiler extension targeting .NET 8.0 instead of netstandard2.0.
+
+      Reason  : The JSClassGenerator source generator project references
+                Microsoft.CodeAnalysis.CSharp.Workspaces and targets
+                net8.0.  Changing the target framework and removing the
+                Workspaces dependency requires a generator rewrite.
+      Future  : Retarget the generator to netstandard2.0 and replace
+                Workspaces APIs with Roslyn source-generation APIs.
+
+      ── Unread Primary-Constructor Parameters ─────────────────────────
+      CS9113 : Parameter is unread.
+
+      Reason  : Several primary-constructor parameters exist for API
+                surface / structural reasons (e.g. JavaScriptObject(in
+                Arguments a), ModuleCache(bool v), ILTryBlock label
+                parameter) and are intentionally unused in the class body.
+                Removing them would change public API signatures.
+      Future  : Evaluate each parameter individually; remove or use those
+                that are truly unnecessary.
+
+      ── Platform Compatibility ────────────────────────────────────────
+      CA1416 : Call site is reachable on all platforms but API is
+               Windows-only.
+
+      Reason  : The HTML rendering adapters (WpfAdapter, SkiaImageAdapter,
+                PenAdapter) use System.Drawing and WPF types that are
+                inherently Windows-only.  The projects deliberately target
+                net8.0 (not net8.0-windows) to keep the shared-library
+                surface cross-platform where possible.
+      Future  : Add [SupportedOSPlatform("windows")] attributes to the
+                adapter classes, or split Windows-specific code into
+                platform-targeted projects.
+
+      ── Module Initializers ───────────────────────────────────────────
+      CA2255 : The 'ModuleInitializer' attribute is only intended for
+               application code or advanced source generator scenarios.
+
+      Reason  : ModuleInitializer is used intentionally in seven
+                JavaScript engine assemblies to auto-register built-in
+                types at assembly load time.  This is the intended
+                advanced scenario referenced by the rule.
+      Future  : No action needed; this is a valid use case.
+
+      ── Obsolete API ──────────────────────────────────────────────────
+      SYSLIB0013 : Uri.EscapeUriString is obsolete.
+
+      Reason  : Used to implement JavaScript's encodeURI() function.
+                Uri.EscapeUriString matches encodeURI() semantics more
+                closely than Uri.EscapeDataString (which over-encodes
+                reserved URI characters).  Replacing it risks breaking
+                JS spec compliance.
+      Future  : Implement a custom encoder that matches the ECMAScript
+                encodeURI() specification exactly.
+      ════════════════════════════════════════════════════════════════════
+    -->
+    <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8620;CS8622;CS8625;CS8631;CS8632;CS8765;CS8767;CS0109;CS0628;CS9113;CA1416;CA2255;SYSLIB0013;RS1038;RS1041</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    HtmlBridge complexity-reduction Phase 1 (project-graph repair), item 4: canonical
+    single-source paths for the Broiler.Dom and Broiler.Graphics kernels.
+
+    Two submodules carry a nested checkout of these kernels for their own standalone builds
+    (Broiler.CSS/Broiler.DOM and Broiler.HTML/Broiler.Graphics). Left unmanaged, in-tree
+    solution graphs could build two nodes with the same assembly name for each kernel. Each
+    submodule's Directory.Build.props defaults $(BroilerDomPath)/$(BroilerGraphicsPath) to
+    its nested copy (used only when built standalone). In root builds those submodule props
+    chain up to THIS file, so the unconditional values below win and every consumer resolves
+    to the single ROOT checkout — one Broiler.Dom node and one Graphics node per build graph.
+
+    scripts/check-submodule-sha-drift.sh fails CI if a nested submodule SHA drifts from the
+    root, so the collapsed single node is always assembly-identical to the nested copy.
+  -->
+  <PropertyGroup>
+    <BroilerDomPath>$(MSBuildThisFileDirectory)Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj</BroilerDomPath>
+    <BroilerGraphicsPath>$(MSBuildThisFileDirectory)Broiler.Graphics\src\Broiler.Graphics\Broiler.Graphics.csproj</BroilerGraphicsPath>
+  </PropertyGroup>
+</Project>
