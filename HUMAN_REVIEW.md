@@ -14,7 +14,10 @@ before relying on any component.
 One submodule listed below, `Broiler.VM`, is not a dependency of the browser: nothing in
 `src/` references it and it appears in no head's project graph. It is listed so the table
 stays a complete account of the submodules pinned here, not because the browser's behaviour
-depends on it.
+depends on it. It has changed materially since the last bump - it now carries an
+implementation of its core contract rather than project shells - and that implementation has
+had no human review, so the row below is unchanged at PENDING for a stronger reason than
+before.
 
 ## This repository
 
@@ -45,7 +48,7 @@ submodule bump — an approval is revision-scoped and does not carry forward.
 | [Broiler.JS/Broiler.Unicode](Broiler.JS/Broiler.Unicode/HUMAN_REVIEW.md) | Approved with conditions |
 | [Broiler.Layout](Broiler.Layout/HUMAN_REVIEW.md) | Approved for first preview |
 | [Broiler.UI](Broiler.UI/HUMAN_REVIEW.md) | **PENDING** |
-| [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - planning and VM-0 shells only; not in the browser's build closure |
+| [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - core contract version 1 is now implemented and unreviewed; not in the browser's build closure |
 | Broiler.Input | **No review record in the component** |
 | Broiler.Media | **No review record in the component** |
 
