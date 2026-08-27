@@ -1,0 +1,48 @@
+name: Set up Broiler.Browser
+description: >-
+  Initialises the nested component submodules the browser's project closure
+  reaches, and installs the .NET SDK. Run this after actions/checkout with
+  `submodules: true` — a local action cannot perform the checkout itself,
+  because its own files have to be in the workspace first.
+
+inputs:
+  dotnet-version:
+    description: .NET SDK version to install.
+    required: false
+    default: '10.0.x'
+
+runs:
+  using: composite
+  steps:
+    # `submodules: true` on the checkout fetches the eight top-level components only.
+    # Each component repository also carries nested checkouts of its own dependencies,
+    # because its projects reference those nested copies by literal relative path so
+    # that the component still builds standalone. The four lines below are exactly the
+    # nested checkouts the browser's project closure reaches, and no more:
+    #
+    #   Broiler.JS        DateTime, Regex and Unicode have no top-level equivalent.
+    #   Broiler.Graphics  its projects take the image abstraction from its own Media.
+    #   Broiler.UI        every control reaches Graphics and Input through its own copies.
+    #   Broiler.UI/…      and that Graphics copy in turn needs its own Media.
+    #
+    # Naming them beats `--recursive`: the Graphics <-> Media reference is mutual, and a
+    # recursive init also drags in checkouts nothing here builds against — the
+    # Broiler.UI/Broiler.Documents tree, Broiler.CSS/Broiler.DOM and
+    # Broiler.HTML/Broiler.Graphics (both redirected to the top-level checkout by
+    # $(BroilerDomPath)/$(BroilerGraphicsPath)), and Broiler.JS/Broiler.Regex/Broiler.Unicode
+    # (which $(BroilerUnicodeRoot) falls back out of when it is absent).
+    #
+    # Every line is load-bearing. A ProjectReference to a missing project is only a
+    # restore *warning*; the build then fails later on missing types.
+    - name: Initialise nested submodules
+      shell: bash
+      run: |
+        git -C Broiler.JS submodule update --init Broiler.DateTime Broiler.Regex Broiler.Unicode
+        git -C Broiler.Graphics submodule update --init Broiler.Media
+        git -C Broiler.UI submodule update --init Broiler.Graphics Broiler.Input
+        git -C Broiler.UI/Broiler.Graphics submodule update --init Broiler.Media
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
