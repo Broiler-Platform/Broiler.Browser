@@ -108,6 +108,13 @@ function Resolve-ProjectReference {
         throw "Unsupported property in ProjectReference '$Include' from '$ProjectPath'."
     }
 
+    # MSBuild writes ProjectReference includes with backslashes whatever the host. On a
+    # non-Windows host a backslash is an ordinary filename character, so GetFullPath below
+    # would fold '..\..\Broiler.Graphics\...' into one nonsensical component instead of
+    # walking up two directories. Fold them onto the platform separator first; on Windows
+    # this is a no-op. The absolute paths substituted above are already host-native.
+    $resolvedInclude = $resolvedInclude.Replace('\', [IO.Path]::DirectorySeparatorChar)
+
     if (-not [IO.Path]::IsPathRooted($resolvedInclude)) {
         $resolvedInclude = Join-Path $projectDirectory $resolvedInclude
     }
