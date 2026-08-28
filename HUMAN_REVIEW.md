@@ -19,6 +19,13 @@ implementation of its core contract rather than project shells - and that implem
 had no human review, so the row below is unchanged at PENDING for a stronger reason than
 before.
 
+That component has also adopted the platform's
+[code assurance policy](CODE-ASSURANCE.md) and is the first to do so: every relevant unit
+in its product graph now carries an AI assessment and a human review line, and every one
+of those human lines reads `PENDING`. The aggregate is in
+[CODE-ASSURANCE.md](CODE-ASSURANCE.md), and it measures the absence of review rather than
+supplying any.
+
 That component landed its implementation unreviewed under a rule its owner recorded on
 2026-08-28: human review gates a *release*, not a development step. The rule is that
 component's, not this repository's, and it does not weaken anything here - a PENDING row is
