@@ -19,6 +19,13 @@ implementation of its core contract rather than project shells - and that implem
 had no human review, so the row below is unchanged at PENDING for a stronger reason than
 before.
 
+That component landed its implementation unreviewed under a rule its owner recorded on
+2026-08-28: human review gates a *release*, not a development step. The rule is that
+component's, not this repository's, and it does not weaken anything here - a PENDING row is
+still PENDING, and this file still governs what may be claimed for the browser. It is stated
+so a reader of this summary knows that unreviewed code in `Broiler.VM/` is a recorded
+position rather than an oversight.
+
 ## This repository
 
 | Scope | Status |
