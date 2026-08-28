@@ -14,14 +14,37 @@ before relying on any component.
 One submodule listed below, `Broiler.VM`, is not a dependency of the browser: nothing in
 `src/` references it and it appears in no head's project graph. It is listed so the table
 stays a complete account of the submodules pinned here, not because the browser's behaviour
-depends on it.
+depends on it. It has changed materially since the last bump - it now carries an
+implementation of its core contract rather than project shells - and that implementation has
+had no human review, so the row below is unchanged at PENDING for a stronger reason than
+before.
+
+That component has also adopted the platform's
+[code assurance policy](CODE-ASSURANCE.md) and is the first to do so: every relevant unit
+in its product graph now carries an AI assessment and a human review line, and every one
+of those human lines reads `PENDING`. The aggregate is in
+[CODE-ASSURANCE.md](CODE-ASSURANCE.md), and it measures the absence of review rather than
+supplying any.
+
+That component landed its implementation unreviewed under a rule its owner recorded on
+2026-08-28: human review gates a *release*, not a development step. The rule is that
+component's, not this repository's, and it does not weaken anything here - a PENDING row is
+still PENDING, and this file still governs what may be claimed for the browser. It is stated
+so a reader of this summary knows that unreviewed code in `Broiler.VM/` is a recorded
+position rather than an oversight.
 
 ## This repository
 
-| Scope | Status |
-|---|---|
-| `src/` — browser heads, shared chrome, HtmlBridge | **PENDING** |
-| `Broiler.Layout/` — vendored, see component record | see below |
+**How to read the tables.** The leading column in both is a review verdict recorded
+here, and every one is unset: no reviewer has recorded a verdict in this file. The
+status column is what that scope or component records about itself, which is a
+different thing. Marks are defined in
+[Broiler.VM/HUMAN_REVIEW.md section 1](Broiler.VM/HUMAN_REVIEW.md#1-how-to-use-this-file).
+
+| Review | Scope | Status |
+|---|---|---|
+| [ ] | `src/` — browser heads, shared chrome, HtmlBridge | **PENDING** |
+| [ ] | `Broiler.Layout/` — vendored, see component record | see below |
 
 Reviewer: _not yet assigned_
 Reviewed commit: _none_
@@ -33,21 +56,21 @@ Decision: **PENDING**
 Statuses as recorded by each component at the commit pinned here. Re-read these after any
 submodule bump — an approval is revision-scoped and does not carry forward.
 
-| Component | Recorded status |
-|---|---|
-| [Broiler.CSS](Broiler.CSS/HUMAN_REVIEW.md) | Approved for first preview |
-| [Broiler.DOM](Broiler.DOM/HUMAN_REVIEW.md) | Approved with conditions |
-| [Broiler.Graphics](Broiler.Graphics/HUMAN_REVIEW.md) | Approved with conditions |
-| [Broiler.HTML](Broiler.HTML/HUMAN_REVIEW.md) | Approved with conditions — first preview only |
-| [Broiler.JS](Broiler.JS/HUMAN_REVIEW.md) | **PENDING** — usable in preview only with its safety warning |
-| [Broiler.JS/Broiler.DateTime](Broiler.JS/Broiler.DateTime/HUMAN_REVIEW.md) | Approved for preview |
-| [Broiler.JS/Broiler.Regex](Broiler.JS/Broiler.Regex/HUMAN_REVIEW.md) | Approved for preview |
-| [Broiler.JS/Broiler.Unicode](Broiler.JS/Broiler.Unicode/HUMAN_REVIEW.md) | Approved with conditions |
-| [Broiler.Layout](Broiler.Layout/HUMAN_REVIEW.md) | Approved for first preview |
-| [Broiler.UI](Broiler.UI/HUMAN_REVIEW.md) | **PENDING** |
-| [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - planning and VM-0 shells only; not in the browser's build closure |
-| Broiler.Input | **No review record in the component** |
-| Broiler.Media | **No review record in the component** |
+| Review | Component | Recorded status |
+|---|---|---|
+| [ ] | [Broiler.CSS](Broiler.CSS/HUMAN_REVIEW.md) | Approved for first preview |
+| [ ] | [Broiler.DOM](Broiler.DOM/HUMAN_REVIEW.md) | Approved with conditions |
+| [ ] | [Broiler.Graphics](Broiler.Graphics/HUMAN_REVIEW.md) | Approved with conditions |
+| [ ] | [Broiler.HTML](Broiler.HTML/HUMAN_REVIEW.md) | Approved with conditions — first preview only |
+| [ ] | [Broiler.JS](Broiler.JS/HUMAN_REVIEW.md) | **PENDING** — usable in preview only with its safety warning |
+| [ ] | [Broiler.JS/Broiler.DateTime](Broiler.JS/Broiler.DateTime/HUMAN_REVIEW.md) | Approved for preview |
+| [ ] | [Broiler.JS/Broiler.Regex](Broiler.JS/Broiler.Regex/HUMAN_REVIEW.md) | Approved for preview |
+| [ ] | [Broiler.JS/Broiler.Unicode](Broiler.JS/Broiler.Unicode/HUMAN_REVIEW.md) | Approved with conditions |
+| [ ] | [Broiler.Layout](Broiler.Layout/HUMAN_REVIEW.md) | Approved for first preview |
+| [ ] | [Broiler.UI](Broiler.UI/HUMAN_REVIEW.md) | **PENDING** |
+| [ ] | [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - core contract version 1 is now implemented and unreviewed; not in the browser's build closure |
+| [ ] | Broiler.Input | **No review record in the component** |
+| [ ] | Broiler.Media | **No review record in the component** |
 
 ## Overall position
 
