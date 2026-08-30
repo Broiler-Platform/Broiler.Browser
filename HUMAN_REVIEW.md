@@ -68,7 +68,7 @@ submodule bump — an approval is revision-scoped and does not carry forward.
 | [ ] | [Broiler.JS/Broiler.Unicode](Broiler.JS/Broiler.Unicode/HUMAN_REVIEW.md) | Approved with conditions |
 | [ ] | [Broiler.Layout](Broiler.Layout/HUMAN_REVIEW.md) | Approved for first preview |
 | [ ] | [Broiler.UI](Broiler.UI/HUMAN_REVIEW.md) | **PENDING** |
-| [ ] | [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - core contract version 1 is now implemented and unreviewed; not in the browser's build closure |
+| [ ] | [Broiler.VM](Broiler.VM/HUMAN_REVIEW.md) | **PENDING** - core contract version 1 is implemented, its verification boundary is bounded by a retained corpus and a fuzz target, and none of it is reviewed; not in the browser's build closure |
 | [ ] | Broiler.Input | **No review record in the component** |
 | [ ] | Broiler.Media | **No review record in the component** |
 

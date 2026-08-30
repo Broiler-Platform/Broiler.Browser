@@ -21,7 +21,7 @@ weaker position, not a stronger one.
 
 | Component | Adopted | Relevant units | Human reviewed | Max security risk | Max IP risk |
 |---|---|---:|---:|---|---|
-| [Broiler.VM](Broiler.VM/CODE-ASSURANCE.md) | **yes** | 689 | **0 (0%)** | High | Low |
+| [Broiler.VM](Broiler.VM/CODE-ASSURANCE.md) | **yes** | 716 | **0 (0%)** | High | Low |
 | Broiler.CSS | no | - | - | - | - |
 | Broiler.DOM | no | - | - | - | - |
 | Broiler.Graphics | no | - | - | - | - |
@@ -62,7 +62,8 @@ may proceed unreviewed; nothing ships unreviewed.
 `Broiler.VM` is the reference implementation. Its scanner, fingerprinter and generator live inside
 its own architecture-test assembly rather than in a shared tool, because that component's
 [ADR 0001](Broiler.VM/docs/adr/0001-component-topology-and-dependency-graph.md) caps its project
-count and both of its permitted test-only projects were already spent. A platform-wide tool that
+count, and every test-only project that record permits before VM-3 is now spent - the two VM-1 was
+allowed and the fuzz target host VM-2 was allowed. A platform-wide tool that
 every component could share does not exist yet, so this table is hand-maintained from the
 components' generated reports - which is exactly the kind of hand-maintained summary the policy
 warns against, and is recorded here rather than hidden.
@@ -71,7 +72,7 @@ warns against, and is recorded here rather than hidden.
 
 The authority is the owner's `BROILER-CODE-ASSURANCE.md`. `Broiler.VM` records how it fitted the
 policy to a component with no CI lane, and what the fitting cost, in
-[its evidence bundle](Broiler.VM/docs/evidence/vm-1/README.md) - in particular that its two modes
+[its VM-1 evidence bundle](Broiler.VM/docs/evidence/vm-1/README.md) - in particular that its two modes
 run as a test rather than in CI, that four rounds of adversarial attack produced 46 defeats every
 one of which was in coverage, and that an assessment is a comment and therefore moves no
 fingerprint when it is downgraded.
