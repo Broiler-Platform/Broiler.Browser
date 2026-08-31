@@ -1,0 +1,40 @@
+# Every tracked text file in this repository is stored LF. Without this file a
+# Windows checkout converts all of them - 632 of 638 were `i/lf w/crlf` when this
+# was written, and `.gitmodules` had drifted to mixed endings in the working tree.
+#
+# Nothing is broken by that today, and the reason is worth recording so it is not
+# mistaken for the problem being absent: `scripts/update-solutions.ps1` normalises
+# with .Replace("`r`n", "`n") before it compares, so the Solution manifest check
+# defends itself. That is one tool remembering to. The component this repository
+# composes learned the same lesson the other way - a stock Windows clone of
+# Broiler.VM failed five tests before any edit, because three generated artefacts
+# and an eighty-seven-entry SHA-256-pinned corpus are compared byte for byte and
+# nothing normalised for them.
+#
+# Pinning the checkout is cheaper than requiring every future byte-comparing tool
+# to remember. Submodules carry their own .gitattributes; this file governs only
+# what this repository tracks.
+#
+# This changes no content. All 638 tracked text files are already LF in the index,
+# so `git add --renormalize .` reports nothing but this file.
+
+# Text is stored and checked out LF on every platform, whatever a contributor's
+# core.autocrlf says. eol=lf is the half that matters: text=auto alone normalises
+# the index and still hands a Windows checkout CRLF.
+*             text=auto eol=lf
+
+*.cs          text eol=lf
+*.csproj      text eol=lf
+*.slnx        text eol=lf
+*.props       text eol=lf
+*.targets     text eol=lf
+*.pubxml      text eol=lf
+*.xml         text eol=lf
+*.js          text eol=lf
+*.md          text eol=lf
+*.yml         text eol=lf
+*.ps1         text eol=lf
+*.config      text eol=lf
+.gitmodules   text eol=lf
+
+*.png         binary
