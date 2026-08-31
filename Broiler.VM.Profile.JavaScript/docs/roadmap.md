@@ -261,23 +261,31 @@ report returns nothing: a refusal on a ceiling-class dimension is latched and su
 operation's next charge or poll, so **a ceiling-class dimension cannot carry a guest-observable
 refusal**, and any language construct that must observe a refusal gates on a charge instead.
 
-**Maxima and defaults are both catalog-wide, and this profile states both halves.** A profile hard
-maximum is **not** a statement of what this profile uses; the defaults are that. It is the most
-this profile would tolerate a host granting, and a runtime ceiling is clamped to the *tightest*
-hard maximum across every profile in the catalog — while **adopting a profile default resolves to
-the tightest default in the catalog**, which is the half a reader who knows only the first will
-still get wrong. A profile that declares its own usage as its maximum caps every profile composed
-beside it, which is a composition defect this component must not introduce, and it is caught by a
-two-profile catalog test rather than by a reader.
+**A maximum is a statement about this profile; a default is a statement about its neighbours.** A
+profile hard maximum is **not** a statement of what this profile uses; the defaults are that. The
+maximum is the most this profile would tolerate a host granting, and it binds **this profile's own
+artifacts and nobody else's** — verification intersects the host's ceiling with the maxima of the
+profile the artifact names, and with no other profile's.
 
-**This binds hardest on the four guest-load dimensions**, and in the direction this component
-cannot defend against. A declaring profile's guest-load maxima may not be unconstrained, so this
-profile is obliged to publish finite numbers on exactly the dimensions a profile beside it may
-declare inapplicable and clamp to zero. A composition that carries this profile and a second one
-which does not use guest loads can therefore refuse `eval` with a resource exhaustion naming a
-dimension the other profile never uses — in a verifier that has done nothing wrong. JS-0 records
-this profile's maxima with that consequence stated, and section 15 records that the reconciliation
-belongs to whichever component composes both.
+**The default is the declaration that reaches other profiles.** A host that adopts profile defaults
+rather than stating numbers gets the *tightest default in the catalog*, per dimension, because at
+runtime creation no profile has been selected and there is no other safe answer. So a stingy default
+on a dimension this profile barely uses is what constrains a profile composed beside it, and a host
+that wants more states an explicit ceiling.
+
+*Corrected 2026-08-31, and the correction is worth reading rather than skipping.* Until then the core
+also clamped every runtime ceiling to the tightest **maximum** in the catalog, one step earlier, and
+this section planned around it at length: this profile is obliged to publish finite guest-load maxima,
+a neighbour declaring those dimensions inapplicable could write zero into them, and `eval` would fail
+with a resource exhaustion naming a dimension the other profile never used — in a verifier that had
+done nothing wrong. **That clamp was a defect and has been removed**; the core's own record always
+placed a profile maximum at verification, against the selected profile. The exposure is gone with it,
+and so is the obligation to publish an unconstrained maximum on a dimension declared inapplicable.
+
+What survives is the smaller, real version of the same hazard, moved one column across: **a neighbour's
+zero *default* still reaches this profile** wherever the host adopts rather than states. JS-0 declares
+this profile's defaults with that in mind, and section 15 records that reconciling two profiles'
+declarations belongs to whichever component composes both.
 
 ### What the core refuses to do for this profile
 
@@ -1153,9 +1161,12 @@ back.
    instantiation.** Those two facts do not compose for free, and the choice between one runtime per
    instantiation and a fixed indirection with a dynamic table is a decision the browser component
    takes. The first branch makes `LiveRuntimes` the budget that governs a page.
-5. **The two profiles clamp each other**, in both directions, on every one of the fifteen
-   dimensions — see section 3, where this stops being an abstract warning and becomes an obligation
-   on this component's own declared maxima.
+5. **The two profiles reach each other through their defaults, not their maxima.** A maximum binds
+   only the profile an artifact names. But a host that adopts profile defaults gets the tightest in
+   the catalog, so the two components' *default* vectors are coupled in a browser image whether or
+   not anyone intended it — see section 3. The composing component either reconciles them or states
+   explicit ceilings, which is what the core's own two-profile composition does for the dimensions
+   where it mattered.
 
 **What this roadmap commits to.** It commits to **owning none of the implementation**, and to saying
 so in the support table by name rather than letting a reader infer that a JavaScript profile in a
@@ -1354,10 +1365,10 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   at first); the waited-on set and the snapshot stop condition of section 4.2; the nullable and
   unsafe-code positions the seed forces; and the satellite-acquisition dependency and its owner.
   Record **this profile's fifteen hard maxima and fifteen defaults, with section 3's catalog-wide
-  consequence stated inside the decision itself** — that both a maximum and an adopted default clamp
-  to the tightest in the catalog, that this profile is obliged to publish finite guest-load maxima
-  and therefore cannot defend itself against a neighbour that publishes zero, and that the
-  reconciliation belongs to whichever component composes two profiles. Record the reciprocal
+  consequence stated inside the decision itself** — that a maximum binds this profile's own artifacts
+  alone, that an adopted **default** resolves to the tightest in the catalog and is therefore the
+  declaration a neighbour actually feels, and that reconciling two profiles' defaults belongs to
+  whichever component composes them. Record the reciprocal
   cross-profile position of section 15: the `WebAssembly` namespace is a host-object surface in no
   allocated manifest, named as an exclusion rather than left to be inferred, and the refusal of a
   cross-profile value channel is co-signed here rather than left to the other profile to carry
@@ -1373,9 +1384,10 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   halves of the no-edge-to-another-profile rule**, each with a passing witness and a negative
   control that fails when injected and passes after revert; **a two-profile catalog test composes
   this profile's descriptor beside a second profile whose declarations are deliberately hostile and
-  proves that neither profile's maxima or adopted defaults refuse the other's ordinary artifact**,
-  with a negative control that sets a guest-load maximum to zero on the neighbour and observes
-  `eval` refused with a resource exhaustion naming a dimension this profile did not breach;
+  proves that the neighbour's maxima do not reach this profile's artifacts at all, and that its
+  adopted defaults do**, with a negative control that sets a guest-load *default* to zero on the
+  neighbour, adopts defaults rather than stating ceilings, and observes `eval` refused - the
+  exposure that survives, in the one configuration that still has it;
   a scan asserts no source file, project file, or build item resolves outside the component root,
   and an unresolvable build item is **reported rather than skipped**; the public API baseline
   mechanism exists and compares in both directions, with an injected member failing it and a
@@ -1909,7 +1921,7 @@ What this ordering does and does not imply:
 | Packaging and consumers | package count and identity; produced metadata declaring no foreign dependency; pristine-feed consumer restore-and-run; exercised rollback | a package that resolves a dependency from the internet, a packable identity outside the dated budget, a rollback that does not run |
 | Assurance and review | generator fixed point; refusal-to-invent-a-reviewer negative control; per-declaration blocker naming; origin distribution published; review-mark vocabulary | a generated artifact differing from what the generator would write, a reviewer identifier no source line carries, a stale fingerprint at publish, an unreviewed relevant unit at release |
 | Licence and attribution | upstream derivation carried; modified files marked as changed; the ingested conformance suite's own attribution; the aggregate-repository notice gaining a row in the same change that introduces the copied tree; the core's standing third-party claim confirmed scoped or amended with the release owner co-signing | a notice that omits a copied or ingested tree, an attribution obligation discovered during a publish, a standing claim elsewhere falsified by what this component ships **or by what its tree contains** |
-| Composed-profile safety | a two-profile catalog test with a deliberately hostile neighbour; this profile's fifteen maxima and fifteen defaults published with the catalog-wide consequence recorded; the guest-load maxima proved finite and their clamping exposure named | a maximum or default set to this profile's own usage, a dimension declared inapplicable published with a zero maximum, or a composition hosting two profiles closing a gate with no such test |
+| Composed-profile safety | a two-profile catalog test with a deliberately hostile neighbour, proving a neighbour's maxima do not reach this profile's artifacts and its adopted defaults do; this profile's fifteen maxima and fifteen defaults published, with the defaults recorded as the neighbour-facing half | a default set so tight that a neighbour adopting it is strangled, a maximum mistaken for a neighbour-facing declaration, or a composition hosting two profiles closing a gate with no such test |
 | Measurement | evidence class declared; immutable pre-run manifest; comparable control; A/A lane; every repetition; effective-configuration attestation; register bound to log in both directions | a figure without a control, an envelope widened after seeing a candidate, an effective-versus-requested mismatch, a cross-profile or cross-component comparison |
 
 Generated results are evidence artifacts, not substitutes for pinned manifests and durable
@@ -2000,7 +2012,7 @@ what recertifies unchanged, what must be re-collected, and what is superseded.
 | The value-representation decision is taken late or implicitly, and the standard library lands typed against a base type this profile then cannot change. | The decision is numbered, states its consequence in both directions, and is a gate on entry to JS-4. **Stop: no standard-library source file is copied while the decision is open; if the answer is replace, JS-6 is re-scoped from a copy to a rewrite before it starts, not during it.** |
 | A verification check migrates out of verification into first execution, because a lazily compiling engine naturally defers function-body checks. | Invalid-artifact is illegal at instantiation, invocation, and resume by the core's own stage matrix; the corpus asserts every structural rejection happens at verification. **Stop: a late check reported as a language fault is a release blocker, because it makes a malformed artifact indistinguishable from a language error and silently hollows out the corpus.** |
 | The oracle reports a failure as a pass, or a green run means nothing. | Failing **and** passing self-check fixtures run before every shard, with an injected-and-reverted scoring regression; per-host-mode totals; configuration failures rather than green results; a ratchet no later run may regress. **Stop: a self-check mismatch stops the run, a green run with zero executed tests is never a pass, and a regression against the ratchet fails the milestone.** |
-| This profile's declared maxima or adopted defaults silently cap a second profile composed beside it in a browser — or a neighbour's caps this profile's guest loads, which this component cannot defend against because its guest-load maxima may not be unconstrained. | JS-0 records the fifteen maxima and fifteen defaults with section 3's catalog-wide consequence stated inside the decision; a two-profile catalog test with a deliberately hostile neighbour catches it rather than a reader; section 15 names the reconciliation as belonging to whichever component composes both. **Stop: a maximum or a default set to this profile's own usage is a composition defect, and `eval` refused with a resource exhaustion naming a dimension this profile did not breach is a defect in the composition, not in the guest.** |
+| This profile's declared **defaults** silently constrain a second profile composed beside it in a browser, or a neighbour's constrain this profile, wherever the host adopts defaults rather than stating ceilings. | JS-0 records the fifteen maxima and fifteen defaults with section 3's split stated inside the decision — maxima bind this profile's own artifacts, defaults are catalog-wide; a two-profile catalog test with a deliberately hostile neighbour catches it rather than a reader; section 15 names the reconciliation as belonging to whichever component composes both. **Stop: `eval` refused with a resource exhaustion naming a dimension this profile did not breach is a defect in the composition, not in the guest.** The maxima half of this risk was retired on 2026-08-31 when the core removed a catalog-wide clamp its own record never authorised. |
 | The extraction gate is never answered, and the same mechanism — a diagnostic registry, a conformance harness, an assurance floor, a bounded-read projection — is written twice and diverges on the first edit. | This profile supplies its half of the comparison when a second product profile's implementation has merged: file paths, source revision, and a correspondence table, recorded at the milestone that owns the mechanism. It records **no verdict**, because a verdict changes the core graph and because no identifier from another profile component may appear here. Where the second implementation has not merged, it records that the first condition is unsatisfied and names what would satisfy it. **Stop: the verdict is the core architecture owner's and may be either, and an unsatisfied first condition is not a failure — but an unrecorded state is.** |
 | An aggregate conformance percentage is published, and a strong parser hides an absent library surface — or the reverse. | Per-host-mode and per-manifest totals with their own ratchets, the effective limit vector published beside them, and a release gate that forbids an aggregate. **Stop: a single percentage is not a result this component publishes, at any point, for any audience.** |
 | Determinism is claimed more broadly than it holds, and a corpus entry pins an answer the specification lets vary. | Section 6 names every surface this profile fixes and every surface it declares varying, the support table carries the list, and no corpus entry is written over an unlisted varying surface. **Stop: a determinism claim that a legitimate variation falsifies is an untruthful support claim, and a corpus entry over a varying surface is a test that fails for a reason that is not a defect.** |
