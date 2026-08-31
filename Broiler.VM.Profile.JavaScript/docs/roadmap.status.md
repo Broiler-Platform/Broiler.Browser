@@ -60,19 +60,27 @@ The leading column is an **evidence verdict** — the author's mark about what a
 evidence shows. It is not a reviewer's finding and not a change of state. Every row below is
 `[NONE]`, because no row has retained evidence of any kind.
 
+**The milestone set changed on 2026-08-31 and this table now carries the new shape.** What was one
+`JS-3` is now `JS-3a` and `JS-3b`, split by dependency rather than by size: the conformance harness
+needs a scoring target and not a copied front end, so leaving it fused put this component's only
+external correctness signal behind both of the blockers in section 3 when it needed to be behind
+neither. Twelve rows, not eleven. Nothing is accepted under either shape, so the split changes no
+evidence claim — it changes what a reader is told is schedulable today.
+
 | Verdict | Milestone | State | Current evidence | Immediate evidence-producing action |
 |---|---|---|---|---|
 | [NONE] | **JS-0 — boundary, placement, identity, assurance floor** | **Not started** | None. No project, no rule register, no assurance manifest, no licence or notice file, no evidence-collection script. | Take the placement decision with the core's topology owner co-signing, then stand up the shell graph and the architecture rule register with both halves of the legacy-boundary rule and a negative control for each. Nothing else in this component may land first. |
 | [NONE] | **JS-1 — the whole contract loop on a narrow slice** | **Not started** | None. No descriptor, no format, no verifier, no executor, no composition root. | After JS-0: mint the slice manifest, define format version 1, and drive one artifact through verify, instantiate, and invoke in a composition that publishes and runs under Native AOT. |
 | [NONE] | **JS-2 — seeding snapshot and front-end ingest** | **Blocked** (recorded as `Not started` above the blocker, because no work has begun either) | None. No snapshot has been taken. The candidate identity in roadmap section 4.1 is a recorded candidate, not a taken snapshot. | **Blocked on two named external dependencies.** See section 3. |
-| [NONE] | **JS-3 — static semantics, diagnostic registry, the oracle** | **Not started** | None. No diagnostic registry, no harness, no pinned suite revision, no self-check fixture. | After JS-2: publish the registry bound in both directions, then stand the harness up and prove the self-check before scoring anything. |
+| [NONE] | **JS-3a — diagnostic registry, position encoding, pinned suite, the oracle** | **Not started** | None. No diagnostic registry, no position encoding, no harness, no pinned suite revision, no self-check fixture. | **Openable against JS-1 alone**, and this is the point of the split: nothing in the oracle method needs a copied line, so this milestone sits behind neither of the two blockers in section 3. Publish the registry bound in both directions, then stand the harness up and prove the self-check before scoring anything. |
+| [NONE] | **JS-3b — static semantics as one verification stage, and the lowering** | **Not started** | None. No consolidated early-error stage, no strict-mode ruling, no lowering, no recorded answer for where the verification boundary falls. | After JS-2, and after JS-3a supplies the registry its diagnostics land in. Record the boundary decision of roadmap section 9 before writing the stage that depends on it. |
 | [NONE] | **JS-4 — value representation and object model** | **Not started** | None. The value-representation decision is **open**, and roadmap section 23 makes copying standard-library source while it is open a stop condition. | Open the decision now — it needs no copied code and can be prepared against JS-1 rather than waiting on the acceptance gate. |
 | [NONE] | **JS-5 — executor, abrupt completion, budgets** | **Not started** | None. No interpreter, no charging model, no measured `CallDepth`. | After JS-4. |
 | [NONE] | **JS-6 — the standard library** | **Not started** | None. The satellite-acquisition dependency is unopened and has no named owner. | Open the satellite dependency at JS-0 so JS-6 is not the milestone that discovers it. |
 | [NONE] | **JS-7 — suspension** | **Not started** | None. The continuation design needs no copied code and may be opened early. | After JS-5 and JS-6. |
 | [NONE] | **JS-8 — guest-initiated loads and the three compositions** | **Not started** | None. No guest-load declaration, no mediator adapter, no composition registers a provider or declines to. | After JS-7. |
 | [NONE] | **JS-9 — adversarial input, agents, soak** | **Not started** | None. No corpus, no fuzz target, no soak host, no aggregate-budget exercise. | After JS-8, though the corpus grows from JS-1 onward rather than starting here. |
-| [NONE] | **JS-10 — baselines, packaging, support table, release gate** | **Not started** | None. No measurement lane, no baseline register, no package, no support table, no human review decision on anything. | After JS-9, and after a named human has read every relevant unit — which is the largest single-owner task in the programme and must be scheduled, not assumed. |
+| [NONE] | **JS-10 — baselines, packaging, support table, release gate** | **Not started** | None. No measurement lane, no baseline register, no package, no support table, no human review decision on anything. Neither the language-specification edition nor the conformance-suite revision is pinned, and roadmap section 24 requires a provisional pin to carry a named exclusion in this ledger until a human has retrieved, hashed, and archived it — see section 3. | After JS-9, and after a named human has read every relevant unit — which is the largest single-owner task in the programme and must be scheduled, not assumed. |
 
 ### What this component is not claiming
 
@@ -100,10 +108,16 @@ unblock condition. Two are open today and both belong to JS-2.
 | **The core contract is not accepted.** Every core milestone is in progress and unaccepted, and the core's review record is unsigned. The core roadmap's own seeding conditions require the copy to be adapted to an accepted contract rather than a moving one. | The Broiler.VM core's architecture and release owners | A recorded human review decision on the core's contract surface, at a named contract version | This blocks JS-2 onward. It does **not** block JS-0 or JS-1, which build against the contract as implemented — a distinction the roadmap's delivery order states and this ledger holds it to. |
 | **The seed's waited-on set has not been itemised.** Roadmap section 4.2 lists the candidate items and their dispositions; nobody has ruled on them, and no snapshot-as-is date or commit-count budget has been recorded. | This component's architecture owner, at JS-0 | A dated ruling per item, plus a recorded stop condition after which the snapshot is taken as-is | Without the stop condition this is not a dependency, it is an open-ended postponement — which roadmap section 23 makes a named risk. |
 
-One further dependency is **unopened rather than blocked**, and naming it here is the point:
-acquisition of the regular-expression matcher and the Unicode and locale data as this checkout's
-own dependencies has no named owner. JS-0 opens it. If it has not landed by JS-6, that milestone
-excludes every surface needing it and publishes the exclusions, rather than waiting.
+Four further dependencies are **unopened rather than blocked**, and naming them here is the point.
+An unopened dependency has no holder and no unblock condition, which is a weaker position than a
+blocked one, not a stronger one:
+
+| Unopened dependency | Opened at | If it has not landed |
+|---|---|---|
+| Acquisition of the regular-expression matcher and the Unicode and locale data as this checkout's own dependencies. No named owner. | JS-0 | JS-6 excludes every surface needing it and publishes the exclusions, rather than waiting. |
+| **The language-specification edition is not pinned.** Retrieving, hashing, and archiving a third-party document is a human action; until someone performs it the pin is provisional, and roadmap section 24 requires a provisional pin to carry a named exclusion here. This row is that exclusion. | JS-0 records the intended edition; JS-3a records the pin actually taken | No manifest may be accepted against an unpinned edition, because a conformance total against a moving document is not a total. |
+| **The conformance-suite revision is not pinned**, and its licence and attribution obligations are unexamined. The suite is third-party material this component ingests; roadmap section 22 gate 12 makes an attribution obligation discovered during a publish a stop. | JS-3a | The harness cannot start: a branch name is not a pin, and the method requires the revision resolved once before any shard. |
+| **This profile's hard maxima and defaults are catalog-wide and unreconciled.** Roadmap section 3 records that this component must publish finite guest-load maxima and therefore cannot defend itself against a neighbour publishing zero, and that the reconciliation belongs to whichever component composes two profiles. That component does not exist and has no owner. | JS-0 records this profile's own vector with the consequence stated | A browser composition discovers it as a resource exhaustion naming a dimension this profile did not breach, in a verifier that did nothing wrong. |
 
 ---
 
