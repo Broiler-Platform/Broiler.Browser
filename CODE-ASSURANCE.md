@@ -21,7 +21,7 @@ weaker position, not a stronger one.
 
 | Component | Adopted | Relevant units | Human reviewed | Max security risk | Max IP risk |
 |---|---|---:|---:|---|---|
-| [Broiler.VM](Broiler.VM/CODE-ASSURANCE.md) | **yes** | 716 | **0 (0%)** | High | Low |
+| [Broiler.VM](Broiler.VM/CODE-ASSURANCE.md) | **yes** | 898 | **0 (0%)** | High | Low |
 | Broiler.CSS | no | - | - | - | - |
 | Broiler.DOM | no | - | - | - | - |
 | Broiler.Graphics | no | - | - | - | - |
@@ -68,24 +68,30 @@ every component could share does not exist yet, so this table is hand-maintained
 components' generated reports - which is exactly the kind of hand-maintained summary the policy
 warns against, and is recorded here rather than hidden.
 
-**Two more components are about to build the same thing, and that is now known rather than
-latent.** The roadmaps for `Broiler.VM.Profile.JavaScript` and `Broiler.VM.Profile.WebAssembly`
+**One of the two predicted duplicate implementations will not be built, and the reason is worth
+recording.** The roadmaps for `Broiler.VM.Profile.JavaScript` and `Broiler.VM.Profile.WebAssembly`
 each require, as their first milestone's exit gate, an assurance system with the same parts in
 the same words: an annotation grammar, an exemption predicate, a generated review report, a
 fingerprint binding, a release-mode gate that names each blocking declaration individually, a
 generator proved to be a fixed point, and a negative control proving it refuses to invent a
 reviewer. Seven of the nine clauses are identical between the two. None of it names a language.
 
-That is three implementations of one repository-level policy, and the reason it is not simply
-extracted is worth stating rather than leaving as an accident of project budgets. The rule
+**Updated 2026-08-31.** The JavaScript profile's milestone JS-0 took its placement decision and
+did not build a second implementation. The profile is a family of product projects **inside**
+`Broiler.VM` rather than a component of its own, so it adopts that component's scanner,
+fingerprinter, generator, manifest and release gate, and JS-0's only change to them was to widen
+the covered set from three product assemblies to six. Its decision record JSD-0006 states the
+adoption and the three deviations it costs. **Adopting is strictly better than the deliberate
+copy this file asked for**: there is one implementation over one tree, so there is nothing to
+drift, and the unit count in the table above now measures six assemblies rather than three.
+
+**The extraction trigger is therefore not met and is now less likely to be.** The rule
 `Broiler.VM` applies to shared code requires **two or more product profiles to already implement
-a behaviour in merged code** before a shared component is opened; one implementation exists, so
-the condition fails, and under that rule the duplication is documented and kept rather than
-pre-empted. **This paragraph is that documentation.** The trigger is named: when a second
-component's assurance implementation exists and the two can be compared from real code, open a
-repository-level test-only tool and amend `Broiler.VM`'s project budget to permit it. Until then,
-a second component copying these mechanisms should copy them deliberately and say so, because a
-copy nobody recorded is the thing that makes an eventual extraction expensive.
+a behaviour in merged code** before a shared component is opened. One implementation exists and
+the JavaScript profile added none, so the condition still fails. If the WebAssembly profile takes
+the same placement decision it will add none either, and the extraction question closes rather
+than ripening. It reopens only if a profile is ever placed in a repository of its own - which is
+the decision JSD-0001 records taking, and records as revisable.
 
 **One thing this file asserts that the repository does not contain.** The section below names
 `BROILER-CODE-ASSURANCE.md` as the authority. **That file is not in this repository.** Either it
