@@ -229,11 +229,55 @@ every manifest this component ever mints.
 a dimension this profile does not charge says `NotApplicable` and the catalog checks that answer
 against the structural consequences of the rest of the descriptor.
 
-A profile hard maximum is **not** a statement of what this profile uses; the defaults are that.
-It is the most this profile would tolerate a host granting, and a runtime ceiling is clamped to
-the *tightest* hard maximum across every profile in the catalog. A profile that declares its own
-usage as its maximum caps every profile composed beside it, which is a composition defect this
-component must not introduce.
+The intended matrix, which JS-1 fixes and later milestones may correct with a dated record but may
+not drift. It is stated here rather than deferred to the first descriptor, because a matrix nobody
+wrote down is a matrix assembled from whatever made the catalog stop refusing:
+
+| Dimension | Intended | What charges it |
+|---|---|---|
+| `Fuel` | Charged | Every instruction dispatched, plus the proportional families of invariant 6. |
+| `WallClock` | Charged | Core-metered against the operation; this profile polls often enough for it to bite. |
+| `AllocatedBytes` | Charged | Verification buffers, the constant pool, environments, objects, and the storage layer's transitions. |
+| `LiveBytes` | Charged | Retained realm and heap state, reported on retention and released on instance disposal. |
+| `HostCalls` | Charged | Every call into an imported host capability, including every artifact-provider request. |
+| `CallDepth` | Charged | Every interpreter frame. The default is measured, not chosen — see section 8. |
+| `VerifierWork` | Charged | Required by the catalog. Decode, structural validation, and the static-semantic stage. |
+| `ArtifactBytes` | Charged | Enforced by the core's reader over the payload. |
+| `SectionCount` | Charged | This format's sections are literal and framed, so the dimension has a direct referent. |
+| `DeclaredCount` | Charged | Constant-pool, code, exception-region, and position-table counts, through the core's guarded count reader. |
+| `StructuralDepth` | Charged | Section and exception-region nesting inside one artifact. It is a **ceiling-class** dimension, so it is charged on entry and **released on exit** rather than accumulated — see below. |
+| `NestedLoadDepth` | Charged | Declared, because this profile declares guest-initiated loads. Section 11 records what the contract makes reachable. |
+| `NestedLoadFanOut` | Charged | Every admitted mediator request. This is the counter `eval` chains actually consume. |
+| `NestedLoadBytes` | Charged | Provider-returned bytes for one operation. |
+| `LiveRuntimes` | Charged | Core-metered; this profile adds nothing beyond the agent model of section 13. |
+
+**Allowances accumulate; ceilings occupy, and the two use different members.** Seven of the
+fifteen are allowance-class and are consumed monotonically with no refund. The other eight are
+ceiling-class: they bound a live measure, they are reported as retained and released, and only a
+ceiling-class dimension releases. A depth counter is therefore an ordinary, refusable,
+high-water-mark bound today — charge on entry, release on exit — and this profile does not need an
+amendment to express one. The single caution the core's own surface carries is that the retention
+report returns nothing: a refusal on a ceiling-class dimension is latched and surfaces at the
+operation's next charge or poll, so **a ceiling-class dimension cannot carry a guest-observable
+refusal**, and any language construct that must observe a refusal gates on a charge instead.
+
+**Maxima and defaults are both catalog-wide, and this profile states both halves.** A profile hard
+maximum is **not** a statement of what this profile uses; the defaults are that. It is the most
+this profile would tolerate a host granting, and a runtime ceiling is clamped to the *tightest*
+hard maximum across every profile in the catalog — while **adopting a profile default resolves to
+the tightest default in the catalog**, which is the half a reader who knows only the first will
+still get wrong. A profile that declares its own usage as its maximum caps every profile composed
+beside it, which is a composition defect this component must not introduce, and it is caught by a
+two-profile catalog test rather than by a reader.
+
+**This binds hardest on the four guest-load dimensions**, and in the direction this component
+cannot defend against. A declaring profile's guest-load maxima may not be unconstrained, so this
+profile is obliged to publish finite numbers on exactly the dimensions a profile beside it may
+declare inapplicable and clamp to zero. A composition that carries this profile and a second one
+which does not use guest loads can therefore refuse `eval` with a resource exhaustion naming a
+dimension the other profile never uses — in a verifier that has done nothing wrong. JS-0 records
+this profile's maxima with that consequence stated, and section 15 records that the reconciliation
+belongs to whichever component composes both.
 
 ### What the core refuses to do for this profile
 
@@ -458,12 +502,26 @@ The rules the verified graph must retain, whatever the names become:
 
 - the profile's Broiler.VM reference set is **exactly** the two core assemblies — no reference
   to the core runtime, no package reference to a third core package, no `InternalsVisibleTo` in
-  either direction;
+  either direction. **One question inside this rule is the core's to answer and is open today**:
+  the frozen profile-facing contract states the reference set as exactly those two assemblies, and
+  the graph above adds a third Broiler.VM-named assembly that is this component's own format. Either
+  a profile's own sibling assemblies sit outside that set or the graph above is illegal under a rule
+  that is already active, and JS-0's placement decision cannot be taken correctly until the core has
+  ruled. The risk table already names the shape of this hazard; this is where it has actually
+  arrived;
 - the profile never references the lowering, which is what makes an execution-only image contain
   a format, a verifier, and an interpreter and no compiler at all;
 - no product project references a test project, a fixture, or a conformance host;
 - **no edge in either direction reaches any legacy Broiler component**, asserted by an
   architecture rule with a passing witness and a negative control, including the inbound half;
+- **no edge in either direction reaches any other Broiler.VM profile component**, asserted the same
+  way and with the same negative control. This is a separate rule from the one above and it is not
+  implied by the reference-set clause, because that clause already tolerates one further
+  Broiler.VM-named assembly — this component's own format. Two profiles in one browser image are
+  composed by a composition root; they are not linked to each other. The core states the rule, the
+  extraction gate's fourth condition *is* this property, and section 15's cross-profile boundary
+  depends on it staying true — so a rule only one of the two profiles enforces is a rule that can
+  be violated from the untested side;
 - every namespace matches its assembly. The seed violates this in one place in a way that makes a
   copied assembly *look* like it depends on an IL emitter, and copying that verbatim would put a
   false dependency into the first commit; and
@@ -486,9 +544,18 @@ own is not accepted, and the support table says so.
 justified by arguing that manifest *n* implies it, and the admission criterion for what belongs
 in the next increment is recorded in the allocation table below rather than decided per commit.
 
-**A manifest is refused, not degraded.** An artifact naming a manifest this descriptor does not
-accept is `InvalidArtifact` with reason `UnsupportedFeatureManifest`. There is no partial
-acceptance and no fallback to a smaller manifest.
+**A manifest is refused, not degraded, and so is a feature outside it.** An artifact naming a
+manifest this descriptor does not accept is `InvalidArtifact` with reason
+`UnsupportedFeatureManifest`. There is no partial acceptance and no fallback to a smaller manifest.
+And **a well-formed artifact that uses a construct outside its declared manifest is rejected at
+verification** rather than failing at first execution — the same rule invariant 3 states for
+structural checks, applied to the manifest boundary. This matters most where the manifest split is
+a policy boundary: a composition that declines `broiler.javascript.dynamic` refuses `eval` at
+verification with an invalid-artifact reason, which is **not** the same event as a composition that
+admits the manifest and registers no artifact provider, where the refusal is a run-time
+`ProviderNotRegistered` the guest may catch. Two different outcomes, two different catchabilities,
+one situation a reader will experience as the same. JS-1 states the rule with format version 1, and
+the verifier's rejection list carries it.
 
 The intended allocation, which JS-0 fixes and later milestones may extend but not silently widen:
 
@@ -501,6 +568,30 @@ The intended allocation, which JS-0 fixes and later milestones may extend but no
 | `broiler.javascript.regexp` | Regular expressions, over the from-scratch matcher. | JS-6, or excluded with a published failure |
 | `broiler.javascript.intl` | Internationalization. | Deferred; excluded by name until it has a run |
 | `broiler.javascript.temporal` | The temporal surface. | Deferred; excluded by name until it has a run |
+
+### Where the language is deliberately underspecified, and why a manifest has to say so
+
+A retained corpus compares an observed answer against a recorded one, byte for byte, across three
+publish modes. **A component whose whole method is recorded expected answers cannot hold a corpus
+whose expected answers legitimately vary**, so every surface the specification leaves
+implementation-defined, implementation-approximated, or host-defined has to be named and placed
+before a corpus entry is written over it — not discovered when one publish mode disagrees with
+another.
+
+The named surfaces are not exotic and the list is short enough to write: property enumeration order
+where the specification does not fix it; the contents and format of stack traces and error
+messages; number-to-string and string-to-number precision at the edges the specification leaves to
+the implementation; locale-, calendar-, and time-zone-sensitive behaviour; and anything the host
+supplies rather than the language. Each is either **fixed by this profile and recorded as fixed**,
+so a corpus entry may pin it, or **declared varying and excluded from the corpus by name**, so no
+entry pins it by accident. The internationalization and temporal surfaces are already deferred to
+their own manifests for a related reason; what this rule adds is that the approximated surfaces
+*inside* `broiler.javascript.core` get the same treatment.
+
+JS-1 records the list with the first format version, each manifest extends it, and the support
+table publishes it. **A determinism claim broader than the list is an untruthful support claim**,
+and a corpus entry over an unlisted varying surface is a test that will eventually fail for a
+reason that is not a defect.
 
 ---
 
@@ -537,26 +628,49 @@ The verifier is a trust boundary even when a local tool produced the bytes, and 
 one: there is exactly one verifier in this component, reached only through the core's
 verification entry point.
 
-It rejects, before execution, at least:
+It rejects, before execution, at least the following. **Two outcome categories appear in this list
+and the split is the core's ruling, not this profile's preference**: a malformed or ill-typed
+artifact is `InvalidArtifact` carrying this profile's diagnostic code and a position, while a breach
+of an effective ceiling that names a budget dimension is `ResourceExhaustion` naming that dimension
+and its scope. Conflating them tells a caller its program is malformed when the truth is that this
+host declined to spend the memory, and — because every entry in the retained corpus pins its
+observed triple — a miscategorised entry does not fail later, it passes and records the wrong
+answer. Each bullet below states which category it produces.
 
-- a profile ID, format version, or feature manifest this descriptor does not accept — each with
-  its own distinct reason, and the unsupported-profile case answered **without examining a
-  payload byte**;
-- malformed framing, truncation, and invalid variable-length encodings, mapped from the core's
-  bounded-read statuses onto this profile's diagnostic codes;
-- opcode and operand kinds, constant, local, and function indexes, and instruction boundaries;
-- control-flow validity over reachable and unreachable code, with consistent stack and value
-  states at every join;
-- exception-region nesting, `finally` continuation targets, and suspension and resume targets;
-- every static semantic the manifest requires — see section 9, which makes early errors a
-  verification stage rather than a parser side effect;
-- structural depth, section count, declared counts, and artifact bytes, against the effective
-  ceilings the core materialized before the first byte was read;
-- any host assumption the artifact declares, checked against the capabilities the verification
-  context reports as registered — an artifact that names an import the composition does not
-  carry is refused at verification rather than at first call, and a verification whose context
-  reports no capability at all still answers, deterministically, rather than throwing; and
-- position and debug metadata that refers only to valid canonical bytecode positions.
+- **`InvalidArtifact`** — a profile ID, format version, or feature manifest this descriptor does not
+  accept, each with its own distinct reason, and the unsupported-profile case answered **without
+  examining a payload byte**;
+- **`InvalidArtifact`** — malformed framing, truncation, and invalid variable-length encodings,
+  mapped from the core's bounded-read statuses onto this profile's diagnostic codes;
+- **`InvalidArtifact`** — opcode and operand kinds, constant, local, and function indexes, and
+  instruction boundaries;
+- **`InvalidArtifact`** — control-flow validity over reachable and unreachable code, with consistent
+  stack and value states at every join;
+- **`InvalidArtifact`** — exception-region nesting, `finally` continuation targets, and suspension
+  and resume targets;
+- **`InvalidArtifact`** — every static semantic the manifest requires, and any construct outside the
+  declared manifest — see section 9, which makes early errors a verification stage rather than a
+  parser side effect;
+- **`ResourceExhaustion`** — structural depth, section count, declared counts, and artifact bytes,
+  against the effective ceilings the core materialized before the first byte was read. Each names
+  one dimension and one scope, and none of them is an invalid-artifact answer: the artifact is
+  well formed and this image declined to admit it;
+- **`InvalidArtifact`** — any host assumption the artifact declares, checked against the
+  capabilities the verification context reports as registered. An artifact that names an import the
+  composition does not carry is refused at verification rather than at first call, and a
+  verification whose context reports no capability at all still answers, deterministically, rather
+  than throwing. **The two host checks answer different questions and both are needed**: this one
+  says *this image can never run this artifact*, while a binding failure at runtime creation says
+  *this runtime does not have it right now*; and
+- **`InvalidArtifact`** — position and debug metadata that refers only to valid canonical bytecode
+  positions.
+
+**Positions travel in the core's own position record**, which carries a section index, a byte
+offset, and two profile-owned coordinates whose meaning the core does not interpret. This profile
+states at JS-3a which of the four fields it populates, what it puts in the two coordinates, and what
+a section index of `-1` means for it. That sentence exists because two profiles designing two
+position encodings against one shared record, neither naming it, is how two incompatible
+conventions get built against one struct.
 
 Three disciplines make that list provable rather than aspirational:
 
@@ -639,9 +753,35 @@ diagnostic per rejection.
 So: **consolidate every early error the manifest requires into one validation stage over the
 tree**, carry on the tree the facts the re-scans recover, and delete the re-scans. Each artifact
 is tokenized at most once during verification, asserted by a case. Where strict mode lives — in
-the parser or in the validator — is a named architectural decision with an owner, taken at JS-3
+the parser or in the validator — is a named architectural decision with an owner, taken at JS-3b
 and recorded, because the seed's answer is a split this component may ratify or correct but may
 not inherit by accident.
+
+### Where the verification boundary actually falls, which this document must say and currently does not
+
+The sentence above says "one verification stage", and the core's verification entry point takes a
+descriptor, a payload span, a context and a token — **bytes, not a tree**. The lowering that
+produces the tree is a sibling assembly a composition may omit entirely, and this component fuzzes
+it as a surface distinct from the verifier. So the two stages do not straddle one call, and three
+consequences follow that no gate can be written over until they are settled:
+
+- **Source with an early error never becomes an artifact.** Its diagnostic never occupies the
+  core's profile diagnostic code, never carries a position whose byte offset is an offset within an
+  artifact, and never crosses a core result envelope at all. Half of this component's published
+  registry therefore has a transport that is the embedder's own seam rather than a core result, and
+  the registry has to say which half each code belongs to.
+- **Either the verifier re-derives every early error from artifact bytes, or it does not** — and if
+  it does, the front-end contract that returns "a validated tree the lowering consumes" is doing
+  work the verifier then repeats, which is a design this component may choose but not by accident.
+- **An artifact that is both malformed in framing and invalid in static semantics gets exactly one
+  answer**, and which one is a property of phase order rather than of implementation convenience.
+  A profile that fuses the phases scores it differently from one that does not, and the difference
+  is invisible to a suite that never presents a doubly-bad input.
+
+JS-3a records the registry split and JS-3b records the boundary and the doubly-bad artifact's
+answer, with a named case that **fails when the phases are fused**. Until then, a gate clause asserting that every
+early error "maps onto exactly one core invalid-artifact reason" is asserting a mapping onto a
+reason that half of them may never carry.
 
 The static-semantic vocabulary the copied analysis already speaks is kept verbatim, because
 renaming it would be renaming the specification: `VarDeclaredNames`, `LexicallyDeclaredNames`,
@@ -970,6 +1110,65 @@ for a reader to notice: **a content policy forbidding dynamic evaluation is expr
 registering no artifact provider.** The refusal is then a contract outcome with recorded
 evidence, not an ad-hoc check somewhere inside an engine.
 
+### The other profile in the same image: the JavaScript API for WebAssembly
+
+This section exists because the browser that consumes this profile first will also carry a
+WebAssembly profile, because the web reaches WebAssembly *through JavaScript*, and because **nothing
+in the core makes that free**. No milestone here delivers it and no manifest admits it. What this
+section refuses to do is leave it unpriced from this side, which would leave it priced from one side
+only.
+
+**What the boundary is.** `WebAssembly.Module`, `WebAssembly.Instance`, `WebAssembly.Memory`,
+`WebAssembly.Table`, and `WebAssembly.Global` are a separate specification's objects, defined in
+terms of JavaScript values, with a defined coercion in both directions. Implementing them means two
+core runtimes, carrying two profiles, exchanging values.
+
+**Two frozen facts settle the shape, and neither is written in this document today.** The first is
+that a guest-initiated load **may not name another profile**: the provider must answer with an
+artifact of the profile that asked, and a different profile is a provider contract breach reported
+as a host failure. So `WebAssembly.instantiate` is *not* a mediated load with a different descriptor
+on it, and no amount of amendment to the mediator makes it one. The second is that **cross-runtime
+reentry is legal and depth-bounded**, and was admitted deliberately so a host object may bridge two
+independent runtimes. That is the route: the embedder receives the call from this profile, converts
+arguments into the core's transfer types, invokes the other profile's runtime, and converts results
+back.
+
+**What follows, stated so a browser team meets it here rather than in a benchmark:**
+
+1. **Every call crosses the host twice.** A JavaScript-to-WebAssembly call is two host-boundary
+   transits and a conversion in each direction. That is the correct price for two profiles that
+   share no semantics, and it is a price that shows up in exactly the measurement people run first.
+2. **A linear memory exposed as a JavaScript buffer is the hard case, not the call.** The core's
+   transfer types are integers, byte spans, and opaque references; none of them is a *shared mutable
+   region*, and a shared mutable region is shared semantics by another name. Either the embedder
+   mediates every access, which is unusably slow, or something outside both profiles owns the
+   region. **This profile co-signs the refusal**: it does not ask the core for a cross-profile value
+   channel, and it records that growth on the other side invalidating a view held on this side is a
+   rule nobody currently owns.
+3. **Function identity across the seam is the embedder's.** A WebAssembly export held as a
+   JavaScript value, and a JavaScript function imported into WebAssembly, both need stable identity
+   and a callback direction. The callback direction exists — it is cross-runtime reentry — but the
+   identity rules are not this profile's and are written in no document.
+4. **Capability bindings are fixed when a runtime is created; an import object is built per
+   instantiation.** Those two facts do not compose for free, and the choice between one runtime per
+   instantiation and a fixed indirection with a dynamic table is a decision the browser component
+   takes. The first branch makes `LiveRuntimes` the budget that governs a page.
+5. **The two profiles clamp each other**, in both directions, on every one of the fifteen
+   dimensions — see section 3, where this stops being an abstract warning and becomes an obligation
+   on this component's own declared maxima.
+
+**What this roadmap commits to.** It commits to **owning none of the implementation**, and to saying
+so in the support table by name rather than letting a reader infer that a JavaScript profile in a
+browser image implies a working `WebAssembly` namespace. It commits to **not foreclosing it**: where
+a design choice here would make the seam harder — a host-object model with no stable identity, a
+realm model that cannot hold a foreign exotic object, a transfer surface that cannot carry an opaque
+reference — the choice is recorded with that consequence noted at the milestone that takes it. And
+it commits to **naming the owner**: a browser integration is a consumer of two profile components
+and belongs to whichever component composes them. That component owns the two-profile composition's
+closure report, its Native AOT evidence, its shared aggregate budget, and the reconciliation of two
+profiles' maxima. This roadmap's obligation is to make the price visible before that component
+exists, not to pay it.
+
 ---
 
 ## 16. Persistence and the code cache
@@ -981,9 +1180,37 @@ second serialization path with nothing to hold it to the first.
 
 What this roadmap does instead is fix the design so it stays reachable, at no cost today:
 
-- **The cache key is named now.** Source identity, lowering version, format version, feature
-  manifest identity, verifier semantic version, core contract version, and the identity and
-  version of every host capability and artifact provider whose presence affects semantics.
+- **The cache key is named now, and it is derived from the handle's identity rather than invented
+  beside it.** The persisted key is the **artifact content hash**, the format version, the feature
+  manifest identity and version, the descriptor revision, the verifier semantic version, the core
+  contract version, and **the per-import capability tuple for every import the artifact binds** —
+  which the core defines as seven fields, not two: capability ID, version, signature ID, kind,
+  reentrancy, exception-translation mode, and whether an optional import was bound. The last three
+  are load-bearing rather than decorative: all three change the legal control flow at a call site,
+  and a profile may compile a different path depending on them, so a key that omits them collides
+  two variants onto one entry, which is a correctness defect in the cache and not a tuning one. The
+  tuple covers imports the artifact **binds**; registered-but-unimported capabilities are excluded,
+  so an unrelated composition change does not invalidate every entry. This profile cites the core's
+  tuple rather than restating it, because restating it is how the two-field version got written.
+
+  Three terms are deliberately **not** in it, each for a stated reason:
+
+  - **The effective limit vector is not a persisted key input.** It is part of the handle's
+    in-process identity, so two runtimes with different ceilings do not share a handle — but it is
+    a process-local, timing-dependent quantity, and persisting it would produce a key that never
+    recurs. Correctness does not depend on it being in the key, because loading always re-verifies
+    and recomputes it.
+  - **Source identity is echoed, not compared.** It is the *host's* own lookup key; the core records
+    it and compares it never. Naming it first, as an earlier draft of this section did, quietly made
+    the key a *derivation* — source plus lowering version plus format version — whose validity rests
+    on deterministic lowering, a property section 9 preserves but explicitly declines to warrant. The
+    key is over the output bytes.
+  - **Provider presence is not a persisted key input either**, and it cannot be, because a
+    guest-initiated-origin handle is ineligible for any persisted envelope and may not contribute to
+    any persisted cache key. This is the one persistence rule that binds this profile alone — the
+    other intended profile declares no guest loads and the rule is vacuous for it — and section 11's
+    module map, which legitimately caches handles, is where it has to be enforced. **JS-8 carries the
+    exclusion as a gate clause.**
 - **Nothing warmed or process-local is ever serializable.** No object references, no delegates,
   no intern-table indexes, no process-local identities, no warmed caches, no specialized opcodes
   that have become authoritative, no host handles. That is a property of how the verified state
@@ -1015,7 +1242,15 @@ and no build-time shortcut past the one.
 ## 17. Measurement discipline
 
 Every figure this component publishes obeys the same rules, and the rules are stricter than the
-figures are interesting.
+figures are interesting. **The rules are the core's, restated here only because a reader of this
+document must be able to check a figure without leaving it** — the authority is the core's baseline
+register, and where the two ever differ the register wins. Two things this component adds that a
+restatement alone would lose: a **declared repetition count**, fixed at JS-1 and published with
+every bundle, because "retained repetitions" is a release gate nobody can fail without a number;
+and the discipline of reading the core's own record of *what measuring found*, since two of the
+defects its measurement lane caught were correctness defects no behavioural test saw, and one of
+them was in the guest-load fan-out counter this profile's mediator depends on. **JS-8 reads that
+record before designing the mediator adapter.**
 
 1. **A control that is the same workload minus the thing being measured.** A difference between
    two different programs is a comparison, not an attribution.
@@ -1055,9 +1290,18 @@ the core's execution loop, and each carries the counterweight test: would a prof
 parser, no text format, and no dynamic loads need this too, or is this one language's need
 wearing a general shape?
 
+The counterweight answer is **not this profile's to write alone**. The core's procedure requires
+every amendment record to state whether the other intended profile could use the capability, is
+unaffected, or refuses it — so a row graded here without knowing the other profile's grade is a row
+whose answer changes depending on which component files first. Two rows below were graded that way
+in an earlier draft and are corrected; the rest name the other profile's position where it is known.
+
 | Candidate | Why it might be needed | Counterweight |
 |---|---|---|
-| An argument and result channel on invocation | An invocation request carries one entry-point name. A host calling an already-instantiated realm has no typed way to pass values. | Weak: a profile with one fixed entry point does not need it. Section 10's two workarounds are tried first, and the proposal is opened only if both are shown to cost something real. |
+| An argument channel on invocation | An invocation request carries one entry-point name and there is no typed way to pass values. For a caller-driven browser compile this is mild, because the adapter compiles a *program* and the lowering encodes the arguments into it. **It stops being mild the moment this profile hosts another one**: `instance.exports.f(a, b)` is a typed call whose arguments originate here, so section 15's seam needs the channel in exactly the case a browser is built for. | **Strong, and stronger than an earlier draft of this table recorded.** The other intended profile rates this the strongest ask in its own document, on the ground that a language with no parser, no text format, no dynamic loads and no notion of a program still needs it — which is the counterweight test passing, not failing. Section 10's two workarounds are still tried first and their cost recorded, but the row is no longer graded weak on the argument that a fixed-entry-point profile would not need it. |
+| A result channel on invocation | Kept out of the row above deliberately. The typed payload already carries results, and several of them, so multi-value returns are expressible today. | **None needed.** The other profile states plainly that the result channel is adequate. Filing argument and result as one amendment would put two differently-scoped versions of one capability into the register, which is how a capability gets approved at the wrong width. |
+| Multi-result host capabilities | A capability returns one value. A host import whose signature has two results has nowhere to put the second, so an import that needs one is refused rather than truncated. | Moderate: any profile whose calling convention admits multiple results meets it, and the other intended profile raises it independently. Until then the refusal is deterministic and published. |
+| A wider value slot on the capability channel | A value wider than the channel's slot must be split, which works and needs a published encoding. | Weak, and recorded so it is not mistaken for the row above. |
 | Nested instantiation through the mediator | The contract names it and version 1 provides no path to it. This profile does not need it for `eval` — section 11 shows why — but a module graph that instantiates a dependency as its own instance would. | Moderate: any profile with a module system meets it. Opened only if this profile's realm model actually requires a separate instance per module, which section 13 answers first: one instance may hold several realms, so a module needing its own realm does not by itself need its own instance. |
 | A charging hook for work done inside a host capability | Wall clock covers a slow capability; it does not cover a capability that allocates on this profile's behalf. | Strong: general. |
 | An in-process producer input form — compiling straight to a verified handle | Version 1 admits no other input form, so every caller-driven compile and every mediated dynamic compile serializes and re-decodes on the critical path. | Moderate: general to any composition that compiles at run time; a profile shipped as pre-built artifacts never meets it. Opened only against JS-10's verification-throughput-per-byte and cold-start figures, never against an intuition. |
@@ -1065,9 +1309,18 @@ wearing a general shape?
 | Streaming or incremental verification | A browser wants to verify as bytes arrive. | Strong: general, and the core already carries a registered amendment shape for it. Reopened against a measurement, not an intuition. |
 | A persisted envelope | Section 16. | Strong: general, and already admitted by contract. It needs a gate rather than an amendment. |
 
-The rule that governs all seven: **a design that can only be hosted by a second core state machine
-is refused.** Exactly one core state machine and one core contract version exist in a product
-graph at any time.
+The rule that governs all of them: **a design that can only be hosted by a second core state
+machine is refused.** Exactly one core state machine and one core contract version exist in a
+product graph at any time.
+
+**Two procedural facts belong here rather than being discovered when the first row is filed.** The
+amendment procedure is currently unexecutable — no amendment has been minted, and the minting role
+and both co-signing roles are held by one person, so a co-signature would not be independent. And a
+counterweight *refusal* by the other profile is **recorded, not blocking**: a profile with a veto
+over a core amendment would be a profile-to-profile dependency established by governance rather than
+by reference, which is exactly what the extraction gate's fourth condition exists to prevent. Every
+row above is therefore filed and held rather than scheduled, and none is admissible until it names a
+merged or approved capability.
 
 ---
 
@@ -1075,6 +1328,13 @@ graph at any time.
 
 The [status ledger](roadmap.status.md) is the authority for what has been accepted. This section
 states planned work and objective exit gates only.
+
+**One bookkeeping note, because the alternative is a reader trusting the wrong document.** The
+milestone set here is JS-0, JS-1, JS-2, **JS-3a and JS-3b**, then JS-4 through JS-10: what was one
+JS-3 is now two, split by dependency rather than by size, for the reason section 20 gives. The
+ledger still enumerates the older set, so **until it is updated the two documents disagree on the
+shape of slot 3 and on nothing else**. The ledger is the authority for what has been *accepted* —
+which is nothing, on either shape — and this section is the authority for what is *planned*.
 
 Two dependencies run through every milestone and are stated once. **The core is implemented, not
 accepted**, so JS-0 and JS-1 build against implemented contracts while JS-2 onward additionally
@@ -1093,14 +1353,29 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   manifest allocation of section 6; the three composition labels and which are advertised (none,
   at first); the waited-on set and the snapshot stop condition of section 4.2; the nullable and
   unsafe-code positions the seed forces; and the satellite-acquisition dependency and its owner.
+  Record **this profile's fifteen hard maxima and fifteen defaults, with section 3's catalog-wide
+  consequence stated inside the decision itself** — that both a maximum and an adopted default clamp
+  to the tightest in the catalog, that this profile is obliged to publish finite guest-load maxima
+  and therefore cannot defend itself against a neighbour that publishes zero, and that the
+  reconciliation belongs to whichever component composes two profiles. Record the reciprocal
+  cross-profile position of section 15: the `WebAssembly` namespace is a host-object surface in no
+  allocated manifest, named as an exclusion rather than left to be inferred, and the refusal of a
+  cross-profile value channel is co-signed here rather than left to the other profile to carry
+  alone. Re-grade section 18's argument-channel row and split its result half out, since both need
+  no code and the first amendment the programme files will be one of them.
   Stand up this component's own assurance system — annotation grammar, exemption predicate,
   generated review report, fingerprint binding, release-mode gate — and its own evidence-bundle
   contract and collection script. Publish the licence and third-party notice.
 - **Dependencies:** Named ownership. No dependency on the seed, on the copy, or on any core
   milestone's acceptance.
 - **Objective exit gate:** An acyclic shell graph builds Release with zero warnings; architecture
-  rules express every forbidden edge **including both halves of the legacy-boundary rule**, each
-  with a passing witness and a negative control that fails when injected and passes after revert;
+  rules express every forbidden edge **including both halves of the legacy-boundary rule and both
+  halves of the no-edge-to-another-profile rule**, each with a passing witness and a negative
+  control that fails when injected and passes after revert; **a two-profile catalog test composes
+  this profile's descriptor beside a second profile whose declarations are deliberately hostile and
+  proves that neither profile's maxima or adopted defaults refuse the other's ordinary artifact**,
+  with a negative control that sets a guest-load maximum to zero on the neighbour and observes
+  `eval` refused with a resource exhaustion naming a dimension this profile did not breach;
   a scan asserts no source file, project file, or build item resolves outside the component root,
   and an unresolvable build item is **reported rather than skipped**; the public API baseline
   mechanism exists and compares in both directions, with an injected member failing it and a
@@ -1192,42 +1467,78 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   the dynamic-metaobject surface, the module hosts, the dead attribute family, and the
   module-initializer bootstrap.
 
-### JS-3 — Static semantics as one verification stage; the diagnostic registry; the oracle
+### JS-3a — The diagnostic registry and the oracle, standing before the copy arrives
 
-- **Owner:** verification-boundary owner, with the conformance owner for the harness half.
-- **Next action:** Consolidate every early error the first manifest requires into one validation
-  stage; carry on the tree the facts the two source re-scans recover, and delete the re-scans;
-  take and record the strict-mode ownership decision; publish and version the diagnostic-code
-  registry and the source-position encoding; write the lowering that feeds the one verification
-  entry point. Then pin a suite revision and build the harness, the self-check, the merge, the
-  scope manifests, and the audit command, and run the parse-and-early-error slice.
-- **Dependencies:** JS-2 for the copied analysis; JS-1 for the format and the verifier shape.
+**This milestone was split out of JS-3, and the split is the point.** Nothing in the oracle method
+of section 14 needs a copied line: it needs a scoring target, and JS-1 already produces one — five
+verifier outcomes each by a named retained corpus case, a slice corpus replaying twice with no
+residue and containing a passing control. Leaving the harness fused to the static-semantics work put
+this component's only external correctness signal behind **both** of its external blockers: the core
+acceptance gate and the seed's waited-on set. It only ever needed to be behind neither. Section 20's
+list of decisions that need no copied code omitted the harness, which is the largest of them; this
+milestone is that omission corrected.
+
+- **Owner:** conformance owner, with the verification-boundary owner for the registry half.
+- **Next action:** Publish and version the diagnostic-code registry and the position encoding,
+  stating which of the core position record's four fields this profile populates, what it carries in
+  the two profile-owned coordinates, and what a section index of `-1` means here. **Record which
+  half of the registry each code belongs to** — codes a verified artifact's rejection carries in a
+  core result, and codes a pre-artifact source rejection carries on the embedder's own seam — per
+  section 9's boundary question, which this milestone answers. Then pin a suite revision and build
+  the harness, the self-check, the sharding, the merge, the scope manifests, and the audit command,
+  and score the slice manifest.
+- **Dependencies:** **JS-1 only.** Deliberately not JS-2, not the copy, and not core acceptance.
 - **Objective exit gate:** The diagnostic-code registry is published, versioned, and bound in
   **both** directions — every emittable code appears in it, every code in it is reachable from a
-  named case; every early error the manifest requires is produced by a named case and maps onto
-  exactly one core invalid-artifact reason with no invented or aliased reason; an illegal format-
-  version and manifest pair is refused by this profile's own verifier with a diagnostic code; each
-  artifact is tokenized at most once during verification, asserted by a case; **the self-check
-  runs against the built profile before every shard** and every deliberately broken fixture
-  returns its declared verdict alongside at least one passing control, with a negative control
-  that injects a scoring regression, observes the mismatch, and reverts; the parse slice runs to
-  completion and publishes per-host-mode totals from an exact commit and an exact suite revision,
-  and **that run sets the ratchet**; removing one shard's report reports incomplete coverage
-  rather than a smaller total, a configuration field differing between shards reports a named
-  inconsistency, and an empty selection and an all-skipped selection are each named configuration
-  failures; negative-metadata tests are executed and reported as their own totals, with the
-  uncaught error matched on its JavaScript type name; the failure manifest is proved to be a queue
-  by a case where a listed path still fails
-  and a case where a hand-written entry does not survive; the harness, merge, audit, and scope
-  tooling each carry their own regression tests run before any shard starts; a scan asserts the
-  suite ingestion path appears in no product package and no closure report; and the
-  narrow-runtime-compiler composition publishes and runs on every claimed RID with warnings as
+  named case; each code maps onto exactly one core reason with no invented or aliased reason, and
+  the registry states its own revision so that a retained corpus entry recording a code can be
+  dated, because a code that changes meaning between releases silently invalidates every corpus
+  entry that recorded it; **the self-check runs against the built profile before every shard** and
+  every deliberately broken fixture returns its declared verdict alongside at least one passing
+  control, with a negative control that injects a scoring regression, observes the mismatch, and
+  reverts; the slice manifest runs to completion and publishes per-host-mode totals from an exact
+  commit and an exact suite revision, and **that run sets the ratchet**; removing one shard's report
+  reports incomplete coverage rather than a smaller total, a configuration field differing between
+  shards reports a named inconsistency, and an empty selection and an all-skipped selection are each
+  named configuration failures; negative-metadata tests are executed and reported as their own
+  totals, with the uncaught error matched on its JavaScript type name; the failure manifest is
+  proved to be a queue by a case where a listed path still fails and a case where a hand-written
+  entry does not survive; the harness, merge, audit, and scope tooling each carry their own
+  regression tests run before any shard starts; **no aggregate percentage is published, then or
+  ever**; the effective limit vector each run was obtained under is published with its totals,
+  because a total obtained under generous ceilings is not the total a product with tight ones would
+  get; and a scan asserts the suite ingestion path, the corpus store, and every suite file appear in
+  no product package and no closure report, with a negative control that adds a product reference to
+  the ingestion path and observes the scan fail.
+- **Seed:** Nothing is copied. Every mechanism here is this component's own code, and **no total,
+  manifest entry, known-gap entry, or triage finding crosses the fork.**
+- **Deliberately not done:** No static semantics and no lowering. A milestone that stands up the
+  oracle and also consolidates the early errors will have its hardest scoping question answered by
+  whichever of the two ran late.
+
+### JS-3b — Static semantics as one verification stage, and the lowering
+
+- **Owner:** verification-boundary owner.
+- **Next action:** Consolidate every early error the first manifest requires into one validation
+  stage; carry on the tree the facts the two source re-scans recover, and delete the re-scans;
+  take and record the strict-mode ownership decision; write the lowering that feeds the one
+  verification entry point. Record section 9's boundary answer as a numbered decision: whether the
+  verifier re-derives every early error from artifact bytes, or whether the lowering emits a
+  deliberately invalid artifact the verifier rejects.
+- **Dependencies:** JS-2 for the copied analysis; JS-1 for the format and the verifier shape;
+  JS-3a for the registry the diagnostics land in.
+- **Objective exit gate:** Every early error the manifest requires is produced by a named case
+  carrying a registry code; an illegal format-version and manifest pair is refused by this profile's
+  own verifier with a diagnostic code; a construct outside the declared manifest is refused at
+  verification and not at first execution, by its own case; **an artifact that is both malformed in
+  framing and invalid in static semantics reports exactly one of the two, by a named case that fails
+  when the phases are fused**; each artifact is tokenized at most once during verification, asserted
+  by a case; the parse-and-early-error slice is scored on JS-3a's harness against the ratchet; and
+  the narrow-runtime-compiler composition publishes and runs on every claimed RID with warnings as
   errors, its closure containing the tokenizer and the lowering and no test assembly, and cited
   as evidence for no other composition kind.
 - **Seed:** Copied and re-homed — the post-parse validation stage and the free-name analysis.
-  Written fresh — the registry, the position encoding, the reason mapping, the replacement for
-  both re-scans, the lowering, and the entire harness. **No total, manifest entry, or triage
-  finding is carried across.**
+  Written fresh — the reason mapping, the replacement for both re-scans, and the lowering.
 
 ### JS-4 — The value representation and the object model
 
@@ -1318,7 +1629,7 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   module-initializer wiring — the initializer bodies and the satellite initializer files, and
   only those — after re-homing into the library proper the prototype patching that the same file
   happens to register. Delete the assembly probing.
-- **Dependencies:** JS-4 for the object model, JS-5 for calls. **Satellite acquisition is an
+- **Dependencies:** JS-3b for the general lowering, JS-4 for the object model, JS-5 for calls. **Satellite acquisition is an
   external dependency opened at JS-0**: if it has not landed, the first manifest excludes every
   surface that needs it and publishes each exclusion with its deterministic failure, rather than
   this milestone waiting.
@@ -1331,7 +1642,7 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   count, the covered list, the excluded list, and a justification per exclusion recorded — and
   the milestone does not close on a recorded number alone: zero unexplained failures, every
   exclusion owned; the satellites resolve from this checkout with nothing resolving outside the
-  component root; and the compositions from JS-1 and JS-3 still publish and run with the library
+  component root; and the compositions from JS-1 and JS-3b still publish and run with the library
   linked, closure reports unchanged in shape.
 - **Seed:** Copied — the source generator and attribute vocabulary, the core library, and its
   tests **as a port wherever the value model changed at JS-4, and labelled as such**. Deleted at
@@ -1401,7 +1712,18 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   caught the resulting language error; the admission order is asserted step by step — depth,
   then fan-out, then already-exhausted allowances, all before the provider is called; then one
   host-call unit plus elapsed wall clock; then the returned length against the nested-bytes bound
-  with an over-bound artifact **dropped unverified**; the conversion table passes case by case,
+  with an over-bound artifact **dropped unverified**. **The depth step is asserted for its
+  unreachability, not for its ordering**: at core contract version 1 a nested load hands back a
+  verified handle with no path to a nested core instantiation, and a provider is mandatorily
+  non-reentrant, so nesting is bounded at one by construction and a failing depth case cannot be
+  constructed. The core carries this as a standing exclusion; this milestone cites it, proves the
+  unreachability from the public surface rather than asserting an order whose violation is
+  impossible, and states the consequence for this language plainly — **a chain of `eval` calls
+  consumes fan-out, not depth**, and fan-out is a per-operation counter whose reset the core's own
+  measurement lane once found defective, so the fan-out assertions here are the load-bearing ones.
+  A guest-initiated-origin handle is **ineligible for any persisted envelope and contributes to no
+  persisted cache key**, asserted by a case over the module map of section 11, which legitimately
+  caches handles and is therefore where the rule has to bite; the conversion table passes case by case,
   with a variant surfacing an unconverted nested failure reported as such, and nested exhaustion
   and cancellation each proved **uncatchable from guest code** with bounded unwinding; a mediator
   used past its invocation is refused; a nested handle presented to a second runtime is refused
@@ -1451,7 +1773,7 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
   stated refusal. Publish the support table and the composition register. Claim a RID only where a
   retained bundle published and ran the named composition on it. Run the release gate that
   refuses the tree while any relevant unit lacks a human decision.
-- **Dependencies:** JS-3 and JS-9 for evidence, JS-8 for the composition set, JS-0 for the
+- **Dependencies:** JS-3a and JS-9 for evidence, JS-8 for the composition set, JS-0 for the
   packaging ruling, and **a named human reading every relevant unit** — the largest
   single-owner task in the programme, decomposed and scheduled rather than assumed.
 - **Objective exit gate:** Every published figure declares exactly one evidence class and returns
@@ -1490,16 +1812,23 @@ non-independence is recorded as a limit on what these gates prove, not resolved 
         └→ JS-1  the whole contract loop on a narrow slice, written fresh
              │        publish-and-run on the smallest closure
              │
+             ├→ JS-3a registry, position encoding, pinned suite, the harness
+             │        ←── the suite revision is pinned (a human action)
+             │        ←── an external correctness signal from here on, and it
+             │            is behind NEITHER of this component's two blockers
+             │
              └→ JS-2  seeding snapshot; the front end becomes this component's code
                   │        ←── (core contract accepted): external gate, held by
                   │            the core, open today — it binds JS-2 onward and
-                  │            binds neither JS-0 nor JS-1
+                  │            binds neither JS-0, JS-1, nor JS-3a
                   │        ←── the copy lands here, behind the boundary rules
                   │
-                  └→ JS-3  static semantics, diagnostic registry, the oracle
-                       │        ←── an external correctness signal from here on
-                       │
-                       └→ JS-4  value representation decided; the object model
+                  ├→ JS-3b static semantics, the lowering, the boundary decision
+                  │         (needs JS-3a's registry to land its codes in;
+                  │          rejoins at JS-6, which is the first manifest
+                  │          that needs the general lowering)
+                  │
+                  └→ JS-4  value representation decided; the object model
                             │
                             └→ JS-5  executor, abrupt completion, measured budgets
                                  │
@@ -1534,19 +1863,27 @@ What this ordering does and does not imply:
   off JS-2 in the diagram rather than off the root. JS-2 onward additionally depend on the core
   contract being *accepted*, which this component does not hold and must record as a blocker
   rather than route around.
-- **One pair can be staffed in parallel, and the chain above should not be read as forbidding
-  it.** JS-3 and JS-4 are gated on JS-1 and JS-2 and on nothing else, and they are different
-  skills with different owners: the verification-boundary and conformance owners hold JS-3's
-  registry and harness, the profile runtime owner holds JS-4's ABI and object model. Once JS-2
-  closes, both may open. Every other edge in the diagram is a real prerequisite — **JS-8 depends
-  on JS-7 and cannot be staffed beside it.**
+- **Two forks are drawn, and both are the point.** The first is **JS-3a**, which hangs off JS-1 and
+  off nothing else: the harness needs a scoring target, not a copied line, and JS-1 produces one.
+  Fusing it into the post-copy work — as an earlier version of this ordering did — put this
+  component's only external correctness signal behind *both* of its blockers when it needed to be
+  behind neither. A team that serialises them spends the whole acceptance wait with no oracle.
+  The second is **JS-3b beside JS-4**: both are gated on JS-2 and on nothing else, and they are
+  different skills with different owners — the verification-boundary owner holds JS-3b's semantics
+  and lowering, the profile runtime owner holds JS-4's ABI and object model. Once JS-2 closes, both
+  may open. Every other edge in the diagram is a real prerequisite, and one of them is argued rather
+  than assumed: **JS-8 depends on JS-7's continuation capture and JS-7 depends on nothing JS-8
+  delivers**, which is what keeps that edge acyclic rather than merely asserted, so JS-8 cannot be
+  staffed beside JS-7.
 - **Several decisions need no copied code** and may be opened against JS-1 rather than waiting on
-  the acceptance gate: the diagnostic registry and position encoding, the value and frame ABI,
-  the continuation design, and the suspension-versus-job-queue routing. A team that reaches the
-  acceptance gate after JS-1 should have prepared work rather than a hard stop.
-- **Two milestones carry the bulk of the cost**, and an eleven-milestone diagram should not be
-  read as eleven equal steps: JS-4, which is the ABI plus the object model, and JS-6, which is
-  the standard library.
+  the acceptance gate: **the entire conformance harness of section 14**, which is by a wide margin
+  the largest of them and is now JS-3a; the diagnostic registry and position encoding; the value and
+  frame ABI; the continuation design; and the suspension-versus-job-queue routing. A team that
+  reaches the acceptance gate after JS-1 should have prepared work rather than a hard stop.
+- **Two milestones carry the bulk of the cost**, and a twelve-milestone diagram should not be
+  read as twelve equal steps: JS-4, which is the ABI plus the object model, and JS-6, which is
+  the standard library. JS-3a and JS-3b are one slot split by dependency rather than two steps
+  added.
 - **Manifest increments are not milestones.** Each mints one identity with a reviewed scope,
   extends the corpus, and re-runs the oracle. The admission criterion for the next increment is
   section 6's allocation table, not a judgement made per commit.
@@ -1559,7 +1896,7 @@ What this ordering does and does not imply:
 |---|---|---|
 | Dependency architecture | acyclic graph asserted against a checked-in manifest in both directions; exact profile reference set read from project text and from metadata; no edge to a legacy component in either direction, inbound recording its branch; no dynamic loading, reflection invocation, IL emit, reflective member write, or module initializer; no aggregate profile-listing type; namespace-matches-assembly scan; per-clause witnesses | any forbidden project or assembly edge, an unresolvable build item cleared as a pass, undeclared dynamic loading, a namespace that does not match its assembly, a registered rule with no witness |
 | Identity and registration | descriptor admitted; one named negative case per catalog refusal the descriptor can provoke; identity grammar bounds; reserved-namespace and package-identity pairing; manifest namespace containment; payload-kind range containment; permutation of registration orders producing byte-identical catalog encodings | a descriptor admitted that should be refused, a refusal reported with the wrong reason, a payload kind outside the declared range, an encoding that depends on declaration order |
-| Format and verifier safety | five verifier outcomes each by a named case; retained malformed corpus with expected-and-observed triples and successful control entries; double replay with no residue; ordering assertions — ceilings before the first byte, refusal before allocation, bound before declared-count use; capability-absent and capability-throws verification; caller-buffer mutation, disposal, and concurrent overwrite after return; bounded-read statuses mapped; corpus extended at every format-growing milestone and replayed through the nested path; coverage-guided fuzzing with minimized regressions | invalid input executes, a verifier throws, a late check is reported as a language fault, a declared count sizes an allocation before its bound comparison, a corpus in which nothing verifies successfully, a fuzz counterexample closed by an allow-list entry |
+| Format and verifier safety | five verifier outcomes each by a named case; retained malformed corpus with expected-and-observed triples and successful control entries; double replay with no residue; ordering assertions — ceilings before the first byte, refusal before allocation, bound before declared-count use; capability-absent and capability-throws verification; caller-buffer mutation, disposal, and concurrent overwrite after return; bounded-read statuses mapped; corpus extended at every format-growing milestone and replayed through the nested path; coverage-guided fuzzing with minimized regressions | invalid input executes, a verifier throws, a late check is reported as a language fault, a declared count sizes an allocation before its bound comparison, a corpus in which nothing verifies successfully, a fuzz counterexample closed by an allow-list entry, **a ceiling breach recorded as an invalid artifact or a framing failure recorded as exhaustion** |
 | Front end | explicit parse options with a concurrent two-goal test; zero ambient or thread-local reads; zero conditional-compilation directives; closure-wide trim and AOT analyzer cleanliness; early-error corpus with one diagnostic per case; single-tokenization assertion; compile-time nesting bound; no-reparse invariant | a parse that depends on ambient state, a warning anywhere in the closure, a source re-scan surviving, a deeply nested program terminating the process |
 | Value model and storage | numbered ABI decision with fixtures and AOT representation probes; two-runtime key and shape isolation with its named falsifier; same-slot-index eviction test; handle-immutability structural scan plus concurrent read; a regression per recorded storage defect; measured storage coverage with owned exclusions | process-wide key or shape state, mutable state reachable from a handle, a cache slot keyed process-globally, a recorded defect without a regression |
 | Executor and lifecycle | five step kinds each by a named case; handler and `finally` matrix in both directions across the boundary; outcome-to-instance-state mapping; no exception escaping; poll-bound breach poisoning the runtime; measured `CallDepth` with a recursion case per claimed RID; a proportionality fixture per named operation family with its declared function, granularity, and an unsimplified control | a language fault reported as a core category, an exception escaping into the core, a process termination on recursion, an operation family shipping without a proportionality fixture, a flat charge passing as proportional |
@@ -1571,6 +1908,8 @@ What this ordering does and does not imply:
 | Native AOT | publish-and-run per claimed RID per composition, warnings as errors, closure report attached; execution-only and runtime-compiler evidence kept separate; suppressions inventoried with owner and reachability | an AOT claim derived from a property, an analyzer, or a non-AOT publish; a closure containing a test, reflection, or dynamic-code assembly; one composition's publish cited for another |
 | Packaging and consumers | package count and identity; produced metadata declaring no foreign dependency; pristine-feed consumer restore-and-run; exercised rollback | a package that resolves a dependency from the internet, a packable identity outside the dated budget, a rollback that does not run |
 | Assurance and review | generator fixed point; refusal-to-invent-a-reviewer negative control; per-declaration blocker naming; origin distribution published; review-mark vocabulary | a generated artifact differing from what the generator would write, a reviewer identifier no source line carries, a stale fingerprint at publish, an unreviewed relevant unit at release |
+| Licence and attribution | upstream derivation carried; modified files marked as changed; the ingested conformance suite's own attribution; the aggregate-repository notice gaining a row in the same change that introduces the copied tree; the core's standing third-party claim confirmed scoped or amended with the release owner co-signing | a notice that omits a copied or ingested tree, an attribution obligation discovered during a publish, a standing claim elsewhere falsified by what this component ships **or by what its tree contains** |
+| Composed-profile safety | a two-profile catalog test with a deliberately hostile neighbour; this profile's fifteen maxima and fifteen defaults published with the catalog-wide consequence recorded; the guest-load maxima proved finite and their clamping exposure named | a maximum or default set to this profile's own usage, a dimension declared inapplicable published with a zero maximum, or a composition hosting two profiles closing a gate with no such test |
 | Measurement | evidence class declared; immutable pre-run manifest; comparable control; A/A lane; every repetition; effective-configuration attestation; register bound to log in both directions | a figure without a control, an envelope widened after seeing a candidate, an effective-versus-requested mismatch, a cross-profile or cross-component comparison |
 
 Generated results are evidence artifacts, not substitutes for pinned manifests and durable
@@ -1587,20 +1926,29 @@ A `Broiler.VM.Profile.JavaScript` preview or stable release must satisfy all app
 
 1. **Support truth:** the support table names the implemented and minimum-accepted core contract
    versions as two separate integers, the accepted format-version range, the accepted manifest
-   set, and the conformance manifest identity and version; every unimplemented capability has a
-   named deterministic failure or a named exclusion; composition label, contract admission, and
-   implemented feature are kept apart per row; no row reads as a bare yes; and no figure from any
-   other component appears.
+   set, the conformance manifest identity and version, **the pinned language-specification edition
+   and suite revision by immutable identifier**, and **the list of surfaces this profile declares
+   varying rather than fixed**; every unimplemented capability has a named deterministic failure or
+   a named exclusion — **including the `WebAssembly` host-object surface, which is named as not
+   provided rather than left to be inferred from a second profile in the image**; composition
+   label, contract admission, and implemented feature are kept apart per row; no row reads as a
+   bare yes; and no figure from any other component appears.
 2. **Graph and registration:** the graph is acyclic and matches its manifest; the profile
-   reference set is exactly the two core assemblies; no edge reaches a legacy component in either
-   direction; registration is static and typed, with no reflection, dynamic loading, IL emit, or
+   reference set is exactly the two core assemblies plus whatever the core's placement ruling
+   admits for this component's own siblings; **no edge reaches a legacy component and no edge
+   reaches another Broiler.VM profile component, in either direction, each with both halves
+   witnessed**; registration is static and typed, with no reflection, dynamic loading, IL emit, or
    module initializer anywhere in a product closure.
 3. **Correctness and safety:** the malformed corpus replays with zero unexplained differences on
    all three publish modes; the verifier throws on nothing; every fuzz counterexample is closed by
-   a named regression; verification is separable from execution and there is exactly one verifier.
+   a named regression; verification is separable from execution and there is exactly one verifier;
+   **no structural, index, stack-consistency or handler-nesting check happens after verification**,
+   and **no ceiling breach is reported as a malformed artifact**.
 4. **Lifecycle and results:** the step-kind mapping holds; no exception escapes into the core; no
    core outcome category or reason code is added; every pause is a suspension holding no thread;
-   the terminal unwind and the release order are observed.
+   **a call-stack overflow is reported as a resource exhaustion naming a dimension and is not
+   fatal, on every claimed RID under Native AOT**; the terminal unwind and the release order are
+   observed.
 5. **Guest loads and policy:** a composition registering no provider refuses deterministically
    with recorded evidence; the conversion table holds in both directions; exhaustion and
    cancellation are not catchable from guest code.
@@ -1616,7 +1964,10 @@ A `Broiler.VM.Profile.JavaScript` preview or stable release must satisfy all app
    declares no foreign dependency; a pristine consumer restores and runs; rollback is exercised.
 9. **Conformance:** a release-candidate run of the pinned suite exists from an exact commit with
    retained artifacts; the ratchet is not regressed; every claimed manifest has its own totals;
-   the failure manifest is generated from that run.
+   the failure manifest is generated from that run; the effective limit vector each run was
+   obtained under is published beside its totals; and **no aggregate percentage is published**,
+   because the host modes and manifests measure different things and this component can be
+   excellent at one and absent at another.
 10. **Measurement honesty:** this profile's own overhead is published with its method and its
    limits; no claim is made without a predeclared rule, a comparable control, an A/A lane, and
    retained repetitions; fuel figures are never compared across profiles and no figure is cited
@@ -1625,8 +1976,14 @@ A `Broiler.VM.Profile.JavaScript` preview or stable release must satisfy all app
     no milestone moves to accepted until a named human has recorded a decision on every relevant
     code unit, bound to that declaration's fingerprint.
 12. **Licence and attribution:** this component's licence and notices carry the upstream
-    derivation, modified files are marked as changed, and no standing third-party claim elsewhere
-    is falsified by what this component ships.
+    derivation and the ingested conformance suite's own attribution, modified files are marked as
+    changed, the aggregate-repository notice names this component in the same change that
+    introduces its copied tree, and no standing third-party claim elsewhere is falsified by what
+    this component ships **or by what its tree contains**.
+13. **Operations:** diagnostics, cancellation, rollback, format-version rejection, corpus and
+    suite-revision drift, **vulnerability response**, and recertification owners are each named.
+    This component ships a parser and an interpreter over untrusted input; a release with no named
+    holder for a report about either is not a release.
 
 Recertification is required when the SDK or runtime, core contract version, package graph, host
 capability surface, Native AOT settings, RID matrix, cache identity, resource defaults, pinned
@@ -1643,6 +2000,11 @@ what recertifies unchanged, what must be re-collected, and what is superseded.
 | The value-representation decision is taken late or implicitly, and the standard library lands typed against a base type this profile then cannot change. | The decision is numbered, states its consequence in both directions, and is a gate on entry to JS-4. **Stop: no standard-library source file is copied while the decision is open; if the answer is replace, JS-6 is re-scoped from a copy to a rewrite before it starts, not during it.** |
 | A verification check migrates out of verification into first execution, because a lazily compiling engine naturally defers function-body checks. | Invalid-artifact is illegal at instantiation, invocation, and resume by the core's own stage matrix; the corpus asserts every structural rejection happens at verification. **Stop: a late check reported as a language fault is a release blocker, because it makes a malformed artifact indistinguishable from a language error and silently hollows out the corpus.** |
 | The oracle reports a failure as a pass, or a green run means nothing. | Failing **and** passing self-check fixtures run before every shard, with an injected-and-reverted scoring regression; per-host-mode totals; configuration failures rather than green results; a ratchet no later run may regress. **Stop: a self-check mismatch stops the run, a green run with zero executed tests is never a pass, and a regression against the ratchet fails the milestone.** |
+| This profile's declared maxima or adopted defaults silently cap a second profile composed beside it in a browser — or a neighbour's caps this profile's guest loads, which this component cannot defend against because its guest-load maxima may not be unconstrained. | JS-0 records the fifteen maxima and fifteen defaults with section 3's catalog-wide consequence stated inside the decision; a two-profile catalog test with a deliberately hostile neighbour catches it rather than a reader; section 15 names the reconciliation as belonging to whichever component composes both. **Stop: a maximum or a default set to this profile's own usage is a composition defect, and `eval` refused with a resource exhaustion naming a dimension this profile did not breach is a defect in the composition, not in the guest.** |
+| The extraction gate is never answered, and the same mechanism — a diagnostic registry, a conformance harness, an assurance floor, a bounded-read projection — is written twice and diverges on the first edit. | This profile supplies its half of the comparison when a second product profile's implementation has merged: file paths, source revision, and a correspondence table, recorded at the milestone that owns the mechanism. It records **no verdict**, because a verdict changes the core graph and because no identifier from another profile component may appear here. Where the second implementation has not merged, it records that the first condition is unsatisfied and names what would satisfy it. **Stop: the verdict is the core architecture owner's and may be either, and an unsatisfied first condition is not a failure — but an unrecorded state is.** |
+| An aggregate conformance percentage is published, and a strong parser hides an absent library surface — or the reverse. | Per-host-mode and per-manifest totals with their own ratchets, the effective limit vector published beside them, and a release gate that forbids an aggregate. **Stop: a single percentage is not a result this component publishes, at any point, for any audience.** |
+| Determinism is claimed more broadly than it holds, and a corpus entry pins an answer the specification lets vary. | Section 6 names every surface this profile fixes and every surface it declares varying, the support table carries the list, and no corpus entry is written over an unlisted varying surface. **Stop: a determinism claim that a legitimate variation falsifies is an untruthful support claim, and a corpus entry over a varying surface is a test that fails for a reason that is not a defect.** |
+| The support table implies a working `WebAssembly` namespace because a browser image contains this profile beside another one. | Section 15 states the boundary, its two frozen facts, and its unowned costs; the support table names the JavaScript API for WebAssembly as not provided, with its exclusion. **Stop: an untruthful support claim is a stop condition; a difficult or slow milestone is not.** |
 | A published claim is untruthful — a composition label read as a capability claim, contract admission read as an implemented feature, or an execution-only publish promoted into evidence for a compiler-bearing one. | The support table separates the three facts per row, each with its own evidence cell; a composition label describes when source is compiled; no publish is cited for another kind. **Stop: a difficult or slow milestone is not itself a stop condition; an untruthful support claim is.** |
 | Unreviewed copied units accumulate faster than anyone reads them, and a passing suite over them reads as assurance. | Annotation at ingest with a ported origin; a generator that refuses to invent a reviewer; decisions bound to fingerprints so a changed unit reports stale; a release gate naming each blocker by its declaration; the origin distribution published. **Stop: no publish, no claimed RID, no support table, and no accepted milestone while any relevant unit lacks a decision.** |
 | Guest-controlled superlinear cost is not charged proportionally, so a bounded budget bounds nothing. | Per-family declared monotone charging functions with a declared granularity and a ceiling floor, each with a retained fixture and an unsimplified control; an uncharged-work breach is a profile fault that poisons the runtime. **Stop: an operation family without a proportionality fixture does not ship in the increment.** |
@@ -1674,7 +2036,7 @@ links below are discovery entry points, **not substitutes for the pinned manifes
 - **The language specification edition**, pinned by immutable revision identifier, retrieved,
   hashed, and archived. Retrieving, hashing, and archiving a third-party document is a **human
   action**: until someone performs it the pin is provisional and carries a named exclusion in the
-  ledger. JS-0 records the intended edition; JS-3 records the pin that was actually taken.
+  ledger. JS-0 records the intended edition; JS-3a records the pin that was actually taken.
 - **The conformance suite revision**, the immutable commit resolved once before any shard starts,
   never a branch name, together with the scope manifests mapping this component's assemblies to
   suite path prefixes.
