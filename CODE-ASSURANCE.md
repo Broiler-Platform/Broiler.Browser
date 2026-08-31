@@ -21,7 +21,7 @@ weaker position, not a stronger one.
 
 | Component | Adopted | Relevant units | Human reviewed | Max security risk | Max IP risk |
 |---|---|---:|---:|---|---|
-| [Broiler.VM](Broiler.VM/CODE-ASSURANCE.md) | **yes** | 898 | **0 (0%)** | High | Low |
+| [Broiler.VM](Broiler.VM/CODE-ASSURANCE.md) | **yes** | 905 | **0 (0%)** | High | Low |
 | Broiler.CSS | no | - | - | - | - |
 | Broiler.DOM | no | - | - | - | - |
 | Broiler.Graphics | no | - | - | - | - |
