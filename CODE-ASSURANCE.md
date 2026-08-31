@@ -68,6 +68,31 @@ every component could share does not exist yet, so this table is hand-maintained
 components' generated reports - which is exactly the kind of hand-maintained summary the policy
 warns against, and is recorded here rather than hidden.
 
+**Two more components are about to build the same thing, and that is now known rather than
+latent.** The roadmaps for `Broiler.VM.Profile.JavaScript` and `Broiler.VM.Profile.WebAssembly`
+each require, as their first milestone's exit gate, an assurance system with the same parts in
+the same words: an annotation grammar, an exemption predicate, a generated review report, a
+fingerprint binding, a release-mode gate that names each blocking declaration individually, a
+generator proved to be a fixed point, and a negative control proving it refuses to invent a
+reviewer. Seven of the nine clauses are identical between the two. None of it names a language.
+
+That is three implementations of one repository-level policy, and the reason it is not simply
+extracted is worth stating rather than leaving as an accident of project budgets. The rule
+`Broiler.VM` applies to shared code requires **two or more product profiles to already implement
+a behaviour in merged code** before a shared component is opened; one implementation exists, so
+the condition fails, and under that rule the duplication is documented and kept rather than
+pre-empted. **This paragraph is that documentation.** The trigger is named: when a second
+component's assurance implementation exists and the two can be compared from real code, open a
+repository-level test-only tool and amend `Broiler.VM`'s project budget to permit it. Until then,
+a second component copying these mechanisms should copy them deliberately and say so, because a
+copy nobody recorded is the thing that makes an eventual extraction expensive.
+
+**One thing this file asserts that the repository does not contain.** The section below names
+`BROILER-CODE-ASSURANCE.md` as the authority. **That file is not in this repository.** Either it
+lives outside it, in which case this file should say where, or it has never been written, in
+which case the authority for every row above is a document nobody can read. Naming the gap is the
+point; resolving it is the owner's, and it cannot be resolved by inventing the policy here.
+
 ## The policy
 
 The authority is the owner's `BROILER-CODE-ASSURANCE.md`. `Broiler.VM` records how it fitted the

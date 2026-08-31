@@ -4,6 +4,22 @@ Broiler is an independent project. References to upstream projects identify the 
 of inherited code and ideas; they do not imply affiliation, sponsorship, endorsement,
 or responsibility for Broiler by the upstream authors.
 
+**The discipline this file follows.** A component whose tree contains third-party-derived
+source, or which ingests a third-party corpus, gains a section here **in the same change
+that introduces it** — not at the release that discovers it. An attribution obligation
+found during a publish is a stop, so the notice moves with the code rather than after it.
+Each section names the component, the upstream, its licence, and where the licence text
+is retained.
+
+**Two subjects are anticipated and neither has landed.** `Broiler.VM.Profile.JavaScript`
+plans to start from a snapshot copy of `Broiler.JS`, which is itself Apache-2.0 and derived
+from Yantra JS, so the *Yantra JS* section below acquires a second component the moment
+that copy lands, and the *Unicode data* section acquires one with it. And
+`Broiler.VM.Profile.WebAssembly` plans to ingest a third-party conformance suite as
+test-only material. Neither is recorded as a section yet because neither exists; both are
+recorded here so that the first person to land one finds the obligation already written
+down.
+
 ## HTML Renderer
 
 Broiler.HTML is derived in part from [HTML Renderer](https://github.com/ArthurHub/HTML-Renderer),
