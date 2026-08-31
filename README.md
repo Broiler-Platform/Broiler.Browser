@@ -133,11 +133,13 @@ The nested-submodule set the browser needs is defined once, in
 | `src/Broiler.HtmlBridge.Dom` | DOM bridge, tree building, JavaScript DOM objects |
 | `src/Broiler.HtmlBridge.Scripting` | JavaScript execution integration |
 | `Broiler.Layout` | Vendored layout engine — see *Dependencies* below |
+| `Broiler.VM.Profile.JavaScript` | JavaScript language profile for `Broiler.VM`. Documents only — `docs/roadmap.md` and its delivery, gates and status files. No source tree yet. |
+| `Broiler.VM.Profile.WebAssembly` | WebAssembly language profile for `Broiler.VM`. Documents only, same shape. No source tree yet. |
 | `eng/`, `scripts/` | Solution manifest and generator |
 
 ## Dependencies
 
-Eight components are submodules, pinned to `main`:
+Nine components are submodules, pinned to `main`:
 
 | Component | Purpose |
 |---|---|
@@ -149,9 +151,14 @@ Eight components are submodules, pinned to `main`:
 | `Broiler.UI` | Platform-neutral retained-mode UI toolkit |
 | `Broiler.HTML` | Modular HTML/CSS renderer |
 | `Broiler.JS` | JavaScript parser, compiler, runtime and built-ins |
+| `Broiler.VM` | Generic execution core — a host for language profiles, not a language. Owns profile selection, bounded loading, the verification boundary, the execution lifecycle, resource authority and diagnostics; owns no opcode set, value representation or language semantics |
 
 `Broiler.JS` carries `Broiler.DateTime`, `Broiler.Regex` and `Broiler.Unicode` as its own
 nested submodules.
+
+`Broiler.VM` is not yet used by the browser heads. It is a separate clean-room component with its
+own roadmap, and `Broiler.JS` does not depend on it. The two intended language profiles live in
+this repository — see *Repository layout* — and are documents only: neither has a source tree yet.
 
 ### Broiler.Layout is vendored, not a submodule
 
