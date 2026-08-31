@@ -304,9 +304,9 @@ not drift:
 | `SectionCount` | Charged | WebAssembly sections are literal, so this dimension has a direct referent for once. Custom sections count. |
 | `DeclaredCount` | Charged | Every vector length in the binary format — types, functions, locals, elements, data, fields, and the rest. |
 | `StructuralDepth` | Charged | Section framing and block nesting, as a *high-water mark* rather than a running total — **which the core already supports and an earlier draft of this row said it did not.** The relevant members are not `TryCharge` alone: the metering surface is four members, and the retain/release pair exists precisely for the eight ceiling-class dimensions, of which this is one. Only a ceiling-class dimension releases; an allowance never refunds. So the discipline is charge on entry, release on exit, and the refusal lands exactly at the ceiling on a long function of many sequential shallow blocks — the failure mode the earlier draft feared is the one the pair prevents. This profile already applies the same discipline to `LiveBytes`, which is declared in this same table as reported on growth and released on disposal — so the earlier reading was internally inconsistent as well as wrong. Section framing is core-metered through the reader in any case. **WA-1 records the charge sites and the one caution below, not the question.** |
-| `NestedLoadDepth` | NotApplicable, maximum **`Unconstrained`** | No guest-initiated loads at any manifest this roadmap allocates. **The two halves of that row are separate declarations and getting the second one wrong is a cross-profile defect**: see below. |
-| `NestedLoadFanOut` | NotApplicable, maximum **`Unconstrained`** | As above. |
-| `NestedLoadBytes` | NotApplicable, maximum **`Unconstrained`** | As above. |
+| `NestedLoadDepth` | NotApplicable, **default `Unconstrained`** | No guest-initiated loads at any manifest this roadmap allocates. The maximum may be whatever this profile likes - it binds this profile's artifacts alone. **The default is the half that reaches a neighbour**, and getting it wrong is a cross-profile defect: see below. |
+| `NestedLoadFanOut` | NotApplicable, **default `Unconstrained`** | As above. |
+| `NestedLoadBytes` | NotApplicable, **default `Unconstrained`** | As above. |
 | `LiveRuntimes` | Charged | Core-metered; this profile adds nothing. |
 
 **One caution the metering surface carries, and it lands on this profile harder than on any other.**
@@ -322,28 +322,35 @@ decision before the memory representation is chosen**, and section 20 records th
 honestly: a refusable retention member would be general to any profile with host-visible retained
 state, which is the counterweight test this profile applies to everyone else's asks.
 
-**Maxima and defaults are both catalog-wide, and this profile declares both.** A profile hard
-maximum is **not** a statement of what this profile uses; the defaults are that. It is the most this
-profile would tolerate a host granting, and a runtime ceiling is clamped to the *tightest* hard
-maximum across every profile in the catalog — while **adopting a profile default resolves to the
-tightest default in the catalog**, which is the half a reader who knows only the first will still
-get wrong. A profile that declares its own usage as its maximum caps every profile composed beside
-it — which matters more here than anywhere else, because the composition this component exists to
-serve is a browser that will also carry a JavaScript profile. Section 17 carries that as a named
-risk with a named owner.
+**A maximum is a statement about this profile; a default is a statement about its neighbours.** A
+profile hard maximum is **not** a statement of what this profile uses; the defaults are that. The
+maximum is the most this profile would tolerate a host granting, and it binds **this profile's own
+modules and nobody else's** — verification intersects the host's ceiling with the maxima of the
+profile the artifact names, and with no other profile's.
 
-**The sharpest case is the one this profile would get wrong by instinct.** A dimension declared
-`NotApplicable` in the budget matrix is a statement about what this profile *charges*. It is not a
-statement about the hard maximum, which is a separate vector, and the clamp reads every dimension of
-every descriptor with no exemption for the inapplicable ones. So writing `0` into the three
-guest-load maxima — the natural thing to write for "I do not use this" — **clamps a JavaScript
-profile beside this one to zero nested loads and makes `eval` fail with a resource exhaustion naming
-a dimension this profile never touches, in a verifier that has done nothing wrong.** The other
-profile cannot defend itself: a declaring profile's guest-load maxima may not be unconstrained, so
-it is obliged to publish finite numbers on exactly the dimensions this one may zero. The remedy is
-already written in the core's own evidence from the first two-profile composition it built: what
-keeps a dimension unreachable is an import list and a budget matrix, **not a zero ceiling**. **WA-0
-publishes these three maxima as `Unconstrained`, explicitly and with the reason recorded.**
+**The default is the declaration that reaches other profiles.** A host that adopts profile defaults
+rather than stating numbers gets the *tightest default in the catalog*, per dimension, because at
+runtime creation no profile has been selected and there is no other safe answer. That matters more
+here than anywhere else, because the composition this component exists to serve is a browser that
+will also carry a JavaScript profile. Section 17 carries it as a named risk with a named owner.
+
+**The sharpest case is the one this profile would get wrong by instinct, and it is about defaults.**
+A dimension declared `NotApplicable` in the budget matrix is a statement about what this profile
+*charges*. It is not a statement about the limit vectors, which are separate, and the default
+resolution reads every descriptor in the catalog with no exemption for the inapplicable ones. So
+writing `0` into the three guest-load **defaults** — the natural thing to write for "I do not use
+this" — **hands a host that adopts defaults a ceiling of zero nested loads, and makes `eval` fail in
+a JavaScript profile beside this one with a resource exhaustion naming a dimension this profile never
+touches, in a verifier that has done nothing wrong.** What keeps a dimension unreachable is an import
+list and a budget matrix, **not a zero ceiling**. **WA-0 publishes these three defaults as
+`Unconstrained`, explicitly and with the reason recorded.**
+
+*Corrected 2026-08-31.* Until then the same paragraph said all of this about the **maxima**, because
+the core also clamped every runtime ceiling to the tightest maximum in the catalog. That clamp was a
+defect against the core's own record, which always placed a profile maximum at verification against
+the selected profile, and it has been removed. This profile's maxima are now its own business; the
+obligation moved one column across to the defaults, which is a smaller exposure — a host that states
+explicit ceilings never meets it at all — but not an absent one.
 
 ### What the core refuses to do for this profile
 
@@ -1525,13 +1532,16 @@ follow, and each is a thing a browser team will meet:
    view a host holds over that memory**, which the JavaScript API models as detaching the buffer. It
    is stated here because a memory representation chosen without it is a representation that cannot
    express it, and WA-5 takes that decision.
-3. **Two profiles in one catalog clamp each other.** A runtime ceiling is clamped to the *tightest*
-   profile hard maximum across every profile in the catalog. So this profile's declared maxima
-   directly constrain any JavaScript profile composed beside it, and vice versa. Section 3 says a
-   profile that declares its own usage as its maximum caps every profile composed beside it; here
-   that stops being an abstract warning and becomes a coordination obligation between two
-   independently owned components. **WA-0 records this profile's maxima with that consequence
-   stated**, and the browser composition — wherever it lives — owns the reconciliation.
+3. **Two profiles in one catalog reach each other through their defaults.** A maximum binds only
+   the profile an artifact names, so this profile's maxima constrain a JavaScript profile beside it
+   not at all. But a host that adopts profile defaults rather than stating ceilings gets the tightest
+   in the catalog, so the two components' *default* vectors are coupled whether or not anyone
+   intended it, and a stingy default here is felt over there. That is a coordination obligation
+   between two independently owned components, smaller than the one this point used to describe -
+   a host stating explicit ceilings never meets it - but real. **WA-0 records this profile's defaults
+   with that consequence stated**, and the browser composition - wherever it lives - owns the
+   reconciliation. Until 2026-08-31 this point said the maxima clamped each other too; that was a
+   defect in the core, not a property of the contract, and it has been removed.
 4. **The trap-to-exception mapping is the embedder's, and the exception-to-trap mapping is
    worse.** A WebAssembly trap surfacing into JavaScript becomes a JavaScript error object; a
    JavaScript exception thrown from an imported function must unwind WebAssembly frames. This
@@ -1727,11 +1737,11 @@ control a copied codebase gets for free from the shape of what it copied.
   profile ID and the `Broiler.*` package identity it obliges, **with the manifest-namespace
   consequence of the spelling stated**; the assembly topology of section 5 and the single-assembly
   default; the feature manifest allocation of section 6 and the `DET` position; the one composition
-  label; **the fifteen profile hard maxima and the fifteen defaults, with section 17's clamping
-  consequence for a second profile in the same catalog stated in the record, and with the three
-  guest-load maxima published as `Unconstrained` and the reason recorded** — a dimension declared
-  inapplicable in the budget matrix is a statement about what this profile charges and not a licence
-  to write a zero into a vector that clamps every profile beside it; the nullable and unsafe-code
+  label; **the fifteen profile hard maxima and the fifteen defaults, with section 17's cross-profile
+  consequence stated in the record, and with the three guest-load *defaults* published as
+  `Unconstrained` and the reason recorded** — a dimension declared inapplicable in the budget matrix
+  is a statement about what this profile charges and not a licence to write a zero into the vector a
+  neighbour adopts. The maxima need no such care: they bind this profile's own modules alone; the nullable and unsafe-code
   positions; and the intended
   specification revision and suite revision, marked provisional until a human has retrieved,
   hashed, and archived them. Stand up this component's own assurance system — annotation grammar,
@@ -1745,10 +1755,11 @@ control a copied codebase gets for free from the shape of what it copied.
   negative control that fails when injected and passes after revert; a scan asserts no source file,
   project file, or build item resolves outside the component root, and an unresolvable build item is
   **reported rather than skipped**; **a two-profile catalog test composes this descriptor beside a
-  second profile that declares guest-initiated loads and proves that this profile's maxima and
-  defaults refuse none of that profile's ordinary work**, with a negative control that writes a zero
-  into one guest-load maximum and observes the neighbour's nested load refused with a resource
-  exhaustion naming a dimension this profile does not use; the public API baseline mechanism exists and compares in both
+  second profile that declares guest-initiated loads and proves that this profile's maxima reach that
+  profile's work not at all, while its adopted defaults do**, with a negative control that writes a
+  zero into one guest-load *default*, adopts defaults rather than stating ceilings, and observes the
+  neighbour's nested load refused with a resource exhaustion naming a dimension this profile does not
+  use; the public API baseline mechanism exists and compares in both
   directions, with an injected member failing it and a deleted member failing it too; the assurance
   generator is a fixed point — a regeneration moves no byte — and a negative control proves it
   refuses to write a reviewer identifier no source line carries; the release-mode gate names each
@@ -2197,7 +2208,7 @@ What this ordering does and does not imply:
 | Conformance | pinned suite revision; self-check with failing **and** passing fixtures before every shard, plus an injected-and-reverted scoring regression; the malformed-before-invalid self-check fixture; per-family totals with per-family ratchets; published effective limit vector per run; registration and both module forms exercised; merge configuration-failure kinds; failure manifest as a queue; the harness's own regression suite; ingestion-path absence scan with a negative control | a failing test reported as a pass, a family selecting files and executing none, a green run with zero executed tests, a regression against a family's ratchet, an aggregate percentage published, a claimed manifest whose totals show it failing |
 | Native AOT | publish-and-run per claimed RID, warnings as errors, closure report attached and read off the published output; suppressions inventoried with owner and reachability | an AOT claim derived from a property, an analyzer, or a non-AOT publish; a closure containing a test, ingestion, reflection, or dynamic-code assembly; one RID's publish cited for another |
 | Packaging and consumers | package count and identity; produced metadata declaring no foreign dependency; pristine-feed consumer restore-and-run through the embedding seam; exercised rollback | a package that resolves a dependency from the internet, a packable identity outside the dated budget, a rollback that does not run |
-| Composed-profile safety | a two-profile catalog test with a neighbour that declares guest-initiated loads; the fifteen maxima and fifteen defaults published with the catalog-wide consequence recorded; the three guest-load maxima published `Unconstrained` with a negative control that zeroes one and observes the neighbour refused | a maximum or default set to this profile's own usage, a dimension declared inapplicable published with a zero maximum, or a composition hosting two profiles closing a gate with no such test |
+| Composed-profile safety | a two-profile catalog test with a neighbour that declares guest-initiated loads, proving this profile's maxima reach it not at all and its adopted defaults do; the fifteen maxima and fifteen defaults published, the defaults recorded as the neighbour-facing half; the three guest-load defaults published `Unconstrained` with a negative control that zeroes one, adopts defaults, and observes the neighbour refused | a default set so tight that a neighbour adopting it is strangled, a maximum mistaken for a neighbour-facing declaration, or a composition hosting two profiles closing a gate with no such test |
 | Assurance and review | generator fixed point; refusal-to-invent-a-reviewer negative control; per-declaration blocker naming; review-mark vocabulary; **origin distribution published, and expected to be uniform** — a unit in this component that is not written here is a finding, because there is no seed to explain it | a generated artifact differing from what the generator would write, a reviewer identifier no source line carries, a stale fingerprint at publish, an unreviewed relevant unit at release, an unexplained non-local origin |
 | Licence and attribution | licence and notices carrying the ingested suite's attribution; modified files marked; the core's standing third-party claim confirmed scoped or amended with the release owner's co-signature | an attribution obligation discovered during a publish, a standing claim elsewhere falsified by what this component's tree contains |
 | Measurement | evidence class declared; immutable pre-run manifest carrying the specification and suite pins and the effective limit vector; comparable control; A/A lane; every repetition; effective-configuration attestation; register bound to log in both directions | a figure without a control, an envelope widened after seeing a candidate, an effective-versus-requested mismatch, a cross-profile or cross-engine comparison |
@@ -2287,7 +2298,7 @@ is superseded.
 | Guest-controlled superlinear cost is not charged proportionally, so a bounded budget bounds nothing — and here the offenders are *single instructions*. | Per-family declared monotone charging functions with a declared granularity and a ceiling floor, each with a retained fixture and an unsimplified control; `memory.fill` over a large memory as the named negative control. **Stop: an operation family without a proportionality fixture does not ship in the increment.** |
 | The test-only ingestion path — a text-format reader, a binary encoder, and a large third-party corpus — leaks into a product closure. | Architecture rules with both halves, a scan over every published closure, and a negative control that adds the reference and observes the failure. **Stop: a product closure containing the ingestion path falsifies the "no text format, no compiler" claim that is most of this profile's value as a counterweight.** |
 | The support table implies a working JavaScript API because a browser image contains this profile. | Section 17 states the boundary and its cost; the support table names the JavaScript API as not provided, with its exclusion. **Stop: an untruthful support claim is a stop condition; a difficult or slow milestone is not.** |
-| This profile's hard maxima silently cap a second profile composed beside it in a browser. | WA-0 records the maxima with the clamping consequence stated in the decision itself; section 17 names the reconciliation as belonging to whichever component composes both. **Stop: a maximum set to this profile's own usage is a composition defect, and it is caught by a two-profile catalog test rather than by a reader.** |
+| This profile's declared **defaults** silently constrain a second profile composed beside it in a browser, wherever the host adopts defaults rather than stating ceilings. | WA-0 records the defaults with the cross-profile consequence stated in the decision itself; section 17 names the reconciliation as belonging to whichever component composes both. **Stop: a guest-load default of zero is a composition defect, and it is caught by a two-profile catalog test rather than by a reader.** The maxima half of this risk was retired on 2026-08-31, when the core removed a catalog-wide maximum clamp its own record never authorised; a maximum now binds only the modules of the profile that declared it. |
 | An aggregate conformance percentage is published, and a strong verifier hides an absent execution surface — or the reverse. | Per-family totals with per-family ratchets, and a release gate that forbids an aggregate. **Stop: a single percentage is not a result this component publishes, at any point, for any audience.** |
 | Determinism is claimed more broadly than it holds. | Section 6 states `DET` and section 12 states that memory growth stays non-deterministic under it, with the support table carrying both. **Stop: a determinism claim that a growth refusal falsifies is an untruthful support claim.** |
 | The extraction gate is never answered, and two verifiers duplicate a worklist and a fixpoint forever. | **This profile may be the second verifier**, so the core's four conditions become answerable for the first time when its validator exists *and a second product profile's has merged* — which is a claim about a schedule this component does not hold, so it is stated as a condition and not as an assumption. WA-8 **supplies this profile's half** — file paths, source revision, correspondence table — and records that it supplied it, or records that the first condition is unsatisfied and names what would satisfy it. It records no verdict: the verdict is the core architecture owner's, it changes the core graph, and the record can only live in the core's own ADR set because this document may carry no identifier from another profile component. **Stop: the verdict may be either and an unsatisfied first condition is not a failure — but an unrecorded state is, and an extraction that creates a profile-to-profile dependency is refused whatever it saves.** |
