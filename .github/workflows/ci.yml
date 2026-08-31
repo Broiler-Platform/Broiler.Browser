@@ -18,6 +18,85 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
 
 jobs:
+  # A gitlink can point at a commit that was never pushed. It resolves for
+  # whoever recorded it and for nobody else, so the tree looks correct locally
+  # and every other job in this file dies in `Check out` with `upload-pack: not
+  # our ref`, before a single project is restored. That has happened twice, in
+  # ce203a1 and again in 4e20dac.
+  #
+  # Two properties this job has that the failure it replaces does not. It checks
+  # out **without submodules** — a job that fetched them would fail in the same
+  # step it exists to explain, so do not add `submodules: true` here. And it
+  # reports **every** bad pin rather than stopping at the first, because
+  # `git submodule update` stops there and tells you nothing about the rest.
+  pins:
+    name: Submodule pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # No submodules, deliberately. See above.
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # `git ls-remote` would only prove a pin is a branch or tag *tip*, and a
+      # pin to any other reachable commit is legitimate. So this asks the remote
+      # the same question `git submodule update` asks — fetch exactly this
+      # commit — which is the ground truth and costs one shallow fetch each.
+      - name: Verify every gitlink exists on its remote
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          resolve() {
+            local url="$1" base
+            case "$url" in
+              ./*|../*)
+                base="$(git config --get remote.origin.url)"
+                base="${base%.git}"
+                while [ "${url#../}" != "$url" ]; do
+                  url="${url#../}"
+                  base="${base%/*}"
+                done
+                printf '%s/%s' "$base" "${url#./}"
+                ;;
+              *) printf '%s' "$url" ;;
+            esac
+          }
+
+          status=0
+          count=0
+
+          while IFS=$'\t' read -r meta path; do
+            sha="${meta##* }"
+            count=$((count + 1))
+
+            url="$(git config --file .gitmodules --get "submodule.$path.url" || true)"
+            if [ -z "$url" ]; then
+              echo "::error file=.gitmodules::$path is a gitlink with no submodule.$path.url entry"
+              status=1
+              continue
+            fi
+            url="$(resolve "$url")"
+
+            if git fetch --quiet --no-tags --depth=1 "$url" "$sha" 2>/dev/null; then
+              printf 'ok       %-20s %s\n' "$path" "$sha"
+            else
+              printf 'MISSING  %-20s %s\n' "$path" "$sha"
+              echo "::error file=.gitmodules::$path is pinned to $sha, which is not reachable from any ref on $url. Either push the commit to that repository, or re-point this gitlink at one that is already there."
+              status=1
+            fi
+          done < <(git ls-tree -r HEAD | grep '^160000 ')
+
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No gitlinks found. This check cannot pass vacuously; if the submodules were removed, remove this job with them."
+            exit 1
+          fi
+
+          echo
+          echo "$count gitlink(s) checked."
+          exit "$status"
+
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them
   # true is failing here when a checked-in solution no longer matches the real
