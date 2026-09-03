@@ -87,3 +87,24 @@ Broiler.VM includes material copied from the ECMAScript Language Specification, 
 **It is a reference document and not code.** Nothing is derived from it, no line of it is copied
 into any assembly, and it compiles into nothing. Ecma International has not reviewed or endorsed
 Broiler.
+
+## test262 (ECMAScript Test Suite)
+
+`Broiler.VM.Composition.JavaScript.Conformance` scores the JavaScript profile against **test262**,
+the ECMAScript conformance suite, and **archives the suite it scores**: roadmap section 14 of that
+component asks for the revision retrieved, hashed *and* archived, and a figure is only checkable by
+a reader who has the material it came from. The suite is retained at
+[`Broiler.VM/src/tests/conformance/pins/`](Broiler.VM/src/tests/conformance/pins/README.md) as the
+archive it was retrieved as, at `tc39/test262` commit
+`ccaac100ff49d81e9ff47a75ff4c60e0bd3f262e`.
+
+test262 is © 2012 Ecma International, made available under the **BSD 3-Clause** licence, whose
+full text Broiler retains beside the archive in
+[`test262-LICENSE.txt`](Broiler.VM/src/tests/conformance/pins/test262-LICENSE.txt) as condition 1
+of that licence requires. **The suite is unmodified** — it is the archive as retrieved, and its
+SHA-256 is what says so — so there is no changed file to mark.
+
+**It is test-only material and reaches nothing that ships.** The harness is handed a suite as a
+directory on a command line; rule **N13** asserts that neither the harness nor any suite directory
+reaches a package or an advertised composition's closure, and that no project file names one. Ecma
+International has not reviewed or endorsed Broiler.
