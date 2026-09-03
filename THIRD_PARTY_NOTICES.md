@@ -11,7 +11,12 @@ found during a publish is a stop, so the notice moves with the code rather than 
 Each section names the component, the upstream, its licence, and where the licence text
 is retained.
 
-**Two subjects are anticipated and neither has landed.** `Broiler.VM.Profile.JavaScript`
+**One has landed since this file was written, and it is the section on ECMA-262 below**: the
+JavaScript profile archives the language-specification edition it pins, which is third-party
+material in the tree and gained its section in the change that introduced it, as the discipline
+above requires.
+
+**Two further subjects are anticipated and neither has landed.** `Broiler.VM.Profile.JavaScript`
 plans to start from a snapshot copy of `Broiler.JS`, which is itself Apache-2.0 and derived
 from Yantra JS, so the *Yantra JS* section below acquires a second component the moment
 that copy lands, and the *Unicode data* section acquires one with it. And
@@ -57,3 +62,28 @@ It is consumed as an unmodified NuGet package by
 [`tests/octane/jint-host`](tests/octane/jint-host), a benchmark tool that is not part of
 any shipped Broiler component and carries no Jint code. Jint is used here only as a
 measurement reference; its authors have not reviewed or endorsed Broiler.
+
+## ECMAScript Language Specification (ECMA-262)
+
+`Broiler.VM.Profile.JavaScript` pins the language-specification edition its feature manifests
+are defined against, and **archives the document rather than citing it**: roadmap section 24 of
+that component asks for the edition retrieved, hashed *and* archived, and a digest is only
+checkable by a reader who has the bytes. The edition is **ECMA-262, 17th edition (ES2026)**,
+retained at
+[`Broiler.VM/src/Broiler.VM.Profile.JavaScript/docs/specification/`](Broiler.VM/src/Broiler.VM.Profile.JavaScript/docs/specification/README.md)
+at `tc39/ecma262` commit `0248456c758431e4bb8e5d26333ff1865123c9cd`.
+
+The specification's natural-language text is licensed under the **Alternative copyright notice
+of the Ecma text copyright policy**, which permits copying and distribution for any purpose
+without fee or royalty on three conditions. Broiler retains the full notice text beside the
+document, in
+[`ECMA-alternative-copyright-notice.txt`](Broiler.VM/src/Broiler.VM.Profile.JavaScript/docs/specification/ECMA-alternative-copyright-notice.txt);
+the document is byte-for-byte unmodified, so its own notices are intact; and the notice of
+changes that condition requires records that there are none.
+
+Broiler.VM includes material copied from the ECMAScript Language Specification, ECMA-262,
+17th edition (ES2026). Copyright © Ecma International.
+
+**It is a reference document and not code.** Nothing is derived from it, no line of it is copied
+into any assembly, and it compiles into nothing. Ecma International has not reviewed or endorsed
+Broiler.
