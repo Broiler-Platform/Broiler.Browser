@@ -142,4 +142,23 @@
     <BroilerDomPath>$(MSBuildThisFileDirectory)Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj</BroilerDomPath>
     <BroilerGraphicsPath>$(MSBuildThisFileDirectory)Broiler.Graphics\src\Broiler.Graphics\Broiler.Graphics.csproj</BroilerGraphicsPath>
   </PropertyGroup>
+
+  <!--
+    The same collapse for the kernels the Broiler.Graphics and Broiler.UI submodules vendor for their own standalone builds.
+    It defaults $(BroilerMediaRoot) and $(BroilerInputRoot) to its nested checkouts and
+    imports this file first, so the values below win in a root build and every Media and
+    Input reference resolves to the single root checkout.
+
+    Without this a root build produced two Broiler.Media.Image assemblies from two checkouts.
+    They disagreed about whether ImageCodec.DecodeAsync is abstract, and whichever copy won
+    the copy into the output directory decided whether the managed codecs could load at all:
+
+      System.TypeLoadException: Method 'DecodeAsync' in type
+      'Broiler.Media.Image.Managed.PngImageCodec' ... does not have an implementation.
+  -->
+  <PropertyGroup>
+    <BroilerMediaRoot>$(MSBuildThisFileDirectory)Broiler.Media</BroilerMediaRoot>
+    <BroilerInputRoot>$(MSBuildThisFileDirectory)Broiler.Input</BroilerInputRoot>
+    <BroilerGraphicsRoot>$(MSBuildThisFileDirectory)Broiler.Graphics</BroilerGraphicsRoot>
+  </PropertyGroup>
 </Project>
