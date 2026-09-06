@@ -97,6 +97,32 @@ jobs:
           echo "$count gitlink(s) checked."
           exit "$status"
 
+  # Two projects with the same assembly name in one graph is the failure mode this
+  # repository keeps hitting: both compile, the copy to the output directory keeps
+  # one of them, and the loser's callers die at runtime with a TypeLoadException
+  # that names a method rather than a build problem. It shipped once as
+  # PngImageCodec.DecodeAsync, and Debug and Release had picked different winners.
+  #
+  # Evaluation only -- it resolves what each project would produce without building
+  # any of it, so it runs in a couple of minutes and fails before the long jobs do.
+  graph:
+    name: Component graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Set up
+        uses: ./.github/actions/setup-broiler
+
+      - name: Verify one assembly per name
+        shell: bash
+        run: ./scripts/check-component-graph.sh
+
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them
   # true is failing here when a checked-in solution no longer matches the real

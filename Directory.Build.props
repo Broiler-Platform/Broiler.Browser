@@ -135,8 +135,12 @@
     chain up to THIS file, so the unconditional values below win and every consumer resolves
     to the single ROOT checkout — one Broiler.Dom node and one Graphics node per build graph.
 
-    scripts/check-submodule-sha-drift.sh fails CI if a nested submodule SHA drifts from the
-    root, so the collapsed single node is always assembly-identical to the nested copy.
+    scripts/check-component-graph.sh fails CI when a solution's project closure still builds
+    two assemblies of the same name, which is what a reference that escaped these properties
+    looks like from the outside. It does not compare submodule SHAs: a nested checkout is
+    expected to trail the root's pin, because the collapse means its sources are compiled
+    against the root's copy and never its own, and whether they still compile is something
+    the build says out loud.
   -->
   <PropertyGroup>
     <BroilerDomPath>$(MSBuildThisFileDirectory)Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj</BroilerDomPath>
