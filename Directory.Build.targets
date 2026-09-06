@@ -25,4 +25,32 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)Broiler.Media\src\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
   </ItemGroup>
 
+  <!--
+    Broiler.Graphics carries its own Broiler.Media gitlink, and that gitlink trails the
+    top-level one. Left alone, a root build compiles Broiler.Graphics against the nested
+    checkout while Broiler.Media.Image.Managed compiles against the top-level one, and both
+    emit an assembly called Broiler.Media.Image into the same output directory. Whichever
+    copy wins the copy decides whether ImageCodec.DecodeAsync is abstract, so the loser's
+    codecs fail to load: "Method 'DecodeAsync' in type 'PngImageCodec' ... does not have an
+    implementation."
+
+    Point Broiler.Graphics at the canonical top-level checkout so a root build produces one
+    Broiler.Media.Image, one Broiler.Media.Video, one Broiler.Media.Video.Windows and one
+    Broiler.Media. Standalone Broiler.Graphics builds keep using its nested checkout.
+
+    Delete this block once the Broiler.Graphics gitlink for Broiler.Media is bumped to the
+    commit this repository pins and the two cannot drift apart again.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectFullPath)' == '$(MSBuildThisFileDirectory)Broiler.Graphics\src\Broiler.Graphics\Broiler.Graphics.csproj'">
+    <ProjectReference Remove="..\..\Broiler.Media\src\Broiler.Media.Image\Broiler.Media.Image.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Broiler.Media\src\Broiler.Media.Image\Broiler.Media.Image.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectFullPath)' == '$(MSBuildThisFileDirectory)Broiler.Graphics\src\Broiler.Graphics.Windows\Broiler.Graphics.Direct2D.csproj'">
+    <ProjectReference Remove="..\..\Broiler.Media\src\Broiler.Media.Video\Broiler.Media.Video.csproj" />
+    <ProjectReference Remove="..\..\Broiler.Media\src\Broiler.Media.Video.Windows\Broiler.Media.Video.Windows.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Broiler.Media\src\Broiler.Media.Video\Broiler.Media.Video.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Broiler.Media\src\Broiler.Media.Video.Windows\Broiler.Media.Video.Windows.csproj" />
+  </ItemGroup>
+
 </Project>
