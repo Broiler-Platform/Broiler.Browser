@@ -97,6 +97,36 @@ jobs:
           echo "$count gitlink(s) checked."
           exit "$status"
 
+  # Two projects with the same assembly name in one graph is the failure mode this
+  # repository keeps hitting: both compile, the copy to the output directory keeps
+  # one of them, and the loser's callers die at runtime with a TypeLoadException
+  # that names a method rather than a build problem. It shipped once as
+  # PngImageCodec.DecodeAsync, and Debug and Release had picked different winners.
+  #
+  # Evaluation only -- it resolves what each project would produce without building
+  # any of it, so it runs in a couple of minutes and fails before the long jobs do.
+  graph:
+    name: Component graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Set up
+        uses: ./.github/actions/setup-broiler
+
+      # Broiler.Android.Browser.slnx is absent deliberately: evaluating it needs the
+      # android workload, which this job does not install and should not pay for.
+      # The `android` job checks that one, after the install it already does.
+      - name: Verify one assembly per name
+        shell: bash
+        run: |
+          ./scripts/check-component-graph.sh             Broiler.Windows.Browser.slnx             Broiler.Linux.Browser.slnx             Broiler.Browser.Tests.slnx
+
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them
   # true is failing here when a checked-in solution no longer matches the real
@@ -193,6 +223,12 @@ jobs:
       # the restore fails outright rather than degrading.
       - name: Install the Android workload
         run: dotnet workload install android
+
+      # The other three solutions are checked in the `graph` job; this one needs the
+      # workload installed above to evaluate at all, so it is checked here.
+      - name: Verify one assembly per name
+        shell: bash
+        run: ./scripts/check-component-graph.sh Broiler.Android.Browser.slnx
 
       - name: Build
         run: dotnet build Broiler.Android.Browser.slnx -c Release

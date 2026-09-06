@@ -97,6 +97,21 @@ function Resolve-ProjectReference {
         '$(BroilerGraphicsPath)',
         (Join-Path $repositoryRoot 'Broiler.Graphics/src/Broiler.Graphics/Broiler.Graphics.csproj'))
 
+    # The component roots are directories, not project paths: a submodule spells its
+    # reference '$(BroilerXRoot)\src\Foo\Foo.csproj' so that the consumer chooses the
+    # checkout and one assembly of each name is built instead of several. These have to
+    # match the values the root Directory.Build.props sets, or the generated solutions
+    # will list a different copy than the build compiles.
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerGraphicsRoot)',
+        (Join-Path $repositoryRoot 'Broiler.Graphics'))
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerMediaRoot)',
+        (Join-Path $repositoryRoot 'Broiler.Media'))
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerInputRoot)',
+        (Join-Path $repositoryRoot 'Broiler.Input'))
+
     # Broiler.Regex prefers a Broiler.Unicode checkout nested beside it and falls back to the
     # one Broiler.JS owns. Both gitlinks point at the same commit, and the mapping table folds
     # the nested spelling onto Broiler.JS/Broiler.Unicode anyway, so resolve to the fallback.

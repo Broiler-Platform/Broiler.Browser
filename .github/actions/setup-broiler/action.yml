@@ -14,33 +14,30 @@ inputs:
 runs:
   using: composite
   steps:
-    # `submodules: true` on the checkout fetches the eight top-level components only.
-    # Each component repository also carries nested checkouts of its own dependencies,
-    # because its projects reference those nested copies by literal relative path so
-    # that the component still builds standalone. The four lines below are exactly the
-    # nested checkouts the browser's project closure reaches, and no more:
+    # `submodules: true` on the checkout fetches the top-level components only. A
+    # component repository also carries nested checkouts of its own dependencies so it
+    # still builds standalone, and those used to have to be initialised here too,
+    # because its projects reached them by literal relative path.
     #
-    #   Broiler.JS        DateTime, Regex and Unicode have no top-level equivalent.
-    #   Broiler.Graphics  its projects take the image abstraction from its own Media.
-    #   Broiler.UI        every control reaches Graphics and Input through its own copies.
-    #   Broiler.UI/…      and that Graphics copy in turn needs its own Media.
+    # They no longer do. Every component reference now goes through a root property --
+    # $(BroilerDomPath), $(BroilerGraphicsPath), $(BroilerGraphicsRoot),
+    # $(BroilerMediaRoot), $(BroilerInputRoot) -- which the root Directory.Build.props
+    # sets to the top-level checkout, so the nested copies are not in any solution's
+    # project closure and initialising them only costs time. Verified by emptying all
+    # of them and building all four solutions clean.
     #
-    # Naming them beats `--recursive`: the Graphics <-> Media reference is mutual, and a
-    # recursive init also drags in checkouts nothing here builds against — the
-    # Broiler.UI/Broiler.Documents tree, Broiler.CSS/Broiler.DOM and
-    # Broiler.HTML/Broiler.Graphics (both redirected to the top-level checkout by
-    # $(BroilerDomPath)/$(BroilerGraphicsPath)), and Broiler.JS/Broiler.Regex/Broiler.Unicode
-    # (which $(BroilerUnicodeRoot) falls back out of when it is absent).
+    # Broiler.JS is the exception, and the reason this step still exists: DateTime,
+    # Regex and Unicode have no top-level equivalent to be redirected to.
     #
-    # Every line is load-bearing. A ProjectReference to a missing project is only a
-    # restore *warning*; the build then fails later on missing types.
+    # A ProjectReference to a missing project is only a restore *warning*, and the
+    # build then fails later on missing types, so if a nested checkout ever becomes
+    # load-bearing again the symptom will not name it. The `graph` job in ci.yml is
+    # what catches the opposite mistake -- a reference that escaped its property and
+    # put two assemblies of one name in the graph.
     - name: Initialise nested submodules
       shell: bash
       run: |
         git -C Broiler.JS submodule update --init Broiler.DateTime Broiler.Regex Broiler.Unicode
-        git -C Broiler.Graphics submodule update --init Broiler.Media
-        git -C Broiler.UI submodule update --init Broiler.Graphics Broiler.Input
-        git -C Broiler.UI/Broiler.Graphics submodule update --init Broiler.Media
 
     - name: Set up .NET
       uses: actions/setup-dotnet@v6

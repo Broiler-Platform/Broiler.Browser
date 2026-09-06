@@ -11,7 +11,7 @@ namespace Broiler.Browser.Core.Tests;
 /// list into a <see cref="BRenderList"/> and lets the platform's text stack draw the glyphs. That
 /// hop is only correct while the font it describes to the backend is the font layout measured the
 /// run with — and it was not: <c>DrawTextItem.FontSize</c> is a point count that went into
-/// <see cref="BFontStyle.SizeInPixels"/>, and <c>DrawTextItem.FontFamily</c> is the whole CSS
+/// <see cref="BFontStyle.Size"/>, and <c>DrawTextItem.FontFamily</c> is the whole CSS
 /// family list, which matches no installed family. Every word was then drawn narrower than the
 /// space layout had reserved for it, so the words in a line visibly drifted apart.
 ///
@@ -20,8 +20,6 @@ namespace Broiler.Browser.Core.Tests;
 /// </summary>
 public class RenderListTextFidelityTests
 {
-    private const double PointsToPixels = 96.0 / 72.0;
-
     /// <summary>
     /// Every unit CSS can express a font size in, including the ones the old string-parsing path
     /// got differently wrong: <c>px</c> was right by accident, <c>rem</c> parsed to nonsense,
@@ -66,8 +64,8 @@ public class RenderListTextFidelityTests
             ILayoutFont measured = Assert.IsAssignableFrom<ILayoutFont>(item.FontHandle);
             BRenderCommand.DrawText command = Find(commands, item);
 
-            // RFont.Size is in points; BFontStyle.SizeInPixels is in CSS pixels.
-            Assert.Equal(measured.Size * PointsToPixels, command.Text.Font.SizeInPixels, 3);
+            // RFont.Size is in points; BFontStyle.Size is in this surface's unit, CSS pixels.
+            Assert.Equal(BFontStyle.PointsToPixels(measured.Size), command.Text.Font.Size, 3);
         }
     }
 
@@ -155,7 +153,7 @@ public class RenderListTextFidelityTests
         // SVG synthesises its item with a font size already in CSS pixels, and the font handle it
         // carries was built at that size in points — so the same rule that fixes HTML text must not
         // scale this one twice.
-        Assert.Equal(18d, svgRun.Text.Font.SizeInPixels, 1);
+        Assert.Equal(18d, svgRun.Text.Font.Size, 1);
     }
 
     [Fact]
