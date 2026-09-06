@@ -42,6 +42,10 @@
 # Usage: scripts/check-component-graph.sh [solution ...]
 #        Defaults to every .slnx at the repository root.
 #
+# Evaluating a solution needs whatever workloads its projects require, so
+# Broiler.Android.Browser.slnx needs the android workload and is checked from the
+# CI job that already installs it rather than from the one that does not.
+#
 # Requires: dotnet, python3.
 
 set -uo pipefail
@@ -75,6 +79,7 @@ annotate() {
 
 status=0
 checked_total=0
+duplicates_found=0
 
 for solution in "${solutions[@]}"; do
   echo "── $solution"
@@ -166,6 +171,7 @@ PY
   fi
 
   status=1
+  duplicates_found=1
   while IFS= read -r assembly; do
     [ -n "$assembly" ] || continue
     annotate "$solution builds $assembly from more than one project. Route the duplicate through the component-root property the root Directory.Build.props sets, so the graph keeps one."
@@ -176,7 +182,9 @@ done
 echo
 if [ "$status" -eq 0 ]; then
   echo "One assembly per name across ${#solutions[@]} solution(s), $checked_total projects."
-else
+elif [ "$duplicates_found" -eq 1 ]; then
   echo "Duplicate assemblies found. See the errors above."
+else
+  echo "A solution could not be evaluated, so nothing was proved about it. See the errors above."
 fi
 exit "$status"

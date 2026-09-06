@@ -119,9 +119,13 @@ jobs:
       - name: Set up
         uses: ./.github/actions/setup-broiler
 
+      # Broiler.Android.Browser.slnx is absent deliberately: evaluating it needs the
+      # android workload, which this job does not install and should not pay for.
+      # The `android` job checks that one, after the install it already does.
       - name: Verify one assembly per name
         shell: bash
-        run: ./scripts/check-component-graph.sh
+        run: |
+          ./scripts/check-component-graph.sh             Broiler.Windows.Browser.slnx             Broiler.Linux.Browser.slnx             Broiler.Browser.Tests.slnx
 
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them
@@ -219,6 +223,12 @@ jobs:
       # the restore fails outright rather than degrading.
       - name: Install the Android workload
         run: dotnet workload install android
+
+      # The other three solutions are checked in the `graph` job; this one needs the
+      # workload installed above to evaluate at all, so it is checked here.
+      - name: Verify one assembly per name
+        shell: bash
+        run: ./scripts/check-component-graph.sh Broiler.Android.Browser.slnx
 
       - name: Build
         run: dotnet build Broiler.Android.Browser.slnx -c Release
