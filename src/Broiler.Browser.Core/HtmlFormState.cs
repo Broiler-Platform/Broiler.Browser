@@ -165,6 +165,33 @@ internal sealed class HtmlFormState
     }
 
     /// <summary>
+    /// Builds the request for a submission a script asked for — <c>form.submit()</c>, which names
+    /// its form by position. Returns <c>null</c> when the document has no such form.
+    /// </summary>
+    /// <remarks>
+    /// No submitter, and that is the specified behaviour rather than a shortcut:
+    /// <c>form.submit()</c> submits the form without any button contributing its name and value,
+    /// which is exactly what separates it from a click on one (HTML §4.10.21.3). The same as
+    /// pressing Enter in a field, and it shares that path's shape for the same reason.
+    /// </remarks>
+    /// <param name="baseUrl">Page URL, used to resolve a relative form action.</param>
+    public PageRequest? TryBuildScriptSubmitRequest(string pageHtml, int formIndex, string baseUrl)
+    {
+        if (string.IsNullOrEmpty(pageHtml) || formIndex < 0)
+            return null;
+
+        DomElement? root = TryParse(pageHtml);
+        if (root is null)
+            return null;
+
+        DomElement? form = HtmlFormSerializer.FindFormByIndex(root, formIndex);
+        if (form is null)
+            return null;
+
+        return BuildRequest(form, submitter: null, ResolveAction(form.GetAttribute("action"), baseUrl));
+    }
+
+    /// <summary>
     /// Turns a form and its submitter into a navigation: a GET puts the form data set
     /// in the query, a POST carries it as the request body.
     /// </summary>

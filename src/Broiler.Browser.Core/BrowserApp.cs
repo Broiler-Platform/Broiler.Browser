@@ -6,6 +6,8 @@ using Broiler.Graphics;
 using Broiler.HTML.Core.Entities;
 using Broiler.HTML.Graphics;
 using Broiler.HtmlBridge;
+using Broiler.HtmlBridge.Dom;
+using Broiler.HtmlBridge.Logging;
 using Broiler.Input.Keyboard;
 using Broiler.Input.Mouse;
 using Broiler.Input.Touch;
@@ -210,6 +212,25 @@ internal sealed class BrowserApp : IDisposable
 
         if (_viewport.StepAnimation())
             _host.RequestInvalidate();
+
+        // A loaded page can still decide to leave — a click handler calling form.submit(), a timer
+        // reaching location.href. The load loop reads that question while a page is loading; this
+        // is the same question afterwards, and it is asked here because this is the UI thread, the
+        // one place NavigateTo can be called from.
+        //
+        // It goes through NavigateTo rather than the load loop's follow, and the difference is
+        // deliberate: this is a new navigation the way a link click is, not another hop in a
+        // redirect chain, so it gets a history entry and a fresh set of loop budgets.
+        // A request for the page already shown is refused only when repeating it would change
+        // nothing: a GET of the same URL is a timer asking for what is on screen. A POST to the same
+        // URL is a submission — the body is the difference, and refusing it would lose the form.
+        if (_viewport.TakePendingNavigation() is { } requested
+            && !(requested.IsRepeatable
+                && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
+        {
+            NavigateTo(requested);
+            return;
+        }
 
         if (!_viewport.HasPendingWork)
         {
@@ -507,60 +528,267 @@ internal sealed class BrowserApp : IDisposable
         return BroilerUserAgent.Apply(new HttpClient(handler));
     }
 
+    /// <summary>
+    /// How many script-initiated navigations one user-initiated navigation will follow before it
+    /// stops and shows the document it has.
+    /// </summary>
+    /// <remarks>
+    /// A page that navigates on load is ordinary — a search form submitting through
+    /// <c>location.replace</c>, a consent interstitial handing over to the page behind it — and
+    /// following it is what a browser does. A page that navigates to itself on every load is also
+    /// ordinary, and following that one forever is a hang with nothing on screen to explain it. The
+    /// cap separates the two without having to tell them apart: ten is well past any real redirect
+    /// chain and still bounded.
+    /// </remarks>
+    internal const int MaxScriptNavigations = 10;
+
+    /// <summary>
+    /// How many times one URL path may be loaded within a single navigation before its further
+    /// requests to itself stop being followed.
+    /// </summary>
+    /// <remarks>
+    /// The global cap counts hops; this counts repeats, and repeats are the failure that actually
+    /// happens. A page re-submitting itself with a fresh token each round has a different URL every
+    /// hop and the same path every hop, so only this notices.
+    /// <para>
+    /// Two loads, so one re-submission. That is the shape of the handshake that works — load, take a
+    /// token or a cookie, ask once more — and a round still going after it is one that is collecting
+    /// rather than converging. Google's search bootstrap is the measured case: the second hop adds a
+    /// <c>sei</c>, the third a <c>sg_ss</c> signal blob, and no number of further hops satisfies it.
+    /// Each one costs a request and buys nothing.
+    /// </para>
+    /// </remarks>
+    internal const int SamePathLoadLimit = 2;
+
+    /// <summary>
+    /// The longest wait a <c>&lt;meta http-equiv="refresh"&gt;</c> may state and still be followed
+    /// straight away.
+    /// </summary>
+    /// <remarks>
+    /// The threshold is a judgement, and the honest version of one: there is no scheduler here, so
+    /// the choice is between acting now and not acting, and the delay is the only evidence of which
+    /// the author wanted. Two seconds is about where a wait stops reading as "you are being
+    /// redirected" and starts reading as "here is something to look at first".
+    /// </remarks>
+    internal static readonly TimeSpan MetaRefreshFollowLimit = TimeSpan.FromSeconds(2);
+
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(PageRequest request, LoadProgress progress, CancellationToken cancellationToken)
     {
         using var pipeline = new RenderingPipeline(
             new PageLoader(PageHttpClient),
             new ScriptEngine());
 
-        var (normalisedUrl, content) = await pipeline.LoadPageAsync(request, cancellationToken).ConfigureAwait(false);
-        cancellationToken.ThrowIfCancellationRequested();
+        // Keyed by everything ahead of the query, because that is what separates a chain moving on
+        // from a page re-submitting itself. See TryFollowNavigation.
+        var loadsPerPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        string html = PrepareForBrowsing(content.Html);
-        InteractiveSession? session = null;
-        try
+        for (int hop = 0; ; hop++)
         {
-            session = pipeline.ExecuteScriptsInteractive(content);
+            var (normalisedUrl, content) = await pipeline.LoadPageAsync(request, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (session is not null)
+            string loadedPath = NavigationPathKey(normalisedUrl);
+            loadsPerPath[loadedPath] = loadsPerPath.TryGetValue(loadedPath, out int loaded) ? loaded + 1 : 1;
+
+            // Read off the fetched markup, before any script runs and whether or not there is any:
+            // ExecuteScriptsInteractive returns null for a page with no scripts, and a refresh
+            // interstitial is very often exactly that. A script that navigates later supersedes it
+            // below, which is the same last-one-wins the bridge applies among script navigations.
+            NavigationRequest? pending = MetaRefreshDiscovery.Find(content.Html, normalisedUrl);
+
+            string html = PrepareForBrowsing(content.Html);
+            InteractiveSession? session = null;
+            try
             {
-                // Settle the load window here, on the load worker. ExecuteScriptsInteractive drains
-                // only microtasks, so without this every timer the page scheduled during load is
-                // left for the viewport to step from the UI thread — inside the WndProc, one
-                // callback batch per animation tick, and a batch of a page like google.com is
-                // measured in seconds. That is the freeze; the CLI never had it because its drain
-                // runs bounded and off any message pump. See docs/browser-load-window-pump.md.
-                //
-                // The settle reports each batch to `progress`, which paints what it can keep up
-                // with. Settling silently is what made a page that animates while loading arrive
-                // already finished: Acid3 advances its score one test per setTimeout, so the whole
-                // count ran here, before the first paint, and the browser showed only the total.
-                string initial = session.SettleLoadWindow(
-                    serialize => progress.PublishFrame(serialize, normalisedUrl),
-                    cancellationToken);
-                if (!string.IsNullOrWhiteSpace(initial))
-                    html = PrepareForBrowsing(initial);
+                session = pipeline.ExecuteScriptsInteractive(content);
+                cancellationToken.ThrowIfCancellationRequested();
 
-                // Same bounded question the viewport pumps on: a page whose only remaining work is
-                // an interval's later ticks is finished loading, and carrying its session forward
-                // would hand the viewport a live JS context it is never going to step.
-                if (!session.HasWorkDueInLoadWindow)
+                if (session is not null)
                 {
-                    session.Dispose();
-                    session = null;
-                }
-            }
+                    // Settle the load window here, on the load worker. ExecuteScriptsInteractive drains
+                    // only microtasks, so without this every timer the page scheduled during load is
+                    // left for the viewport to step from the UI thread — inside the WndProc, one
+                    // callback batch per animation tick, and a batch of a page like google.com is
+                    // measured in seconds. That is the freeze; the CLI never had it because its drain
+                    // runs bounded and off any message pump. See docs/browser-load-window-pump.md.
+                    //
+                    // The settle reports each batch to `progress`, which paints what it can keep up
+                    // with. Settling silently is what made a page that animates while loading arrive
+                    // already finished: Acid3 advances its score one test per setTimeout, so the whole
+                    // count ran here, before the first paint, and the browser showed only the total.
+                    string initial = session.SettleLoadWindow(
+                        serialize => progress.PublishFrame(serialize, normalisedUrl),
+                        cancellationToken);
+                    if (!string.IsNullOrWhiteSpace(initial))
+                        html = PrepareForBrowsing(initial);
 
-            HtmlContainer container = BrowserViewport.CreateContentContainer(html, normalisedUrl);
-            return NavigationLoadResult.FromSuccess(normalisedUrl, container, session);
-        }
-        catch
-        {
-            session?.Dispose();
-            throw;
+                    // After the settle, because the script that decides to leave usually runs on a
+                    // timer rather than inline — asking before it would miss exactly the pages that
+                    // navigate. Before the dispose below, because the request lives on the bridge and
+                    // disposal takes the bridge with it.
+                    //
+                    // A script navigation supersedes a refresh meta the same markup declared: both
+                    // are this document asking to leave, and the script asked second.
+                    //
+                    // Taken, not read: whatever is decided below, this document has now had its
+                    // answer. Left in place, a request declined here was picked up again by the
+                    // post-load path a few seconds later and performed with a fresh set of budgets —
+                    // the refusal undone by the code that was supposed to catch what came after it.
+                    pending = session.TakePendingNavigation() ?? pending;
+
+                    // Same bounded question the viewport pumps on: a page whose only remaining work is
+                    // an interval's later ticks is finished loading, and carrying its session forward
+                    // would hand the viewport a live JS context it is never going to step.
+                    if (!session.HasWorkDueInLoadWindow)
+                    {
+                        session.Dispose();
+                        session = null;
+                    }
+                }
+
+                if (ShouldFollow(pending, normalisedUrl, hop, loadsPerPath)
+                    && ToPageRequest(pending!, html, normalisedUrl) is { } next)
+                {
+                    // The page asked to leave before this document was ever shown, so it is not the
+                    // document to show. Frames already published for it stay on screen until the next
+                    // load publishes its own — the alternative is a blank pane for the length of
+                    // another fetch, which is worse than a stale one.
+                    session?.Dispose();
+                    request = next;
+                    continue;
+                }
+
+                HtmlContainer container = BrowserViewport.CreateContentContainer(html, normalisedUrl);
+                return NavigationLoadResult.FromSuccess(normalisedUrl, container, session, hop > 0);
+            }
+            catch
+            {
+                session?.Dispose();
+                throw;
+            }
         }
     }
+
+    /// <summary>
+    /// Whether a document's navigation request should be followed.
+    /// </summary>
+    /// <remarks>
+    /// Following is the default because not following is what made a search render as the search
+    /// box: Google's results page is reached by <c>location.replace</c>, so a browser that only
+    /// logged the request showed the form the query was typed into. See
+    /// <c>docs/script-initiated-navigation.md</c>.
+    /// <para>
+    /// Deciding <i>whether</i> is separate from building <i>what</i> (<see cref="ToPageRequest"/>)
+    /// because only the second needs the document: a form submission has to be serialized out of it,
+    /// and the rules below would otherwise be untestable without one.
+    /// </para>
+    /// </remarks>
+    internal static bool ShouldFollow(
+        NavigationRequest? navigation,
+        string currentUrl,
+        int hop,
+        Dictionary<string, int> loadsPerPath)
+    {
+        if (navigation is null)
+            return false;
+
+        // A refresh meta states a wait, and the length of it is the author saying what the page is
+        // for. A second or two is a redirect with a courtesy message; half a minute is a notice
+        // meant to be read, and replacing it immediately would take away the thing it exists to
+        // show. Nothing here schedules a navigation for later, so the long ones are declined rather
+        // than deferred — a browser would honour them on a timer, and that is the piece not built.
+        if (navigation.Delay > MetaRefreshFollowLimit)
+        {
+            RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
+                $"{navigation.Url} not followed: it asks to wait {navigation.Delay.TotalSeconds:0.#} s, which is a notice to read rather than a redirect");
+            return false;
+        }
+
+        if (hop >= MaxScriptNavigations)
+        {
+            RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
+                $"{navigation.Url} not followed: {MaxScriptNavigations} script navigations already followed for this one, which is a page navigating in a loop rather than a redirect chain");
+            return false;
+        }
+
+        // A request for the URL already loaded means different things from different methods. From
+        // reload() it is what the page asked for and is followed. From a form submission it is the
+        // ordinary case — a form with no action submits to its own page, and the request that
+        // results is not the one already made: a GET carries a new query and a POST a body. From
+        // assign/replace it is a page re-stating where it is, and following it would fetch the same
+        // bytes to run the same script to ask again.
+        if (navigation.Kind is not (NavigationKind.Reload or NavigationKind.FormSubmit)
+            && string.Equals(navigation.Url, currentUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
+                $"{navigation.Url} not followed: it is the document already loaded");
+            return false;
+        }
+
+        // The same test one level up, because exact equality is not the shape the loop actually
+        // takes. Google's search bootstrap re-navigates to the page it is already on with one more
+        // token in the query each round — `sei`, then a `sg_ss` signal blob — so every hop has a
+        // URL nobody has seen before and the check above never fires. What repeats is the path.
+        //
+        // Following that is useless rather than merely expensive: the round never converges for this
+        // engine, so every extra hop costs a request and buys nothing. google.de answers 429 to it,
+        // and — measured — answers 429 to three hops just as it did to ten, so the number was never
+        // what it was objecting to. The budget is here to stop paying for a conversation that is not
+        // going anywhere, not to stay under a rate limit.
+        string targetPath = NavigationPathKey(navigation.Url);
+        if (loadsPerPath.TryGetValue(targetPath, out int loaded) && loaded >= SamePathLoadLimit)
+        {
+            RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
+                $"{navigation.Url} not followed: {targetPath} has been loaded {loaded} times already, so this is a page re-submitting itself rather than a chain moving on");
+            return false;
+        }
+
+        RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
+            $"following {navigation.Kind} to {navigation.Url} from {currentUrl}");
+        return true;
+    }
+
+    /// <summary>
+    /// The request a navigation actually makes. Everything but a form submission is a GET of the URL
+    /// it names; a form submission has to be serialized out of <paramref name="pageHtml"/> first, and
+    /// yields <c>null</c> when the named form is not in it.
+    /// </summary>
+    /// <remarks>
+    /// A fresh <see cref="HtmlFormState"/> per call, and correct because of when this runs: control
+    /// overrides hold what a user typed, and during a load nobody has typed anything — the page is
+    /// not interactive yet, and the previous page's state was reset at navigation. The viewport's
+    /// live state is used for a submission that happens after load, where it does hold something.
+    /// </remarks>
+    internal static PageRequest? ToPageRequest(NavigationRequest navigation, string pageHtml, string baseUrl) =>
+        BuildRequest(navigation, new HtmlFormState(), pageHtml, baseUrl);
+
+    private static PageRequest? BuildRequest(
+        NavigationRequest navigation,
+        HtmlFormState formState,
+        string pageHtml,
+        string baseUrl)
+    {
+        if (navigation.Kind != NavigationKind.FormSubmit)
+            return PageRequest.ForUrl(navigation.Url);
+
+        PageRequest? submission = formState.TryBuildScriptSubmitRequest(pageHtml, navigation.FormIndex, baseUrl);
+        if (submission is null)
+        {
+            RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
+                $"form.submit() not followed: form {navigation.FormIndex} is not in the document the host has");
+        }
+
+        return submission;
+    }
+
+    /// <summary>
+    /// A URL reduced to everything ahead of its query: the part that stays the same while a page
+    /// re-submits itself, and changes when a chain actually moves on.
+    /// </summary>
+    internal static string NavigationPathKey(string url)
+        => Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)
+            ? uri.GetLeftPart(UriPartial.Path)
+            : url;
 
     private void CompleteBackgroundLoad(
         long navigationGeneration,
@@ -733,6 +961,23 @@ internal sealed class BrowserApp : IDisposable
 
     private void ApplyLoadedPage(NavigationLoadResult result)
     {
+        // The history entry was written by NavigateTo before the load, so it names where the
+        // navigation started, not where a script sent it. Point it at the document actually loaded:
+        // reload and back/forward re-issue that entry, and re-issuing the start would walk the user
+        // through the interstitial again instead of back past it. One followed chain is one
+        // navigation, which is also why the hops in between get no entries of their own.
+        //
+        // Only when a script navigation was followed. The entry can hold a POST body — that is how
+        // revisiting a submission re-issues it — and rewriting it on every load would quietly turn
+        // every form submission into a GET of its own action URL.
+        if (result.FollowedNavigation
+            && !string.IsNullOrEmpty(result.NormalisedUrl)
+            && _historyIndex >= 0
+            && _historyIndex < _history.Count)
+        {
+            _history[_historyIndex] = PageRequest.ForUrl(result.NormalisedUrl);
+        }
+
         SetUrlText(result.NormalisedUrl);
         _viewport.ReplacePage(result.TakeContainer(), result.TakeSession(), result.NormalisedUrl);
 
@@ -989,26 +1234,36 @@ internal sealed class BrowserApp : IDisposable
             string normalisedUrl,
             HtmlContainer? container,
             InteractiveSession? session,
+            bool followedNavigation,
             Exception? error)
         {
             NormalisedUrl = normalisedUrl;
             _container = container;
             _session = session;
+            FollowedNavigation = followedNavigation;
             Error = error;
         }
 
         public string NormalisedUrl { get; }
+
+        /// <summary>
+        /// Whether the document loaded is somewhere a script sent the browser rather than where the
+        /// navigation started. The history entry was written before the load and names the start, so
+        /// this is what says it needs correcting.
+        /// </summary>
+        public bool FollowedNavigation { get; }
 
         public Exception? Error { get; }
 
         public static NavigationLoadResult FromSuccess(
             string normalisedUrl,
             HtmlContainer container,
-            InteractiveSession? session) =>
-            new(normalisedUrl, container, session, null);
+            InteractiveSession? session,
+            bool followedNavigation) =>
+            new(normalisedUrl, container, session, followedNavigation, null);
 
         public static NavigationLoadResult FromError(Exception error) =>
-            new(string.Empty, null, null, error);
+            new(string.Empty, null, null, false, error);
 
         public HtmlContainer TakeContainer()
         {
@@ -1339,6 +1594,25 @@ internal sealed class BrowserApp : IDisposable
                 StopSession();
 
             return html is not null;
+        }
+
+        /// <summary>
+        /// The navigation the live page has asked for since the last step, as the request it makes,
+        /// or <c>null</c> when it has asked for none.
+        /// </summary>
+        /// <remarks>
+        /// The load loop reads the pending navigation while a page is loading; this is the same
+        /// question after it has loaded, and it is the one that matters for <c>form.submit()</c> —
+        /// the usual shape is a user filling a form and a click handler submitting it, which happens
+        /// long after the load window closed. It uses the viewport's own form state, because by now
+        /// the overrides in it are what the user actually typed.
+        /// </remarks>
+        public PageRequest? TakePendingNavigation()
+        {
+            // Consuming, so a request only ever answers once. The load decided about everything the
+            // page asked for before it finished; what reaches here is what it asked for since.
+            NavigationRequest? pending = _interactiveSession?.TakePendingNavigation();
+            return pending is null ? null : BuildRequest(pending, _formState, GetPageHtml(), BaseUrl);
         }
 
         public void StopSession()

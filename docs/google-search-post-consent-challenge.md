@@ -129,17 +129,75 @@ shape that did not throw: an index the compiler holds unboxed — a numeric loca
 a constant-folded expression. `var u; var k = 3; u[k]` was `undefined`, and is now a `TypeError`
 per §6.2.5.5.
 
-Fixed in `Broiler.JS`, pinned by `25da60d`. It is worth reading twice because it turns silence
-into a throw: page script relying on the old answer now stops where it used to carry on. That is
-the point — the old behaviour fed a wrong value onward and surfaced far from its cause, which is
-this page's entire failure mode.
+Fixed in `Broiler.JS` by `0031018c`, "Throw on an indexed read off null or undefined". It is worth
+reading twice because it turns silence into a throw: page script relying on the old answer now
+stops where it used to carry on. That is the point — the old behaviour fed a wrong value onward
+and surfaced far from its cause, which is this page's entire failure mode.
+
+> This was recorded as `25da60d` until 2026-09-07, and no object with that prefix exists in
+> `Broiler.JS` — a wrong SHA, not a missing commit. `0031018c` is an ancestor of the pin.
+
+## Where the page fails now
+
+The entries above were each a missing or wrong binding, and each one moved the page further along.
+That is no longer where it stops.
+
+Reaching the results at all needs a navigation: the search submits from the homepage through
+`location.replace`, which this engine only logged, so the render was the box the query had been
+typed into. That is fixed — see `script-initiated-navigation.md` — and following it uncovered the
+wall behind it.
+
+**Google's bootstrap now re-navigates to `/search` with a longer query each round**, carrying one
+more token: first `sei`, then a `sg_ss` signal blob of some nine hundred characters. It is
+collecting evidence because it is not satisfied with what it has, and it does not become satisfied.
+google.de answers **429 Too Many Requests**.
+
+**The 429 is the verdict, not the rate.** It was first read as a rate limit — the chain ran to the
+hop cap, and ten requests at one endpoint inside twenty seconds is what a limiter is for. Then
+`SamePathLoadLimit` cut the same page to three loads, and the answer was 429 again. Three is not ten,
+so the count was never what was being objected to: the check has decided what this client is, and
+says so with the status code it has. Tuning the budget further will not change it, and reading the
+429 as "slow down" is what sends the next person tuning a constant instead of reading `sg_ss`.
+
+**Watch `gbv`.** An earlier run of the same search carried `gbv=1` — Google's basic, no-JavaScript
+variant, which does not run this check at all and is the version that would render. A later one,
+after the engine had grown a working `location.replace`, `form.submit()` and control-value
+serialization, carried `gbv=2` and the full JavaScript path. The capability the browser presents is
+what selects the route, so making the engine better can move it onto the harder one. Pinning `gbv=1`
+on the URL is the way to see results today, and the difference between the two runs is worth keeping
+in view when judging whether a change helped.
+
+So the shape of the problem has changed. Every entry above was a binding that could be written, and
+writing it moved the page on. This one is the anti-abuse check declining the client, and there is no
+single binding whose absence explains it — the same ambiguity the watchdog section describes, one
+level up. `SamePathLoadLimit` stops the browser paying for a conversation that is going nowhere; it
+is a courtesy, not a fix.
+
+Anyone picking this up should start by finding out *what* the check is unhappy about, rather than
+adding another binding and re-running. `sg_ss` growing between hops is the signal to read.
 
 ## Open
 
-**Which cause fed the watchdog was never recorded.** `BROILER_TRACE_JS_ENTRY` was added to settle
-it in one reproduction, and the nullish indexed-read fix landed alongside as a plausible
-contributor, but no run confirming either is in the tree. Anyone picking this up should
-reproduce with the trace on before assuming the engine fix closed it.
+**~~Which cause fed the watchdog was never recorded.~~ Settled: it is a gap.** A run with
+`BROILER_TRACE_JS_ENTRY=1` on 2026-09-07 marked one crossing, and it is on the idle side:
+
+```
+gap       28472 ms idle before Script:inline-0   <-- WATCHDOG
+```
+
+Per the ambiguity above, that is the answer the trace was built to give. **No turn came near the
+16384 ms threshold** — the slowest were 4585 ms and 2875 ms, botguard's interpreter running, which
+is slow but is not what crossed the line. So the engine was not stalled, and the nullish
+indexed-read fix, whatever else it was worth, is not what this was waiting on.
+
+What it *was* waiting on is the next question and a different one. The gap runs from the previous
+document's last JS to the new document's first inline script, so it spans a navigation: fetch,
+parse, and the handoff into the load window. Twenty-eight seconds of that is a lot, and none of it
+is script. Anyone picking this up should measure inside that span rather than inside the engine —
+`BridgePhaseTrace` already brackets parse and document registration.
+
+**What the bot check wants is not known.** The `sg_ss` round above is where the page stops, and
+nothing in the tree records which signal it is failing on.
 
 ## Supporting surface
 

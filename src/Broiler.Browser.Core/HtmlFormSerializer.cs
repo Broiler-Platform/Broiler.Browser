@@ -53,6 +53,36 @@ internal static class HtmlFormSerializer
     }
 
     /// <summary>
+    /// The form at <paramref name="index"/> in document order, or <c>null</c> when the document has
+    /// no such form.
+    /// </summary>
+    /// <remarks>
+    /// How a <c>form.submit()</c> is located. Script names the form by position because that is what
+    /// survives the trip from the bridge's document to this re-parse of it — a form with no
+    /// <c>id</c> or <c>name</c> has nothing else to be found by, and the two walks are the same
+    /// order.
+    /// </remarks>
+    public static DomElement? FindFormByIndex(DomNode? root, int index)
+    {
+        if (root is null || index < 0)
+            return null;
+
+        var seen = 0;
+        foreach (DomElement element in root.InclusiveDescendants().OfType<DomElement>())
+        {
+            if (!IsTag(element, "form"))
+                continue;
+
+            if (seen == index)
+                return element;
+
+            seen++;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Finds the form control in <paramref name="root"/> that the given attributes
     /// describe — how a clicked submit button, reported by the renderer as a bare
     /// attribute bag, is located in the parsed document. Matches on <c>id</c> first,
