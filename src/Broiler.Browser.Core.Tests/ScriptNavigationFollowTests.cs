@@ -20,15 +20,13 @@ public class ScriptNavigationFollowTests
     private static bool Follows(
         NavigationRequest? navigation,
         string currentUrl,
-        out PageRequest? next,
         int hop = 0,
         Dictionary<string, int>? loadsPerPath = null) =>
-        BrowserApp.TryFollowNavigation(
+        BrowserApp.ShouldFollow(
             navigation,
             currentUrl,
             hop,
-            loadsPerPath ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-            out next);
+            loadsPerPath ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase));
 
     private static Dictionary<string, int> Loaded(string path, int times) =>
         new(StringComparer.OrdinalIgnoreCase) { [path] = times };
@@ -36,7 +34,7 @@ public class ScriptNavigationFollowTests
     [Fact]
     public void NothingRequestedIsNothingFollowed()
     {
-        Assert.False(Follows(null, SearchPath, out _));
+        Assert.False(Follows(null, SearchPath));
     }
 
     [Fact]
@@ -45,7 +43,9 @@ public class ScriptNavigationFollowTests
         // The case the whole feature exists for: the homepage hands over to the results page.
         var pending = new NavigationRequest($"{SearchPath}?q=test", NavigationKind.Replace);
 
-        Assert.True(Follows(pending, "https://www.google.de/", out PageRequest? next));
+        Assert.True(Follows(pending, "https://www.google.de/"));
+
+        PageRequest? next = BrowserApp.ToPageRequest(pending, "<html></html>", "https://www.google.de/");
         Assert.Equal($"{SearchPath}?q=test", next!.Url);
         Assert.Equal(PageRequest.Get, next.Method);
     }
@@ -55,7 +55,7 @@ public class ScriptNavigationFollowTests
     {
         var pending = new NavigationRequest($"{SearchPath}?q=test", NavigationKind.Assign);
 
-        Assert.False(Follows(pending, $"{SearchPath}?q=test", out _));
+        Assert.False(Follows(pending, $"{SearchPath}?q=test"));
     }
 
     [Fact]
@@ -65,8 +65,7 @@ public class ScriptNavigationFollowTests
         // must not swallow it.
         var pending = new NavigationRequest($"{SearchPath}?q=test", NavigationKind.Reload);
 
-        Assert.True(Follows(pending, $"{SearchPath}?q=test", out PageRequest? next));
-        Assert.Equal($"{SearchPath}?q=test", next!.Url);
+        Assert.True(Follows(pending, $"{SearchPath}?q=test"));
     }
 
     [Fact]
@@ -77,8 +76,8 @@ public class ScriptNavigationFollowTests
         // so exact-URL equality never fires; the path is what repeats.
         var pending = new NavigationRequest($"{SearchPath}?q=test&sei=second", NavigationKind.Replace);
 
-        Assert.True(Follows(pending, $"{SearchPath}?q=test", out _, loadsPerPath: Loaded(SearchPath, 1)));
-        Assert.True(Follows(pending, $"{SearchPath}?q=test", out _, loadsPerPath: Loaded(SearchPath, BrowserApp.SamePathLoadLimit - 1)));
+        Assert.True(Follows(pending, $"{SearchPath}?q=test", loadsPerPath: Loaded(SearchPath, 1)));
+        Assert.True(Follows(pending, $"{SearchPath}?q=test", loadsPerPath: Loaded(SearchPath, BrowserApp.SamePathLoadLimit - 1)));
     }
 
     [Fact]
@@ -88,7 +87,7 @@ public class ScriptNavigationFollowTests
         // cap is a burst of requests at one endpoint.
         var pending = new NavigationRequest($"{SearchPath}?q=test&sg_ss=blob", NavigationKind.Replace);
 
-        Assert.False(Follows(pending, $"{SearchPath}?q=test&sei=x", out _, loadsPerPath: Loaded(SearchPath, BrowserApp.SamePathLoadLimit)));
+        Assert.False(Follows(pending, $"{SearchPath}?q=test&sei=x", loadsPerPath: Loaded(SearchPath, BrowserApp.SamePathLoadLimit)));
     }
 
     [Fact]
@@ -98,7 +97,7 @@ public class ScriptNavigationFollowTests
         // the guard would break the redirect chains it is meant to allow.
         var pending = new NavigationRequest("https://www.google.de/sorry/index", NavigationKind.Replace);
 
-        Assert.True(Follows(pending, $"{SearchPath}?q=test", out _, loadsPerPath: Loaded(SearchPath, 99)));
+        Assert.True(Follows(pending, $"{SearchPath}?q=test", loadsPerPath: Loaded(SearchPath, 99)));
     }
 
     [Fact]
@@ -106,7 +105,7 @@ public class ScriptNavigationFollowTests
     {
         var pending = new NavigationRequest("https://www.google.de/somewhere-new", NavigationKind.Replace);
 
-        Assert.False(Follows(pending, SearchPath, out _, hop: BrowserApp.MaxScriptNavigations));
+        Assert.False(Follows(pending, SearchPath, hop: BrowserApp.MaxScriptNavigations));
     }
 
     [Theory]

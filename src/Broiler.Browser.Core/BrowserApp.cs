@@ -213,6 +213,25 @@ internal sealed class BrowserApp : IDisposable
         if (_viewport.StepAnimation())
             _host.RequestInvalidate();
 
+        // A loaded page can still decide to leave — a click handler calling form.submit(), a timer
+        // reaching location.href. The load loop reads that question while a page is loading; this
+        // is the same question afterwards, and it is asked here because this is the UI thread, the
+        // one place NavigateTo can be called from.
+        //
+        // It goes through NavigateTo rather than the load loop's follow, and the difference is
+        // deliberate: this is a new navigation the way a link click is, not another hop in a
+        // redirect chain, so it gets a history entry and a fresh set of loop budgets.
+        // A request for the page already shown is refused only when repeating it would change
+        // nothing: a GET of the same URL is a timer asking for what is on screen. A POST to the same
+        // URL is a submission — the body is the difference, and refusing it would lose the form.
+        if (_viewport.TakePendingNavigation() is { } requested
+            && !(requested.IsRepeatable
+                && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
+        {
+            NavigateTo(requested);
+            return;
+        }
+
         if (!_viewport.HasPendingWork)
         {
             SetBusy(false);
@@ -617,7 +636,8 @@ internal sealed class BrowserApp : IDisposable
                     }
                 }
 
-                if (TryFollowNavigation(pending, normalisedUrl, hop, loadsPerPath, out PageRequest? next))
+                if (ShouldFollow(pending, normalisedUrl, hop, loadsPerPath)
+                    && ToPageRequest(pending!, html, normalisedUrl) is { } next)
                 {
                     // The page asked to leave before this document was ever shown, so it is not the
                     // document to show. Frames already published for it stay on screen until the next
@@ -640,22 +660,25 @@ internal sealed class BrowserApp : IDisposable
     }
 
     /// <summary>
-    /// Whether a script's navigation request should be followed, and as what.
+    /// Whether a document's navigation request should be followed.
     /// </summary>
     /// <remarks>
     /// Following is the default because not following is what made a search render as the search
     /// box: Google's results page is reached by <c>location.replace</c>, so a browser that only
     /// logged the request showed the form the query was typed into. See
     /// <c>docs/script-initiated-navigation.md</c>.
+    /// <para>
+    /// Deciding <i>whether</i> is separate from building <i>what</i> (<see cref="ToPageRequest"/>)
+    /// because only the second needs the document: a form submission has to be serialized out of it,
+    /// and the rules below would otherwise be untestable without one.
+    /// </para>
     /// </remarks>
-    internal static bool TryFollowNavigation(
+    internal static bool ShouldFollow(
         NavigationRequest? navigation,
         string currentUrl,
         int hop,
-        Dictionary<string, int> loadsPerPath,
-        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out PageRequest? next)
+        Dictionary<string, int> loadsPerPath)
     {
-        next = null;
         if (navigation is null)
             return false;
 
@@ -679,10 +702,12 @@ internal sealed class BrowserApp : IDisposable
         }
 
         // A request for the URL already loaded means different things from different methods. From
-        // reload() it is what the page asked for and is followed. From assign/replace it is a page
-        // re-stating where it is, and following it would fetch the same bytes to run the same
-        // script to ask again.
-        if (navigation.Kind != NavigationKind.Reload
+        // reload() it is what the page asked for and is followed. From a form submission it is the
+        // ordinary case — a form with no action submits to its own page, and the request that
+        // results is not the one already made: a GET carries a new query and a POST a body. From
+        // assign/replace it is a page re-stating where it is, and following it would fetch the same
+        // bytes to run the same script to ask again.
+        if (navigation.Kind is not (NavigationKind.Reload or NavigationKind.FormSubmit)
             && string.Equals(navigation.Url, currentUrl, StringComparison.OrdinalIgnoreCase))
         {
             RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
@@ -709,8 +734,40 @@ internal sealed class BrowserApp : IDisposable
 
         RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
             $"following {navigation.Kind} to {navigation.Url} from {currentUrl}");
-        next = PageRequest.ForUrl(navigation.Url);
         return true;
+    }
+
+    /// <summary>
+    /// The request a navigation actually makes. Everything but a form submission is a GET of the URL
+    /// it names; a form submission has to be serialized out of <paramref name="pageHtml"/> first, and
+    /// yields <c>null</c> when the named form is not in it.
+    /// </summary>
+    /// <remarks>
+    /// A fresh <see cref="HtmlFormState"/> per call, and correct because of when this runs: control
+    /// overrides hold what a user typed, and during a load nobody has typed anything — the page is
+    /// not interactive yet, and the previous page's state was reset at navigation. The viewport's
+    /// live state is used for a submission that happens after load, where it does hold something.
+    /// </remarks>
+    internal static PageRequest? ToPageRequest(NavigationRequest navigation, string pageHtml, string baseUrl) =>
+        BuildRequest(navigation, new HtmlFormState(), pageHtml, baseUrl);
+
+    private static PageRequest? BuildRequest(
+        NavigationRequest navigation,
+        HtmlFormState formState,
+        string pageHtml,
+        string baseUrl)
+    {
+        if (navigation.Kind != NavigationKind.FormSubmit)
+            return PageRequest.ForUrl(navigation.Url);
+
+        PageRequest? submission = formState.TryBuildScriptSubmitRequest(pageHtml, navigation.FormIndex, baseUrl);
+        if (submission is null)
+        {
+            RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
+                $"form.submit() not followed: form {navigation.FormIndex} is not in the document the host has");
+        }
+
+        return submission;
     }
 
     /// <summary>
@@ -1465,6 +1522,9 @@ internal sealed class BrowserApp : IDisposable
 
         public string BaseUrl { get; private set; } = string.Empty;
 
+        /// <summary>The last navigation handed out by <see cref="TakePendingNavigation"/>.</summary>
+        private NavigationRequest? _lastTakenNavigation;
+
         // The load window, not "are any timers queued at all" — see
         // InteractiveSession.HasWorkDueInLoadWindow. This drives the busy state, the 16 ms
         // animation tick and StopSession, and on a page holding an interval the unbounded
@@ -1526,6 +1586,33 @@ internal sealed class BrowserApp : IDisposable
                 StopSession();
 
             return html is not null;
+        }
+
+        /// <summary>
+        /// The navigation the live page has asked for since the last step, as the request it makes,
+        /// or <c>null</c> when it has asked for none.
+        /// </summary>
+        /// <remarks>
+        /// The load loop reads the pending navigation while a page is loading; this is the same
+        /// question after it has loaded, and it is the one that matters for <c>form.submit()</c> —
+        /// the usual shape is a user filling a form and a click handler submitting it, which happens
+        /// long after the load window closed. It uses the viewport's own form state, because by now
+        /// the overrides in it are what the user actually typed.
+        /// </remarks>
+        public PageRequest? TakePendingNavigation()
+        {
+            NavigationRequest? pending = _interactiveSession?.PendingNavigation;
+            if (pending is null)
+                return null;
+
+            // Nothing clears the slot, so the same request would be seen on every later tick. It
+            // does not get one: navigating stops the session, and until it does, returning the same
+            // request twice is prevented here rather than relied on there.
+            if (ReferenceEquals(pending, _lastTakenNavigation))
+                return null;
+
+            _lastTakenNavigation = pending;
+            return BuildRequest(pending, _formState, GetPageHtml(), BaseUrl);
         }
 
         public void StopSession()

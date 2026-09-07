@@ -29,7 +29,7 @@ URL in it.
 | HTTP 3xx | yes, inside `HttpClient` |
 | `location.href = url`, `assign`, `replace`, `reload` | **now yes** |
 | `<meta http-equiv="refresh">` | **now yes**, up to a stated wait |
-| `form.submit()` | no — see "Still not wired" |
+| `form.submit()` | **now yes** |
 
 JS-initiated navigation was the gap, and it was the one pages reach for most.
 
@@ -124,6 +124,52 @@ The rewrite happens only when a script navigation was actually followed. History
 POST body — that is how revisiting a submission re-issues it, behind a confirmation — and rewriting
 unconditionally would quietly turn every form submission into a GET of its own action URL.
 
+## The one whose target the bridge cannot finish
+
+`form.submit()` is the only navigation where naming the URL is not enough. A GET form's target
+*includes* its data set — the fields go in the query — so knowing where it goes means serializing
+the form, and the bridge has no serializer.
+
+It also must not grow one. `HtmlFormSerializer` and `HtmlFormState` already do this for a clicked
+submit button and for Enter pressed in a field: entry list, `enctype`, `multipart`, `text/plain`,
+action resolution. A second implementation on the bridge side would be the two drifting apart, and
+the bug that results is a form that submits differently depending on what triggered it.
+
+So the request carries **which form**, and the host builds the rest:
+
+- The bridge resolves the form's `action` into `Url` — the whole target for a POST, the stem of it
+  for a GET — so a log line names where the page was going.
+- `FormIndex` names the form **by position in document order**, because that is what survives the
+  trip. The host re-parses the serialized document rather than sharing the bridge's nodes, and a
+  form with no `id` or `name` has nothing else to be identified by. Both walks are the same order.
+- `HtmlFormState.TryBuildScriptSubmitRequest` turns that into the `PageRequest`, with **no
+  submitter** — `form.submit()` submits without any button contributing its name and value, which is
+  exactly what separates it from a click on one.
+
+Two guards needed adjusting for it. A form with no `action` submits to its own page, so the
+"already loaded" refusal had to stop catching it — the resulting request is not the one already
+made, since a GET carries a new query and a POST a body. The same reasoning applies to the
+post-load check below, which refuses a repeat only when the request is repeatable.
+
+`preventDefault()` on the `submit` listener now means something. The default action used to be
+nothing at all, so cancelling it cancelled a no-op; it is the difference between the form going and
+staying.
+
+## After the page has loaded
+
+The load loop reads the pending navigation while a page is loading. That is the wrong and only
+moment for `form.submit()`, whose usual shape is a user filling a form and a click handler
+submitting it — long after the load window closed.
+
+`BrowserApp.StepAnimation` asks the same question on the UI thread, which is the one place
+`NavigateTo` can be called from, and `BrowserViewport.TakePendingNavigation` answers it using the
+viewport's own `HtmlFormState` — by then its control overrides hold what the user actually typed,
+where during a load there was nothing to hold.
+
+**A post-load navigation is not a hop in a chain.** It goes through `NavigateTo` like a link click:
+its own history entry, and a fresh set of loop budgets. A page navigating five seconds after load is
+not redirecting; it is doing what the user asked for.
+
 ## The one that is not script at all
 
 `<meta http-equiv="refresh">` reaches the host as the same `NavigationRequest`, so it inherits the
@@ -151,11 +197,6 @@ Two things are specific to it:
 
 ## Still not wired
 
-**`form.submit()`.** It fires the `submit` listeners and returns; `FormSubmitBinding` has no form
-serialization, so there is nothing to navigate *to*. Doing it properly means field collection,
-`enctype`, `method` and `action` resolution, and multipart for file inputs — `PageRequest` already
-models the POST it would produce, so the missing half is entirely on the bridge side.
-
 **The non-interactive `ScriptEngine.Execute` path.** It returns serialized HTML with nowhere to put
 a pending navigation. A host on that path reads `IDomBridgeRuntime.PendingNavigation` directly,
 which is why the property is on the runtime interface rather than only on `InteractiveSession`.
@@ -169,3 +210,9 @@ declined rather than deferred. A browser honours any wait by scheduling it, and 
 retire `MetaRefreshFollowLimit` entirely — the threshold exists only because the choice today is
 between acting now and not acting. It needs a timer that survives the load loop and respects the
 navigation generation, so it is a real piece of work rather than a constant to delete.
+
+**A form submitted by a script that also set field values.** The host serializes from the document
+it re-parses, layered with the viewport's control overrides. A script that writes `input.value`
+moves the DOM property, and whether that reaches the serialized attribute is a question about
+`DomBridge` serialization rather than about navigation — untested here, and the first thing to check
+if a submitted form carries stale values.

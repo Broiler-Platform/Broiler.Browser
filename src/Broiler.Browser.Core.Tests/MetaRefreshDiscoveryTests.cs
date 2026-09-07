@@ -123,9 +123,9 @@ public class MetaRefreshDiscoveryTests
     {
         var request = new NavigationRequest("https://example.test/next", NavigationKind.MetaRefresh, TimeSpan.Zero);
 
-        Assert.True(BrowserApp.TryFollowNavigation(
-            request, PageUrl, 0, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase), out PageRequest? next));
-        Assert.Equal("https://example.test/next", next!.Url);
+        Assert.True(BrowserApp.ShouldFollow(
+            request, PageUrl, 0, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)));
+        Assert.Equal("https://example.test/next", BrowserApp.ToPageRequest(request, "<html></html>", PageUrl)!.Url);
     }
 
     [Fact]
@@ -138,8 +138,8 @@ public class MetaRefreshDiscoveryTests
             NavigationKind.MetaRefresh,
             BrowserApp.MetaRefreshFollowLimit + TimeSpan.FromSeconds(1));
 
-        Assert.False(BrowserApp.TryFollowNavigation(
-            request, PageUrl, 0, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase), out _));
+        Assert.False(BrowserApp.ShouldFollow(
+            request, PageUrl, 0, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)));
     }
 
     [Fact]
@@ -149,14 +149,13 @@ public class MetaRefreshDiscoveryTests
         // stopped the search re-submission apply to a refresh loop without knowing it is one.
         var request = new NavigationRequest("https://example.test/interstitial?n=2", NavigationKind.MetaRefresh);
 
-        Assert.False(BrowserApp.TryFollowNavigation(
+        Assert.False(BrowserApp.ShouldFollow(
             request,
             PageUrl,
             0,
             new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
             {
                 [BrowserApp.NavigationPathKey(PageUrl)] = BrowserApp.SamePathLoadLimit,
-            },
-            out _));
+            }));
     }
 }
