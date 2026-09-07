@@ -129,10 +129,38 @@ shape that did not throw: an index the compiler holds unboxed — a numeric loca
 a constant-folded expression. `var u; var k = 3; u[k]` was `undefined`, and is now a `TypeError`
 per §6.2.5.5.
 
-Fixed in `Broiler.JS`, pinned by `25da60d`. It is worth reading twice because it turns silence
-into a throw: page script relying on the old answer now stops where it used to carry on. That is
-the point — the old behaviour fed a wrong value onward and surfaced far from its cause, which is
-this page's entire failure mode.
+Fixed in `Broiler.JS` by `0031018c`, "Throw on an indexed read off null or undefined". It is worth
+reading twice because it turns silence into a throw: page script relying on the old answer now
+stops where it used to carry on. That is the point — the old behaviour fed a wrong value onward
+and surfaced far from its cause, which is this page's entire failure mode.
+
+> This was recorded as `25da60d` until 2026-09-07, and no object with that prefix exists in
+> `Broiler.JS` — a wrong SHA, not a missing commit. `0031018c` is an ancestor of the pin.
+
+## Where the page fails now
+
+The entries above were each a missing or wrong binding, and each one moved the page further along.
+That is no longer where it stops.
+
+Reaching the results at all needs a navigation: the search submits from the homepage through
+`location.replace`, which this engine only logged, so the render was the box the query had been
+typed into. That is fixed — see `script-initiated-navigation.md` — and following it uncovered the
+wall behind it.
+
+**Google's bootstrap now re-navigates to `/search` with a longer query each round**, carrying one
+more token: first `sei`, then a `sg_ss` signal blob of some nine hundred characters. It is
+collecting evidence because it is not satisfied with what it has, and it does not become satisfied.
+Followed to the hop cap, that is ten requests at one endpoint inside twenty seconds, and google.de
+answers **429 Too Many Requests**.
+
+So the shape of the problem has changed. Every entry above was a binding that could be written, and
+writing it moved the page on. This one is the anti-abuse check declining the client, and there is no
+single binding whose absence explains it — the same ambiguity the watchdog section describes, one
+level up. `SamePathLoadLimit` stops the browser hammering a server it cannot satisfy; it is a
+courtesy, not a fix.
+
+Anyone picking this up should start by finding out *what* the check is unhappy about, rather than
+adding another binding and re-running. `sg_ss` growing between hops is the signal to read.
 
 ## Open
 
@@ -140,6 +168,9 @@ this page's entire failure mode.
 it in one reproduction, and the nullish indexed-read fix landed alongside as a plausible
 contributor, but no run confirming either is in the tree. Anyone picking this up should
 reproduce with the trace on before assuming the engine fix closed it.
+
+**What the bot check wants is not known.** The `sg_ss` round above is where the page stops, and
+nothing in the tree records which signal it is failing on.
 
 ## Supporting surface
 
