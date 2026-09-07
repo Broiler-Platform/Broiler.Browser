@@ -22,7 +22,7 @@ public class FormSubmitNavigationTests
     {
         using var session = new ScriptEngine().ExecuteInteractive([script], [], html, PageUrl);
         Assert.NotNull(session);
-        return session!.PendingNavigation;
+        return session!.TakePendingNavigation();
     }
 
     [Fact]

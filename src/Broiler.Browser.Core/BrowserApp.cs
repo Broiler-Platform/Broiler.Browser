@@ -629,7 +629,12 @@ internal sealed class BrowserApp : IDisposable
                     //
                     // A script navigation supersedes a refresh meta the same markup declared: both
                     // are this document asking to leave, and the script asked second.
-                    pending = session.PendingNavigation ?? pending;
+                    //
+                    // Taken, not read: whatever is decided below, this document has now had its
+                    // answer. Left in place, a request declined here was picked up again by the
+                    // post-load path a few seconds later and performed with a fresh set of budgets —
+                    // the refusal undone by the code that was supposed to catch what came after it.
+                    pending = session.TakePendingNavigation() ?? pending;
 
                     // Same bounded question the viewport pumps on: a page whose only remaining work is
                     // an interval's later ticks is finished loading, and carrying its session forward
@@ -1528,9 +1533,6 @@ internal sealed class BrowserApp : IDisposable
 
         public string BaseUrl { get; private set; } = string.Empty;
 
-        /// <summary>The last navigation handed out by <see cref="TakePendingNavigation"/>.</summary>
-        private NavigationRequest? _lastTakenNavigation;
-
         // The load window, not "are any timers queued at all" — see
         // InteractiveSession.HasWorkDueInLoadWindow. This drives the busy state, the 16 ms
         // animation tick and StopSession, and on a page holding an interval the unbounded
@@ -1607,18 +1609,10 @@ internal sealed class BrowserApp : IDisposable
         /// </remarks>
         public PageRequest? TakePendingNavigation()
         {
-            NavigationRequest? pending = _interactiveSession?.PendingNavigation;
-            if (pending is null)
-                return null;
-
-            // Nothing clears the slot, so the same request would be seen on every later tick. It
-            // does not get one: navigating stops the session, and until it does, returning the same
-            // request twice is prevented here rather than relied on there.
-            if (ReferenceEquals(pending, _lastTakenNavigation))
-                return null;
-
-            _lastTakenNavigation = pending;
-            return BuildRequest(pending, _formState, GetPageHtml(), BaseUrl);
+            // Consuming, so a request only ever answers once. The load decided about everything the
+            // page asked for before it finished; what reaches here is what it asked for since.
+            NavigationRequest? pending = _interactiveSession?.TakePendingNavigation();
+            return pending is null ? null : BuildRequest(pending, _formState, GetPageHtml(), BaseUrl);
         }
 
         public void StopSession()

@@ -178,10 +178,23 @@ adding another binding and re-running. `sg_ss` growing between hops is the signa
 
 ## Open
 
-**Which cause fed the watchdog was never recorded.** `BROILER_TRACE_JS_ENTRY` was added to settle
-it in one reproduction, and the nullish indexed-read fix landed alongside as a plausible
-contributor, but no run confirming either is in the tree. Anyone picking this up should
-reproduce with the trace on before assuming the engine fix closed it.
+**~~Which cause fed the watchdog was never recorded.~~ Settled: it is a gap.** A run with
+`BROILER_TRACE_JS_ENTRY=1` on 2026-09-07 marked one crossing, and it is on the idle side:
+
+```
+gap       28472 ms idle before Script:inline-0   <-- WATCHDOG
+```
+
+Per the ambiguity above, that is the answer the trace was built to give. **No turn came near the
+16384 ms threshold** — the slowest were 4585 ms and 2875 ms, botguard's interpreter running, which
+is slow but is not what crossed the line. So the engine was not stalled, and the nullish
+indexed-read fix, whatever else it was worth, is not what this was waiting on.
+
+What it *was* waiting on is the next question and a different one. The gap runs from the previous
+document's last JS to the new document's first inline script, so it spans a navigation: fetch,
+parse, and the handoff into the load window. Twenty-eight seconds of that is a lot, and none of it
+is script. Anyone picking this up should measure inside that span rather than inside the engine —
+`BridgePhaseTrace` already brackets parse and document registration.
 
 **What the bot check wants is not known.** The `sg_ss` round above is where the page stops, and
 nothing in the tree records which signal it is failing on.
