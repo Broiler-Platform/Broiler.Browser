@@ -211,18 +211,37 @@ retire `MetaRefreshFollowLimit` entirely — the threshold exists only because t
 between acting now and not acting. It needs a timer that survives the load loop and respects the
 navigation generation, so it is a real piece of work rather than a constant to delete.
 
-**A `textarea` or `select` whose value a script set.** `input.value` reaches the serialized document
-and so reaches a submission — that was checked, was wrong, and is fixed; see below. The other two
-controls were checked at the same time and **do not reflect at all**: a script writing
-`textarea.value` or `select.value` leaves the markup saying what the page shipped with, so a form
-submitted afterwards carries the old text or the old selection.
+**`outerHTML` reflects an input's value and not a textarea's or a select's.** Document
+serialization runs `ReflectRenderState` over a render projection, and that is the path a submission
+is built from, so all three controls are right there. `element.outerHTML` does not: it goes through
+the attribute enumeration alone, which can reflect an `input` — a value *is* an attribute — and has
+nowhere to put the other two, whose values are child text and a sibling's attribute. Measured, on a
+page that set all three:
 
-Neither is the same fix. `input` had working machinery behind an over-tight guard, where a
-`textarea`'s value is its text content and a `select`'s is a `selected` attribute on one of its
-options — reflecting those means writing child nodes and moving an attribute between siblings, which
-is new serialization rather than a loosened condition.
+```html
+<div id="o"><input id="i" value="wi"><textarea id="t">pt</textarea>
+<select id="s"><option value="a" selected="">A</option><option value="b">B</option></select></div>
+```
 
-### What `input.value` did
+`wi` is the written value; `pt` and the `selected` on `A` are what the page shipped with. A page
+reading its own markup back sees one control current and two stale. Submissions are unaffected.
+
+### What the value reflection did
+
+`input.value` reached the serialized document only when the input had **no `value` attribute** and
+the value was **non-empty**. So an author's `value="…"` outlived every script that overwrote it, and
+clearing a prefilled field left the old text in the markup. Since a submission is built by
+re-parsing that markup, what went to the server was the value the page shipped with rather than the
+one on screen — silently, and looking entirely correct.
+
+`textarea` and `select` did not reflect at all, which is the same bug reached from further back:
+there was no machinery to loosen. Each control now writes into the place HTML actually keeps its
+value — an `input`'s attribute, a `textarea`'s child text (§4.10.11), and for a `select` the
+`selected` attribute moving to the option it chose, through the same option walk the select binding
+selects with, so "the third option" cannot mean two things.
+
+`RuntimeValue.TryGet` answers "did a script set this", which is the only condition any of it needed;
+a control the page never touched is left exactly as authored.
 
 Reflection ran only onto an input that had **no `value` attribute**, and only for a **non-empty**
 string. So an author's `value="…"` outlived every script that overwrote it, and clearing a prefilled

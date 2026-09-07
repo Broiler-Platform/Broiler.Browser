@@ -79,4 +79,73 @@ public class FormControlValueReflectionTests
 
         Assert.Equal("https://example.test/search?q=written", request!.Url);
     }
+
+    [Fact]
+    public void ATextareaValueIsWrittenIntoItsChildText()
+    {
+        // A textarea has no `value` attribute for a write to land in — its value IS its child text
+        // (HTML §4.10.11), so that is what reflection has to change.
+        string html = Serialize(
+            "<html><body><form><textarea id=\"t\" name=\"t\">preset</textarea></form></body></html>",
+            "document.getElementById('t').value = 'written';");
+
+        Assert.Contains("written", html);
+        Assert.DoesNotContain("preset", html);
+    }
+
+    [Fact]
+    public void ASubmittedTextareaCarriesTheValueTheScriptWrote()
+    {
+        PageRequest? request = SubmitAfter(
+            "<html><body><form action=\"/save\" method=\"get\"><textarea id=\"t\" name=\"t\">preset</textarea></form></body></html>",
+            """
+            document.getElementById('t').value = 'written';
+            document.forms[0].submit();
+            """);
+
+        Assert.Equal("https://example.test/save?t=written", request!.Url);
+    }
+
+    [Fact]
+    public void ASelectValueMovesTheSelectedAttribute()
+    {
+        // A select's value is which option carries `selected`, so reflecting it moves an attribute
+        // between siblings rather than writing one on the select.
+        string html = Serialize(
+            "<html><body><form><select id=\"s\" name=\"s\"><option value=\"a\" selected>A</option><option value=\"b\">B</option></select></form></body></html>",
+            "document.getElementById('s').value = 'b';");
+
+        int a = html.IndexOf("value=\"a\"", StringComparison.Ordinal);
+        int b = html.IndexOf("value=\"b\"", StringComparison.Ordinal);
+        int selected = html.IndexOf("selected", StringComparison.Ordinal);
+
+        Assert.True(selected > b, $"`selected` should sit on the second option: {html}");
+        Assert.True(a < b);
+    }
+
+    [Fact]
+    public void ASubmittedSelectCarriesTheOptionTheScriptChose()
+    {
+        PageRequest? request = SubmitAfter(
+            "<html><body><form action=\"/pick\" method=\"get\"><select id=\"s\" name=\"s\"><option value=\"a\" selected>A</option><option value=\"b\">B</option></select></form></body></html>",
+            """
+            document.getElementById('s').value = 'b';
+            document.forms[0].submit();
+            """);
+
+        Assert.Equal("https://example.test/pick?s=b", request!.Url);
+    }
+
+    [Fact]
+    public void AControlThePageNeverTouchedIsLeftAsAuthored()
+    {
+        // TryGet answers "did a script set this", and nothing else should move.
+        string html = Serialize(
+            "<html><body><form><textarea name=\"t\">preset</textarea>"
+            + "<select name=\"s\"><option value=\"a\" selected>A</option><option value=\"b\">B</option></select></form></body></html>",
+            "var untouched = 1;");
+
+        Assert.Contains("preset", html);
+        Assert.Contains("selected", html);
+    }
 }
