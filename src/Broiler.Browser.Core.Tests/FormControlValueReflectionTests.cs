@@ -148,4 +148,80 @@ public class FormControlValueReflectionTests
         Assert.Contains("preset", html);
         Assert.Contains("selected", html);
     }
+
+    /// <summary>
+    /// What the page itself reads back, which is a different serialization path from the document
+    /// one above: no render projection, so each control has to answer for itself.
+    /// </summary>
+    private static string OuterHtmlAfter(string body, string script)
+    {
+        string html = Serialize(
+            $"<html><body>{body}<p id=\"out\"></p></body></html>",
+            script + "; document.getElementById('out').textContent = document.getElementById('o').outerHTML;");
+
+        int start = html.IndexOf("<p id=\"out\">", StringComparison.Ordinal) + "<p id=\"out\">".Length;
+        int end = html.IndexOf("</p>", start, StringComparison.Ordinal);
+        return System.Net.WebUtility.HtmlDecode(html[start..end]);
+    }
+
+    [Fact]
+    public void OuterHtmlReportsAnInputsWrittenValue()
+    {
+        Assert.Contains(
+            "value=\"written\"",
+            OuterHtmlAfter(
+                "<div id=\"o\"><input id=\"i\" value=\"preset\"></div>",
+                "document.getElementById('i').value = 'written';"));
+    }
+
+    [Fact]
+    public void OuterHtmlReportsATextareasWrittenValue()
+    {
+        string outer = OuterHtmlAfter(
+            "<div id=\"o\"><textarea id=\"t\">preset</textarea></div>",
+            "document.getElementById('t').value = 'written';");
+
+        Assert.Contains("written", outer);
+        Assert.DoesNotContain("preset", outer);
+    }
+
+    [Fact]
+    public void OuterHtmlReportsTheOptionAScriptChose()
+    {
+        string outer = OuterHtmlAfter(
+            "<div id=\"o\"><select id=\"s\"><option value=\"a\" selected>A</option><option value=\"b\">B</option></select></div>",
+            "document.getElementById('s').value = 'b';");
+
+        int a = outer.IndexOf("value=\"a\"", StringComparison.Ordinal);
+        int b = outer.IndexOf("value=\"b\"", StringComparison.Ordinal);
+        int selected = outer.IndexOf("selected", StringComparison.Ordinal);
+
+        Assert.True(selected > b, $"`selected` should have moved to the second option: {outer}");
+        Assert.True(a < b);
+    }
+
+    [Fact]
+    public void OuterHtmlLeavesAnUntouchedControlAsAuthored()
+    {
+        string outer = OuterHtmlAfter(
+            "<div id=\"o\"><textarea id=\"t\">preset</textarea>"
+            + "<select id=\"s\"><option value=\"a\" selected>A</option><option value=\"b\">B</option></select></div>",
+            "var untouched = 1;");
+
+        Assert.Contains("preset", outer);
+        Assert.Contains("selected", outer);
+    }
+
+    [Fact]
+    public void ATextareaWrittenValueIsEscapedTheWayAnAuthoredOneIs()
+    {
+        // Textarea is not a raw-text element — only script, style and noscript are — so its text is
+        // escaped on the way out, and a value a script wrote must not become markup.
+        string outer = OuterHtmlAfter(
+            "<div id=\"o\"><textarea id=\"t\">preset</textarea></div>",
+            "document.getElementById('t').value = '<b>&amp;</b>';");
+
+        Assert.Contains("&lt;b&gt;", outer);
+        Assert.DoesNotContain("<b>", outer);
+    }
 }
