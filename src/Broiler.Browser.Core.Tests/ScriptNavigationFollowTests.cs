@@ -23,7 +23,7 @@ public class ScriptNavigationFollowTests
         out PageRequest? next,
         int hop = 0,
         Dictionary<string, int>? loadsPerPath = null) =>
-        BrowserApp.TryFollowScriptNavigation(
+        BrowserApp.TryFollowNavigation(
             navigation,
             currentUrl,
             hop,

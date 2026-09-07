@@ -27,8 +27,8 @@ URL in it.
 | Mechanism | Followed? |
 | --- | --- |
 | HTTP 3xx | yes, inside `HttpClient` |
-| `<meta http-equiv="refresh">` | no |
 | `location.href = url`, `assign`, `replace`, `reload` | **now yes** |
+| `<meta http-equiv="refresh">` | **now yes**, up to a stated wait |
 | `form.submit()` | no — see "Still not wired" |
 
 JS-initiated navigation was the gap, and it was the one pages reach for most.
@@ -124,14 +124,37 @@ The rewrite happens only when a script navigation was actually followed. History
 POST body — that is how revisiting a submission re-issues it, behind a confirmation — and rewriting
 unconditionally would quietly turn every form submission into a GET of its own action URL.
 
+## The one that is not script at all
+
+`<meta http-equiv="refresh">` reaches the host as the same `NavigationRequest`, so it inherits the
+guards above without knowing they exist — a refresh loop is bounded by the same per-path budget that
+stopped the search re-submission.
+
+**It does not come through the bridge, and that is the point.** `MetaRefreshDiscovery` reads the
+fetched markup directly, because `ExecuteScriptsInteractive` returns `null` for a page with no
+scripts and a refresh interstitial is usually exactly that page. Discovering it on the bridge would
+have missed every document that actually uses it. A script navigation found later supersedes it —
+both are this document asking to leave, and the script asked second.
+
+Two things are specific to it:
+
+- **The `content` attribute has more forms than its one job suggests** — `0;url=/next`,
+  `0, URL='next'`, `0.0;url=…`, a bare `5` meaning "reload me". `MetaRefreshDiscovery.TryParseContent`
+  covers those. A value with no leading time is rejected rather than guessed at: the time is the one
+  part the syntax requires, so a `content` without one more likely belongs to a different
+  `http-equiv`.
+- **The wait is the only part of a navigation request a host has to weigh rather than act on.** A
+  second or two is a redirect with a courtesy message; half a minute is a notice meant to be read,
+  and replacing it immediately would take away the thing it exists to show.
+  `MetaRefreshFollowLimit` is two seconds, and it is a judgement rather than a rule — see below for
+  what would replace it.
+
 ## Still not wired
 
 **`form.submit()`.** It fires the `submit` listeners and returns; `FormSubmitBinding` has no form
 serialization, so there is nothing to navigate *to*. Doing it properly means field collection,
 `enctype`, `method` and `action` resolution, and multipart for file inputs — `PageRequest` already
 models the POST it would produce, so the missing half is entirely on the bridge side.
-
-**`<meta http-equiv="refresh">`.** Never handled, before or after this.
 
 **The non-interactive `ScriptEngine.Execute` path.** It returns serialized HTML with nowhere to put
 a pending navigation. A host on that path reads `IDomBridgeRuntime.PendingNavigation` directly,
@@ -140,3 +163,9 @@ which is why the property is on the runtime interface rather than only on `Inter
 **Frames.** A frame's Location gets no host (`LocationBinding.Build`), so a framed page's navigation
 is logged and dropped. Navigating a frame replaces the frame, not the page — a different operation
 from the one the host performs, and not one this contract expresses.
+
+**A scheduled navigation.** Nothing here can navigate *later*, which is why a long meta refresh is
+declined rather than deferred. A browser honours any wait by scheduling it, and doing the same would
+retire `MetaRefreshFollowLimit` entirely — the threshold exists only because the choice today is
+between acting now and not acting. It needs a timer that survives the load loop and respects the
+navigation generation, so it is a real piece of work rather than a constant to delete.
