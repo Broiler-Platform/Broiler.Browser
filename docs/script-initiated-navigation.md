@@ -211,21 +211,6 @@ retire `MetaRefreshFollowLimit` entirely — the threshold exists only because t
 between acting now and not acting. It needs a timer that survives the load loop and respects the
 navigation generation, so it is a real piece of work rather than a constant to delete.
 
-**`outerHTML` reflects an input's value and not a textarea's or a select's.** Document
-serialization runs `ReflectRenderState` over a render projection, and that is the path a submission
-is built from, so all three controls are right there. `element.outerHTML` does not: it goes through
-the attribute enumeration alone, which can reflect an `input` — a value *is* an attribute — and has
-nowhere to put the other two, whose values are child text and a sibling's attribute. Measured, on a
-page that set all three:
-
-```html
-<div id="o"><input id="i" value="wi"><textarea id="t">pt</textarea>
-<select id="s"><option value="a" selected="">A</option><option value="b">B</option></select></div>
-```
-
-`wi` is the written value; `pt` and the `selected` on `A` are what the page shipped with. A page
-reading its own markup back sees one control current and two stale. Submissions are unaffected.
-
 ### What the value reflection did
 
 `input.value` reached the serialized document only when the input had **no `value` attribute** and
@@ -242,6 +227,23 @@ selects with, so "the third option" cannot mean two things.
 
 `RuntimeValue.TryGet` answers "did a script set this", which is the only condition any of it needed;
 a control the page never touched is left exactly as authored.
+
+### Two serialization paths, and both had to learn it
+
+Document serialization reflects by **rewriting a render projection** — `ReflectRenderState` mutates
+a copy, which is also what the renderer draws, so the value shows on screen as well as in a
+submission. `element.outerHTML` does not go anywhere near that projection: it serializes the live
+node directly, so each control has to answer for itself.
+
+That path reflects through the two hooks the serializer already had. An `input`'s and an option's
+`selected` go through the attribute enumeration, which now skips the stale attribute rather than
+emitting it beside the new one. A `textarea`'s goes through `SerializationChildrenOf`, standing a
+minted text node in for the authored children — the same shape as a `<template>` serializing its
+contents fragment instead of its own empty child list.
+
+An option is the awkward one: `select.value = x` writes an index on the *select*, so which option
+that makes selected is a question only the select can answer. The option is asked about its
+ancestor, through the same option walk the select binding selects with.
 
 Reflection ran only onto an input that had **no `value` attribute**, and only for a **non-empty**
 string. So an author's `value="…"` outlived every script that overwrote it, and clearing a prefilled
