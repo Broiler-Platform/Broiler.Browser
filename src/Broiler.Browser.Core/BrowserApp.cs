@@ -536,6 +536,18 @@ internal sealed class BrowserApp : IDisposable
     /// </remarks>
     internal const int SamePathLoadLimit = 3;
 
+    /// <summary>
+    /// The longest wait a <c>&lt;meta http-equiv="refresh"&gt;</c> may state and still be followed
+    /// straight away.
+    /// </summary>
+    /// <remarks>
+    /// The threshold is a judgement, and the honest version of one: there is no scheduler here, so
+    /// the choice is between acting now and not acting, and the delay is the only evidence of which
+    /// the author wanted. Two seconds is about where a wait stops reading as "you are being
+    /// redirected" and starts reading as "here is something to look at first".
+    /// </remarks>
+    internal static readonly TimeSpan MetaRefreshFollowLimit = TimeSpan.FromSeconds(2);
+
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(PageRequest request, LoadProgress progress, CancellationToken cancellationToken)
     {
         using var pipeline = new RenderingPipeline(
@@ -543,7 +555,7 @@ internal sealed class BrowserApp : IDisposable
             new ScriptEngine());
 
         // Keyed by everything ahead of the query, because that is what separates a chain moving on
-        // from a page re-submitting itself. See TryFollowScriptNavigation.
+        // from a page re-submitting itself. See TryFollowNavigation.
         var loadsPerPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         for (int hop = 0; ; hop++)
@@ -554,6 +566,12 @@ internal sealed class BrowserApp : IDisposable
             string loadedPath = NavigationPathKey(normalisedUrl);
             loadsPerPath[loadedPath] = loadsPerPath.TryGetValue(loadedPath, out int loaded) ? loaded + 1 : 1;
 
+            // Read off the fetched markup, before any script runs and whether or not there is any:
+            // ExecuteScriptsInteractive returns null for a page with no scripts, and a refresh
+            // interstitial is very often exactly that. A script that navigates later supersedes it
+            // below, which is the same last-one-wins the bridge applies among script navigations.
+            NavigationRequest? pending = MetaRefreshDiscovery.Find(content.Html, normalisedUrl);
+
             string html = PrepareForBrowsing(content.Html);
             InteractiveSession? session = null;
             try
@@ -561,7 +579,6 @@ internal sealed class BrowserApp : IDisposable
                 session = pipeline.ExecuteScriptsInteractive(content);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                NavigationRequest? scriptNavigation = null;
                 if (session is not null)
                 {
                     // Settle the load window here, on the load worker. ExecuteScriptsInteractive drains
@@ -585,7 +602,10 @@ internal sealed class BrowserApp : IDisposable
                     // timer rather than inline — asking before it would miss exactly the pages that
                     // navigate. Before the dispose below, because the request lives on the bridge and
                     // disposal takes the bridge with it.
-                    scriptNavigation = session.PendingNavigation;
+                    //
+                    // A script navigation supersedes a refresh meta the same markup declared: both
+                    // are this document asking to leave, and the script asked second.
+                    pending = session.PendingNavigation ?? pending;
 
                     // Same bounded question the viewport pumps on: a page whose only remaining work is
                     // an interval's later ticks is finished loading, and carrying its session forward
@@ -597,7 +617,7 @@ internal sealed class BrowserApp : IDisposable
                     }
                 }
 
-                if (TryFollowScriptNavigation(scriptNavigation, normalisedUrl, hop, loadsPerPath, out PageRequest? next))
+                if (TryFollowNavigation(pending, normalisedUrl, hop, loadsPerPath, out PageRequest? next))
                 {
                     // The page asked to leave before this document was ever shown, so it is not the
                     // document to show. Frames already published for it stay on screen until the next
@@ -628,7 +648,7 @@ internal sealed class BrowserApp : IDisposable
     /// logged the request showed the form the query was typed into. See
     /// <c>docs/script-initiated-navigation.md</c>.
     /// </remarks>
-    internal static bool TryFollowScriptNavigation(
+    internal static bool TryFollowNavigation(
         NavigationRequest? navigation,
         string currentUrl,
         int hop,
@@ -638,6 +658,18 @@ internal sealed class BrowserApp : IDisposable
         next = null;
         if (navigation is null)
             return false;
+
+        // A refresh meta states a wait, and the length of it is the author saying what the page is
+        // for. A second or two is a redirect with a courtesy message; half a minute is a notice
+        // meant to be read, and replacing it immediately would take away the thing it exists to
+        // show. Nothing here schedules a navigation for later, so the long ones are declined rather
+        // than deferred — a browser would honour them on a timer, and that is the piece not built.
+        if (navigation.Delay > MetaRefreshFollowLimit)
+        {
+            RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
+                $"{navigation.Url} not followed: it asks to wait {navigation.Delay.TotalSeconds:0.#} s, which is a notice to read rather than a redirect");
+            return false;
+        }
 
         if (hop >= MaxScriptNavigations)
         {
@@ -870,7 +902,7 @@ internal sealed class BrowserApp : IDisposable
         // Only when a script navigation was followed. The entry can hold a POST body — that is how
         // revisiting a submission re-issues it — and rewriting it on every load would quietly turn
         // every form submission into a GET of its own action URL.
-        if (result.FollowedScriptNavigation
+        if (result.FollowedNavigation
             && !string.IsNullOrEmpty(result.NormalisedUrl)
             && _historyIndex >= 0
             && _historyIndex < _history.Count)
@@ -1134,13 +1166,13 @@ internal sealed class BrowserApp : IDisposable
             string normalisedUrl,
             HtmlContainer? container,
             InteractiveSession? session,
-            bool followedScriptNavigation,
+            bool followedNavigation,
             Exception? error)
         {
             NormalisedUrl = normalisedUrl;
             _container = container;
             _session = session;
-            FollowedScriptNavigation = followedScriptNavigation;
+            FollowedNavigation = followedNavigation;
             Error = error;
         }
 
@@ -1151,7 +1183,7 @@ internal sealed class BrowserApp : IDisposable
         /// navigation started. The history entry was written before the load and names the start, so
         /// this is what says it needs correcting.
         /// </summary>
-        public bool FollowedScriptNavigation { get; }
+        public bool FollowedNavigation { get; }
 
         public Exception? Error { get; }
 
@@ -1159,8 +1191,8 @@ internal sealed class BrowserApp : IDisposable
             string normalisedUrl,
             HtmlContainer container,
             InteractiveSession? session,
-            bool followedScriptNavigation) =>
-            new(normalisedUrl, container, session, followedScriptNavigation, null);
+            bool followedNavigation) =>
+            new(normalisedUrl, container, session, followedNavigation, null);
 
         public static NavigationLoadResult FromError(Exception error) =>
             new(string.Empty, null, null, false, error);
