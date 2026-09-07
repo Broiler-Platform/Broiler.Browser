@@ -211,8 +211,25 @@ retire `MetaRefreshFollowLimit` entirely — the threshold exists only because t
 between acting now and not acting. It needs a timer that survives the load loop and respects the
 navigation generation, so it is a real piece of work rather than a constant to delete.
 
-**A form submitted by a script that also set field values.** The host serializes from the document
-it re-parses, layered with the viewport's control overrides. A script that writes `input.value`
-moves the DOM property, and whether that reaches the serialized attribute is a question about
-`DomBridge` serialization rather than about navigation — untested here, and the first thing to check
-if a submitted form carries stale values.
+**A `textarea` or `select` whose value a script set.** `input.value` reaches the serialized document
+and so reaches a submission — that was checked, was wrong, and is fixed; see below. The other two
+controls were checked at the same time and **do not reflect at all**: a script writing
+`textarea.value` or `select.value` leaves the markup saying what the page shipped with, so a form
+submitted afterwards carries the old text or the old selection.
+
+Neither is the same fix. `input` had working machinery behind an over-tight guard, where a
+`textarea`'s value is its text content and a `select`'s is a `selected` attribute on one of its
+options — reflecting those means writing child nodes and moving an attribute between siblings, which
+is new serialization rather than a loosened condition.
+
+### What `input.value` did
+
+Reflection ran only onto an input that had **no `value` attribute**, and only for a **non-empty**
+string. So an author's `value="…"` outlived every script that overwrote it, and clearing a prefilled
+field left the old text in the markup. Since a submission is built by re-parsing that markup, what
+went to the server was the value the page shipped with rather than the one on screen — silently, and
+looking entirely correct.
+
+`RuntimeValue.TryGet` already answers "did a script set this", which is the only condition the
+reflection ever needed. Both extra guards are gone, and the attribute enumeration now skips the stale
+attribute instead of emitting it alongside the new one.
