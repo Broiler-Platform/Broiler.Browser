@@ -28,7 +28,7 @@ public class FormControlValueReflectionTests
         Assert.NotNull(session);
 
         string settled = session!.SettleLoadWindow(CancellationToken.None);
-        NavigationRequest? pending = session.PendingNavigation;
+        NavigationRequest? pending = session.TakePendingNavigation();
         Assert.NotNull(pending);
 
         return BrowserApp.ToPageRequest(pending!, settled, PageUrl);

@@ -181,6 +181,23 @@ where during a load there was nothing to hold.
 its own history entry, and a fresh set of loop budgets. A page navigating five seconds after load is
 not redirecting; it is doing what the user asked for.
 
+### Taking, not reading — and why that is not a detail
+
+Two moments ask for the pending navigation, and the fresh budgets above are exactly what makes the
+second one dangerous. Reading left the request in place, so a navigation the load **declined** was
+still sitting there when the post-load path asked, and it performed it — several seconds later, with
+none of the decision that had just refused it. Measured on google.de:
+
+```
+20:29:56.788 [Warning] …&sg_ss=… not followed: …/search has been loaded 2 times already
+20:30:05.119 location.replace(…&emsg=SG_REL&sg_ss=…) requested        ← same sei, via Google's redirect
+```
+
+The guard fired, and the request went out anyway. `TakePendingNavigation` consumes, so the load
+answers everything the page asked for before it finished and the post-load path sees only what it
+asked for since. A page that still wants to leave asks again, and that is a new decision rather than
+an old one resurfacing — both halves are pinned by tests.
+
 ## The one that is not script at all
 
 `<meta http-equiv="refresh">` reaches the host as the same `NavigationRequest`, so it inherits the
