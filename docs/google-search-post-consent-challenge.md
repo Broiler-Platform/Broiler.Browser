@@ -42,6 +42,16 @@ asked for and returns, which is what a browser blocking a navigation does too, a
 throw it leaves the calling script running. The URL components are deliberately not updated to
 the target — the document did not change.
 
+The one exception is a **fragment navigation**, because it is not a load: a target resolving to
+this document's URL differing only after the `#` moves `location.hash` and `location.href` and
+fires `hashchange`, per HTML §7.4.5. All four spellings — `location.hash = x`,
+`location.href = "#x"`, `assign("#x")` and `replace("#x")` — take that one path. They did not
+before: `hash` was a writable data property, so the first stuck and fired nothing while the
+other three did nothing at all, and `href` went on answering the old fragment either way.
+Detection is conservative, because under-reading a fragment navigation costs a debug line while
+over-reading a real one would hide the fact that the capture stayed put. `LocationBindingTests`
+pins both halves.
+
 ### `iframe.contentWindow.String` — an empty sub-window
 
 A sub-window carried `document`, `location` and the event constructors and nothing else, so
