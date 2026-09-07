@@ -76,7 +76,9 @@ public class ScriptNavigationFollowTests
         // so exact-URL equality never fires; the path is what repeats.
         var pending = new NavigationRequest($"{SearchPath}?q=test&sei=second", NavigationKind.Replace);
 
-        Assert.True(Follows(pending, $"{SearchPath}?q=test", loadsPerPath: Loaded(SearchPath, 1)));
+        // The one re-submission the budget is for: load, take a token, ask once more. That is the
+        // handshake shape that converges, and it has to survive the guard that stops the one which
+        // does not.
         Assert.True(Follows(pending, $"{SearchPath}?q=test", loadsPerPath: Loaded(SearchPath, BrowserApp.SamePathLoadLimit - 1)));
     }
 
