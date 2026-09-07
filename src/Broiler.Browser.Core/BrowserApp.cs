@@ -549,11 +549,16 @@ internal sealed class BrowserApp : IDisposable
     /// <remarks>
     /// The global cap counts hops; this counts repeats, and repeats are the failure that actually
     /// happens. A page re-submitting itself with a fresh token each round has a different URL every
-    /// hop and the same path every hop, so only this notices. Three loads leaves room for a
-    /// handshake that converges — two re-submissions — and stops one that does not well before a
-    /// server decides it is being hammered.
+    /// hop and the same path every hop, so only this notices.
+    /// <para>
+    /// Two loads, so one re-submission. That is the shape of the handshake that works — load, take a
+    /// token or a cookie, ask once more — and a round still going after it is one that is collecting
+    /// rather than converging. Google's search bootstrap is the measured case: the second hop adds a
+    /// <c>sei</c>, the third a <c>sg_ss</c> signal blob, and no number of further hops satisfies it.
+    /// Each one costs a request and buys nothing.
+    /// </para>
     /// </remarks>
-    internal const int SamePathLoadLimit = 3;
+    internal const int SamePathLoadLimit = 2;
 
     /// <summary>
     /// The longest wait a <c>&lt;meta http-equiv="refresh"&gt;</c> may state and still be followed
@@ -720,10 +725,11 @@ internal sealed class BrowserApp : IDisposable
         // token in the query each round — `sei`, then a `sg_ss` signal blob — so every hop has a
         // URL nobody has seen before and the check above never fires. What repeats is the path.
         //
-        // Following that to the global cap is both useless and rude: the round never converges for
-        // this engine, and ten requests to one search endpoint inside twenty seconds is what a rate
-        // limiter is for — google.de answered 429. A budget per path stops it after the second
-        // re-submission, which still leaves room for a handshake that does converge.
+        // Following that is useless rather than merely expensive: the round never converges for this
+        // engine, so every extra hop costs a request and buys nothing. google.de answers 429 to it,
+        // and — measured — answers 429 to three hops just as it did to ten, so the number was never
+        // what it was objecting to. The budget is here to stop paying for a conversation that is not
+        // going anywhere, not to stay under a rate limit.
         string targetPath = NavigationPathKey(navigation.Url);
         if (loadsPerPath.TryGetValue(targetPath, out int loaded) && loaded >= SamePathLoadLimit)
         {

@@ -150,14 +150,28 @@ wall behind it.
 **Google's bootstrap now re-navigates to `/search` with a longer query each round**, carrying one
 more token: first `sei`, then a `sg_ss` signal blob of some nine hundred characters. It is
 collecting evidence because it is not satisfied with what it has, and it does not become satisfied.
-Followed to the hop cap, that is ten requests at one endpoint inside twenty seconds, and google.de
-answers **429 Too Many Requests**.
+google.de answers **429 Too Many Requests**.
+
+**The 429 is the verdict, not the rate.** It was first read as a rate limit — the chain ran to the
+hop cap, and ten requests at one endpoint inside twenty seconds is what a limiter is for. Then
+`SamePathLoadLimit` cut the same page to three loads, and the answer was 429 again. Three is not ten,
+so the count was never what was being objected to: the check has decided what this client is, and
+says so with the status code it has. Tuning the budget further will not change it, and reading the
+429 as "slow down" is what sends the next person tuning a constant instead of reading `sg_ss`.
+
+**Watch `gbv`.** An earlier run of the same search carried `gbv=1` — Google's basic, no-JavaScript
+variant, which does not run this check at all and is the version that would render. A later one,
+after the engine had grown a working `location.replace`, `form.submit()` and control-value
+serialization, carried `gbv=2` and the full JavaScript path. The capability the browser presents is
+what selects the route, so making the engine better can move it onto the harder one. Pinning `gbv=1`
+on the URL is the way to see results today, and the difference between the two runs is worth keeping
+in view when judging whether a change helped.
 
 So the shape of the problem has changed. Every entry above was a binding that could be written, and
 writing it moved the page on. This one is the anti-abuse check declining the client, and there is no
 single binding whose absence explains it — the same ambiguity the watchdog section describes, one
-level up. `SamePathLoadLimit` stops the browser hammering a server it cannot satisfy; it is a
-courtesy, not a fix.
+level up. `SamePathLoadLimit` stops the browser paying for a conversation that is going nowhere; it
+is a courtesy, not a fix.
 
 Anyone picking this up should start by finding out *what* the check is unhappy about, rather than
 adding another binding and re-running. `sg_ss` growing between hops is the signal to read.

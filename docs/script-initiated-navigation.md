@@ -75,7 +75,7 @@ The browser follows by default, in a loop around load-execute-settle. Three rule
   asking for the current document is the entire meaning of the call. From `assign`/`replace` it is a
   page re-stating where it is, and following it would fetch the same bytes to run the same script to
   ask again.
-- **`SamePathLoadLimit` = 3**, counted per URL path within one navigation. This is the rule that
+- **`SamePathLoadLimit` = 2**, counted per URL path within one navigation. This is the rule that
   actually fires, and the section below is why.
 
 ### The rule that exact-URL equality could not catch
@@ -92,19 +92,30 @@ The chain looked like this — one path, a longer query every hop:
 
 Google's bootstrap re-navigates to the page it is already on, carrying one more token each round:
 first `sei`, then a large `sg_ss` signal blob. **Every hop is a URL nobody has seen before**, so the
-"already loaded" check never fires, and the chain runs to the hop cap — ten requests at one search
-endpoint inside twenty seconds, which is what a rate limiter exists for.
+"already loaded" check never fires, and the chain runs to the hop cap.
 
 Two things were wrong, and only one of them was the guard:
 
 - **The guard tested the wrong thing.** What repeats in a re-submission loop is the *path*; the query
-  is what changes. Counting loads per path catches it on the second round. A budget of three still
-  leaves room for a handshake that converges in a hop or two.
+  is what changes. Counting loads per path catches it on the second round.
 - **The round does not converge for this engine at all.** Each `sg_ss` is Google collecting more
   signal because it is not satisfied with what it has — the same wall as
   `google-search-post-consent-challenge.md`. Following harder was never going to reach the results
-  page; it only reached the rate limiter faster. The budget stops the bleeding. It does not make the
+  page. The budget stops paying for a conversation that is not going anywhere. It does not make the
   search work.
+
+#### The 429 was not about the number of requests
+
+This was first written up as a rate verdict — ten requests at one endpoint inside twenty seconds
+being what a rate limiter is for. **That was wrong, and the fix disproved it.** With the per-path
+budget in place the same page produced three loads instead of ten, and google.de answered 429 just
+the same.
+
+So the 429 is the anti-abuse verdict, not a rate one: Google has decided what this client is, and
+the count is not what it is objecting to. The budget is worth keeping for the reason above — hops
+that buy nothing — but it was never going to change the answer, and a smaller number will not
+either. Reading a 429 here as "slow down" would send the next person tuning a constant instead of
+looking at the bot check.
 
 A 429 is not swallowed, incidentally: `PageLoader.FetchAsync` calls `EnsureSuccessStatusCode`, so
 the throw ends the loop and the error page is what the user sees. The loop stops on the first
