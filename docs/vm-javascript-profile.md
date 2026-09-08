@@ -218,13 +218,28 @@ enabling this would make the directory **the first record of browsing that outli
 The comparison with the favourites file does *not* carry: favourites are data the user typed, can
 see, and can remove.
 
-**The honest gate is "can the user clear it", not "was there an opt-in".** `VmArtifactStore.Clear()`
-exists so that gate is satisfiable; the browser has no interface onto it yet, and that — rather than
-a flag — is what should decide when this goes on. Enabling it is one line:
+**The honest gate is "can the user clear it", not "was there an opt-in"** — and that gate is now
+met. Under `Debug-VM`/`Release-VM` the toolbar carries a **Cache** button that asks before deleting
+and then removes the directory, whether or not the store was ever switched on: the files most worth
+deleting are the ones a run left behind while it *was*. It is `null` under the other configurations,
+where there is no such cache to clear, so the layout carries an optional control rather than a
+conditionally compiled one.
+
+**It still defaults off, and the reason has changed.** It was "there is no way to undo this"; that
+is fixed. What remains is that turning it on would buy nothing today — the VM engine's script-only
+paths have no production caller, so no page load reaches this cache — while the cost, a readable
+record of browsing on disk, would land later and be noticed by nobody who chose it. **The thing that
+should flip this default is the VM engine actually serving page loads**, not the button existing.
+
+Enabling it is one line:
 
 ```csharp
 VmCompilationCache.Shared.Store = new VmArtifactStore(VmArtifactStore.DefaultDirectory, 64 * 1024 * 1024);
 ```
+
+Not done, and worth knowing: nothing clears the cache on exit, and there is no private-browsing mode
+to tie it to. Chrome layout has no test coverage in this repository, so the optional-button
+arithmetic is covered by both configurations compiling and by review, not by a test.
 
 #### What actually hits
 
