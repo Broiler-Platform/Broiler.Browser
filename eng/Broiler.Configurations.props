@@ -83,9 +83,10 @@
     one of them at Debug-VM/Release-VM — leaves the property empty, so this still runs and is
     still what maps those names.
 
-    Broiler.UI keeps a duplicate that neither condition can reach: it chains to the root props
-    AND carries a copy, so both run at props time. That predates this file and is the submodule's
-    to resolve.
+    Broiler.UI was for a while a duplicate neither condition could reach: it chains to the root
+    props AND carries a copy, so both ran at props time, where the targets-side guard never gets
+    a say. It now applies the same '$(BroilerBaseConfiguration)' == '' test to its own copy, which
+    is the only side that could fix it.
 
     ── Why the engine selection is in a group of its own ──────────────────
 

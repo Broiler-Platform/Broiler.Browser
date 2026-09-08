@@ -194,9 +194,11 @@ conditional symbol is harmless to the compiler, but a constants list that reads 
 depending on which component you ask defeats the purpose of having one mapping. `ci.yml` asserts
 `RELEASE` appears exactly once.
 
-**Broiler.UI still duplicates and is excluded from that check.** It both chains to the root props
-*and* carries a copy, so both run at props time and no guard on this side can see the second one
-coming. That predates this mapping and is the submodule's to resolve.
+**Broiler.UI needed the same guard on its own side**, and for a while was the one component
+excluded from that check. It both chains to the root props *and* carries a copy, so both ran at
+props time, where a targets-side guard never gets a say. It now applies the same
+`'$(BroilerBaseConfiguration)' == ''` test to its own copy, and is asserted here like everything
+else.
 
 ### Why the Broiler.VM projects are in every solution
 
