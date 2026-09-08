@@ -139,16 +139,33 @@ of instructions, at the same instruction on a fast machine and a slow one.
 
 ### The code cache
 
-`VmCompilationCache` compiles a document once and reuses the artifact. It is process-wide, so two
-pages running one library compile it once; it is bounded on entries and total bytes, because a page
-chooses what goes into it; and the least recently used entry goes first.
+`VmCompilationCache` compiles a document once and reuses the artifact. It is bounded on entries and
+total bytes, because a page chooses what goes into it, and the least recently used entry goes first.
 
-**It caches bytes and not handles, and that is the contract rather than a choice.** Broiler.VM
-settled at VM-0 that bytes are the only input from which a verified artifact may be produced — the
-round trip is mandatory even when the compiler is in the same process and inside the same trust
-boundary (ADR 0010, decision 1). So **every use is still verified**, under that operation's own
-allowance. What is saved is the lowering and nothing else, which is also why a future on-disk form
-is safe by construction: cached bytes are bytes from outside, and bytes from outside are verified.
+**It caches bytes and re-verifies on every load, which is what the contract says to do.** ADR 0010's
+consequences put it directly — release 1 gives a browser no code cache, the persisted envelope is
+approved as contract and not as a release feature with no envelope member exposed, and:
+
+> a host that needs it caches source-to-artifact bytes itself and re-verifies on every load, which
+> is the contract's intended behaviour rather than a workaround
+
+So **every use is still verified**, under its own allowance, and what is saved is the lowering. That
+is also why a future on-disk form is safe by construction: cached bytes are bytes from outside, and
+bytes from outside are verified.
+
+#### What actually hits
+
+**The same document again — not "every library once".** The key is a digest over the whole ordered
+unit list *including each unit's referrer*, so a library shared by two pages is not separately keyed
+(it is one unit inside a whole-document digest) and two documents have two referrers and never
+collide. A hit is a reload, a back or forward, or any return to a URL already visited in this
+process with the same scripts.
+
+That is narrower than a per-library cache and it is what the engine's own design forces: a
+document's scripts are compiled into **one** artifact so they share one realm, and splitting them
+per script to widen the cache would change what the page runs. The cache is shared across engines
+rather than held per engine because `BrowserApp` builds a new engine per navigation — a per-engine
+cache would never hit at all.
 
 The key covers everything that reaches the compiler. Two components are worth naming because
 neither is obvious:
