@@ -137,13 +137,85 @@ The instruction allowance is the profile's own declared default. The VM charges 
 instruction rather than per second, so a script that never terminates ends after a bounded number
 of instructions, at the same instruction on a fast machine and a slow one.
 
+### The code cache
+
+`VmCompilationCache` compiles a document once and reuses the artifact. It is bounded on entries and
+total bytes, because a page chooses what goes into it, and the least recently used entry goes first.
+
+**It caches bytes and re-verifies on every load, which is what the contract says to do.** ADR 0010's
+consequences put it directly — release 1 gives a browser no code cache, the persisted envelope is
+approved as contract and not as a release feature with no envelope member exposed, and:
+
+> a host that needs it caches source-to-artifact bytes itself and re-verifies on every load, which
+> is the contract's intended behaviour rather than a workaround
+
+So **every use is still verified**, under its own allowance, and what is saved is the lowering. That
+is also why a future on-disk form is safe by construction: cached bytes are bytes from outside, and
+bytes from outside are verified.
+
+#### What actually hits
+
+The key is a digest over the **whole ordered unit list** plus the compilation inputs, so:
+
+- **A shared library is not separately keyed.** It is one unit inside a whole-document digest. That
+  is what the engine's design forces rather than a defect in the key: a document's scripts compile
+  into **one** artifact so they share one realm, and splitting them per script to make a library
+  separately cacheable would change what the page runs.
+- **Through `Execute(scripts)` there is no document URL, so two documents with byte-identical
+  script lists share an entry** — correctly, because they compile to the same program byte for
+  byte. Sharing here is the point, not a collision.
+- **Through the module-capable overload the document URL is part of the identity**, because it is
+  what a relative specifier resolves against, so the same text under two documents is two programs.
+
+Both halves are pinned by tests, because this description was wrong twice before it was right.
+
+The cache is shared across engines rather than held per engine because a new engine is built per
+navigation; a per-engine cache would never hit at all.
+
+**In this repository the callers are the tests.** `RenderingPipeline` only calls
+`ExecuteInteractive`, which is forwarded — so the cache serves the document-free entry points, whose
+real consumers (`Broiler.Cli`, `Broiler.Wpt`, `Broiler.DevConsole`) are not in this checkout. It is
+built and proven here; it is not on a path this repository's own browser takes yet, for the same
+reason nothing else on the VM is.
+
+The key covers everything that reaches the compiler. Two components are worth naming because
+neither is obvious:
+
+- **The compiler's own identity**, as the MVID of the assembly `JsCompiler` lives in. The profile
+  publishes a format version but no compiler version, and the format version is the wrong question:
+  a Broiler.VM bump that changes how the lowering emits, without changing the format it emits into,
+  must miss. An MVID changes exactly when that assembly's bytes change.
+- **The referrer** — the document's URL — because it is what a relative specifier resolves against,
+  so one text under two documents is two programs.
+
+Every field is length-prefixed into a SHA-256 digest, so `a` + `bc` and `ab` + `c` cannot collide.
+
+**The tests count compilations; they do not time anything.** "The second run of this document
+compiled nothing" is a fact a machine either reproduces or does not. `Caching` covers the hit, the
+miss, strict mode and the document URL as key components, that a cached document still produces its
+value, that a refusal is not stored, and that eviction takes the least recently used entry.
+
+Measured once, by hand, on one machine — 16.7 KB of script across three units, twenty iterations,
+`Release-VM`:
+
+| | per execution |
+|---|---|
+| cold (compile, verify, instantiate, run) | 41.6 ms |
+| warm (verify, instantiate, run) | 2.8 ms |
+
+So compilation was about 93% of the work and verification plus execution the rest. That is one
+figure from one machine on one shape of input, recorded because a cache with no measurement is a
+claim rather than a result — not a benchmark, and not a promise about any other page.
+
 ### What is still not there
 
-**The code cache.** The embedding contract also describes compiling once and keying the envelope by
-source identity, compiler version and format version. That is not implemented here, and it is left
-out rather than added untested: the component's own rule is that it measures its own overhead and
-never a language's, and a cache added without a measurement would be a performance claim this
-repository cannot support.
+**The on-disk form.** The contract calls the cache a *persisted* envelope; this one lives for the
+process. The step is safe by construction, per the round-trip rule above, but it needs a storage
+location, eviction across runs, and corruption handling, none of which exist here yet.
+
+**Caching what `eval` compiles.** `VmSourceProvider` compiles guest-initiated source on every call.
+Left out deliberately: eval strings are usually unique, so the hit rate would be near zero while a
+page could still push entries through a shared cache.
 
 **A DOM.** Unchanged, and it is the reason the document-bearing paths are still forwarded.
 
