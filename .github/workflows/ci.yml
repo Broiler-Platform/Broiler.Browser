@@ -202,11 +202,10 @@ jobs:
       # time. Harmless to the compiler, but it makes the constants list depend on which
       # component you ask, which is the question that file exists to answer.
       #
-      # Broiler.UI is ABSENT FROM THIS LIST and would fail it. It both chains to the
-      # root props AND carries a copy, so both run at props time and no guard on this
-      # side can see the second one coming. That duplicate predates the guard and is
-      # the submodule's to resolve; it is named here rather than left as an unexplained
-      # gap in the list.
+      # Broiler.UI was the one component this list had to leave out, because it both
+      # chains to the root props AND carries a copy, so both ran at props time where no
+      # guard on this side could see the second. It now guards its own copy on the same
+      # property (Broiler.UI#61) and is asserted here like everything else.
       - name: Verify the mapping is applied once
         shell: bash
         run: |
@@ -217,6 +216,7 @@ jobs:
             Broiler.Input/src/Broiler.Input/Broiler.Input.csproj \
             Broiler.Media/src/Broiler.Media/Broiler.Media.csproj \
             Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj \
+            Broiler.UI/src/Foundation/Broiler.UI/Broiler.UI.csproj \
             Broiler.CSS/Broiler.CSS/Broiler.CSS.csproj \
             src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
           do
