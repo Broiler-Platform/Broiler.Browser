@@ -30,6 +30,7 @@ under every other. That is the whole of the run-time difference.
 |---|---|
 | `Execute(scripts)` | Broiler.VM: compile → verify → instantiate → invoke → drain |
 | `ExecuteDetailed(scripts)` | Broiler.VM, with per-script errors |
+| `ExecuteDetailed(scripts, moduleRoots, documentUrl)` | Broiler.VM — this engine's own overload, adding dynamic `import()` over the document's declared modules |
 | `Execute(scripts, html[, url][, deferred][, moduleRoots])` | Broiler.JS |
 | `ExecuteInteractive(...)` | Broiler.JS |
 | `MicroTasks` | Broiler.JS's queue (there is only one) |
@@ -84,21 +85,52 @@ nothing today — `VmScriptEngine` returns whatever the document engine hands ba
 minting a session — but any future VM-hosted interactive path has to move into that assembly or be
 granted internals by it.
 
-### What the VM engine refuses on purpose
+### Guest-initiated loads, and CSP as the shape of the runtime
 
-`VmScriptEngine.RuntimeOptions()` registers exactly one host capability, `print`, which reaches
-the render log. It registers **no source provider** and **no module resolver**, so:
+`eval`, `new Function` and dynamic `import()` all ask the running program for **more executable
+bytes**. The profile cannot produce them: it has no compiler, deliberately — one that could turn a
+string into bytecode would carry a compiler in every image whether the composition wanted one or
+not. So the only way to answer is a registered **artifact provider**, and `VmSourceProvider` is
+this engine's.
 
-- `eval()` and `new Function()` are refused deterministically, whatever the page's CSP says.
-- `import()` is refused the same way.
+That makes the content policy structural rather than a check:
 
-Both are policy decisions belonging to a composition, and this composition has no answer to
-"what may this page evaluate" or "what does this specifier name" yet. The `Csp` property is still
-forwarded to the Broiler.JS engine, because on the delegated paths it does decide something.
+| Page's CSP | Runtime built for it | `eval` / `import()` |
+|---|---|---|
+| none stated | provider registered | answered |
+| permits evaluation (`unsafe-eval`) | provider registered | answered |
+| forbids evaluation | **no provider registered** | refused by the core, deterministically |
+
+A page without `unsafe-eval` and one with it get two differently *shaped* runtimes, and the refusal
+is a contract outcome the page may catch rather than an engine consulting a policy object
+mid-execution. This is what Broiler.VM's embedding contract means by "a content policy forbidding
+dynamic evaluation is expressed by registering no artifact-provider capability".
+
+**Module resolution is the host's job and `VmModuleMap` is where the browser does it.** A dynamic
+`import()` arrives as a referrer and a specifier; the map resolves it through the *same*
+`UrlResolver` that `ScriptExtractionService` used to form the module keys, and answers only for
+modules the document actually declared — a browser fetches nothing on the guest's behalf at this
+point. The resolve capability confirms the resolution an artifact claims, so a graph bundled under
+some other host's rules is refused rather than run.
+
+Verified end to end by `VmScriptEngineTests`, which asserts on values the guest printed rather than
+on the absence of a throw: `eval('21 * 2')` prints `eval=42`, `new Function('return 7;')()` prints
+`function=7`, and `import('./main.mjs')` of a declared module prints its export. Under a policy
+that forbids evaluation the same scripts take the rejection branch.
 
 The instruction allowance is the profile's own declared default. The VM charges fuel per
 instruction rather than per second, so a script that never terminates ends after a bounded number
 of instructions, at the same instruction on a fast machine and a slow one.
+
+### What is still not there
+
+**The code cache.** The embedding contract also describes compiling once and keying the envelope by
+source identity, compiler version and format version. That is not implemented here, and it is left
+out rather than added untested: the component's own rule is that it measures its own overhead and
+never a language's, and a cache added without a measurement would be a performance claim this
+repository cannot support.
+
+**A DOM.** Unchanged, and it is the reason the document-bearing paths are still forwarded.
 
 ## The build wiring
 
