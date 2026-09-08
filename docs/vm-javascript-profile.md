@@ -185,19 +185,42 @@ every existing key unreachable.
 **Every failure is a miss.** Missing, short, wrong magic, wrong embedded key, locked, unreadable
 directory — all mean "compile it". Tests cover truncation, garbage, and an unusable directory.
 
-**What verification does and does not protect.** It stops *corruption*: malformed bytes are refused
-by the verifier rather than run. It does **not** stop *substitution* — a valid artifact compiled
-from other source, planted under this key's name, is well formed and would be accepted. The file
-carries its key in its header and that is checked on read, which catches a copied directory, a
-partial rename or a case-folding filesystem; it does not stop someone who can write both the name
-and the contents. What makes that acceptable is that such a person can replace the browser
-executable itself, so it is not an escalation — stated because *"every load is verified"* reads like
-a stronger guarantee than it is.
+**What verification does and does not protect**, since *"every load is verified"* reads like a
+stronger guarantee than it is. ADR 0010 puts it in these words:
 
-**Why off by default.** A file named by a content digest records that a document with those exact
-scripts was loaded, and this browser has no private-browsing mode and no way to clear a cache.
-Turning that on for every user is a product decision rather than a consequence of building the
-mechanism. Enabling it is one line:
+> The checksum is not authenticity. It detects accidental corruption only. The core performs no
+> signature check and makes no trust decision about provenance.
+
+The verifier answers "are these bytes a sound artifact", never "are these the bytes that document
+compiles to" — the envelope carries the host's source identity as a field the core *"records and
+echoes … and compares … never"*. So it stops **corruption** and not **substitution**.
+
+The key in the header is a **consistency** check, not an integrity one: it compares the file's digest
+against the key the caller already asked for, so a writer who controls the file controls both halves.
+It catches torn writes, truncation, a copied directory, a partial rename, a case-folding filesystem
+and a future layout change — worth having, not a defence.
+
+That is accepted rather than solved. ADR 0010 also says a host accepting artifacts from *outside*
+its trust boundary binds a hash or signature first; this directory is inside it, writable only by
+this user, and a writer who can reach it could already replace the browser's assemblies — the
+repository ships a bare publish folder and asks for no elevation. Trading that for JavaScript inside
+the VM, whose entire host surface here is `print` plus the policy-gated provider and resolver, is a
+downgrade for an attacker.
+
+**Why off by default — the contents, not the filename.** The artifact holds the program's string
+literals and interned names as length-prefixed text, so `strings` over this directory recovers a
+page's URLs, endpoints, identifiers and messages **directly**. Measured, not assumed: a script
+naming `https://intranet.example.test/api/patient-records` and `user-4417` yields both, verbatim,
+from the stored file.
+
+This browser keeps history, cookies and storage in memory and has no private-browsing mode, so
+enabling this would make the directory **the first record of browsing that outlives the process**.
+The comparison with the favourites file does *not* carry: favourites are data the user typed, can
+see, and can remove.
+
+**The honest gate is "can the user clear it", not "was there an opt-in".** `VmArtifactStore.Clear()`
+exists so that gate is satisfiable; the browser has no interface onto it yet, and that — rather than
+a flag — is what should decide when this goes on. Enabling it is one line:
 
 ```csharp
 VmCompilationCache.Shared.Store = new VmArtifactStore(VmArtifactStore.DefaultDirectory, 64 * 1024 * 1024);
