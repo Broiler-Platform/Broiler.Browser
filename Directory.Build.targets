@@ -1,6 +1,32 @@
 <Project>
 
   <!--
+    THE CONFIGURATION MAPPING, FOR THE PROJECTS THE ROOT Directory.Build.props NEVER REACHED.
+
+    Broiler.Input, Broiler.JS, Broiler.Media and Broiler.VM each carry a Directory.Build.props
+    that deliberately does not chain to a parent, and MSBuild stops at the first one it finds
+    walking up. The Directory.Build.targets lookup is separate, and three of those four have no
+    such file — so THIS file does run for them, and importing the mapping here is what gives
+    their projects the same answer about Debug-VM that every other project in the graph gets.
+
+    Broiler.JS is the fourth and did not work that way: it is the one submodule with a
+    Directory.Build.targets of its own, which stopped the lookup before it reached here and left
+    its twenty-two projects compiling unoptimised under Release-VM. That file now chains to this
+    one, which is a change inside that submodule; docs/vm-javascript-profile.md records it, and
+    ci.yml asserts the outcome so it cannot regress quietly.
+
+    Debug-VM/Release-VM are the first configurations whose project graph reaches into Broiler.VM,
+    which is why the gap is worth closing now and cost nothing before: Release-Linux never built a
+    Broiler.VM project, so nobody could observe it compiling unoptimised.
+
+    The sentinel is set by the imported file itself. A project that already got the mapping from
+    the props side skips this import; the imported file carries a second guard for the submodules
+    whose own vendored copy already decomposed the configuration.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)eng\Broiler.Configurations.props"
+          Condition="'$(BroilerConfigurationMappingApplied)' != 'true'" />
+
+  <!--
     Standalone Broiler.HTML builds use the Graphics checkout nested inside that submodule.
     Root builds instead use the canonical top-level Graphics checkout, which for the Win32
     demo means the src/ layout Broiler.Graphics publishes today.

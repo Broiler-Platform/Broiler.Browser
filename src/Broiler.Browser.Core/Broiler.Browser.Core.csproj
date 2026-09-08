@@ -36,6 +36,29 @@
     <ProjectReference Include="..\Broiler.HtmlBridge.Scripting\Broiler.HtmlBridge.Scripting.csproj" />
   </ItemGroup>
 
+  <!--
+    THE ONLY CONDITIONAL REFERENCE IN THIS REPOSITORY, AND THE REASON THE -VM CONFIGURATIONS EXIST.
+    $(BroilerJavaScriptEngine) is set from the configuration name by eng/Broiler.Configurations.props
+    and is `Vm` for Debug-VM and Release-VM. Under every other configuration this reference is
+    absent, so nothing of Broiler.VM is restored, built or copied.
+
+    TWO THINGS A READER SHOULD NOT INFER FROM IT.
+
+    It does not remove Broiler.JS: Broiler.HtmlBridge.Dom binds the document to Broiler.JavaScript
+    types and is reached from here through Scripting either way. What the configuration selects is
+    which IScriptEngine BrowserApp instantiates — see the #if in BrowserApp.cs and
+    docs/vm-javascript-profile.md.
+
+    And it does not make the VM projects disappear from the generated solutions.
+    scripts/update-solutions.ps1 reads every ProjectReference regardless of its Condition, so all
+    four .slnx files list them and build them in all four configurations. That is deliberate: a
+    solution has to carry the union to offer the configuration in the Visual Studio dropdown at
+    all. A project-level build is the one that is genuinely VM-free under Debug and Release.
+  -->
+  <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
+    <ProjectReference Include="..\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\Broiler.App\Rendering\RenderingPipeline.cs" Link="Rendering\RenderingPipeline.cs" />
     <Compile Include="..\Broiler.App\Rendering\PageLoader.cs" Link="Rendering\PageLoader.cs" />

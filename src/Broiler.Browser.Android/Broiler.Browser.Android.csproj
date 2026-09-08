@@ -24,9 +24,19 @@
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <RunAOTCompilation>false</RunAOTCompilation>
     <PublishTrimmed>false</PublishTrimmed>
-    <AndroidPackageFormat Condition="'$(Configuration)' == 'Release'">aab</AndroidPackageFormat>
-    <AndroidPackageFormat Condition="'$(Configuration)' != 'Release'">apk</AndroidPackageFormat>
+    <!-- The package format follows the BASE configuration, not the literal name. Keying it on
+         '$(Configuration)' == 'Release' alone was correct while Release was the only release-like
+         configuration this head built; Release-VM is a second one, and it would have produced a
+         debuggable .apk from a release build with nothing said about it. $(BroilerBaseConfiguration)
+         (eng/Broiler.Configurations.props) is empty for the plain names, so both tests are needed
+         and Release keeps answering exactly as it did. -->
+    <AndroidPackageFormat Condition="'$(Configuration)' == 'Release' Or '$(BroilerBaseConfiguration)' == 'Release'">aab</AndroidPackageFormat>
+    <AndroidPackageFormat Condition="'$(AndroidPackageFormat)' == ''">apk</AndroidPackageFormat>
     <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Configurations>Debug;Release;Debug-VM;Release-VM</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

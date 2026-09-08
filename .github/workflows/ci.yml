@@ -127,6 +127,111 @@ jobs:
         run: |
           ./scripts/check-component-graph.sh             Broiler.Windows.Browser.slnx             Broiler.Linux.Browser.slnx             Broiler.Browser.Tests.slnx
 
+      # Debug-VM is a DIFFERENT closure, not the same one built differently:
+      # Broiler.Browser.Core's reference to the VM script engine is conditional on
+      # it, so this configuration is the only one in which the Broiler.VM
+      # assemblies are reachable from a head. The duplicate-name question has to be
+      # asked of a closure, so it is asked of this one too. Evaluation only, like
+      # the pass above.
+      - name: Verify one assembly per name (VM profile)
+        shell: bash
+        env:
+          CONFIGURATION: Debug-VM
+        run: |
+          ./scripts/check-component-graph.sh             Broiler.Windows.Browser.slnx             Broiler.Linux.Browser.slnx             Broiler.Browser.Tests.slnx
+
+      # A configuration name the SDK does not recognise gets neither Optimize nor
+      # DebugSymbols: `-c Release-VM` would compile UNOPTIMISED, succeed, and say
+      # nothing. eng/Broiler.Configurations.props is what stops that, reaching part
+      # of the tree through Directory.Build.props, part through
+      # Directory.Build.targets, and Broiler.JS through a chain that submodule's own
+      # Directory.Build.targets makes to this repository's.
+      #
+      # Three routes to one answer is three things that can break independently, and
+      # the breakage is silent in every case, so every route is asserted here rather
+      # than assumed from having read the files. Evaluation only; no project is built.
+      - name: Pin which components the configuration mapping reaches
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+
+          optimize() {
+            dotnet msbuild "$1" -p:Configuration=Release-VM -getProperty:Optimize -nologo 2>/dev/null | tr -d '[:space:]'
+          }
+
+          expect() {
+            local want="$1" project="$2" got
+            got="$(optimize "$project")"
+            if [ "$got" = "$want" ]; then
+              printf '   ok  %-6s %s\n' "${want:-<empty>}" "$project"
+            else
+              echo "::error file=$project::Under Release-VM this project answers Optimize='$got'; docs/vm-javascript-profile.md says '$want'. Update that document and this step together."
+              status=1
+            fi
+          }
+
+          # Reached through Directory.Build.props.
+          expect true src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
+          expect true Broiler.CSS/Broiler.CSS/Broiler.CSS.csproj
+          expect true Broiler.Layout/Broiler.Layout/Broiler.Layout.csproj
+
+          # Reached through Directory.Build.targets, because their own props
+          # deliberately does not chain to the root.
+          expect true Broiler.Input/src/Broiler.Input/Broiler.Input.csproj
+          expect true Broiler.Media/src/Broiler.Media/Broiler.Media.csproj
+          expect true Broiler.UI/src/Foundation/Broiler.UI/Broiler.UI.csproj
+          expect true Broiler.VM/src/Broiler.VM.Runtime/Broiler.VM.Runtime.csproj
+
+          # Broiler.JS is the only submodule with a Directory.Build.targets of its
+          # own, so the root's never reached it and this line asserted '' for as long
+          # as that was true. It now chains to the parent, which is what makes it
+          # answer like everything else -- and one project per family, because that
+          # one file wins for all four and a regression would take all four with it.
+          expect true Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj
+          expect true Broiler.JS/Broiler.Regex/Broiler.Regex/Broiler.Regex.csproj
+          expect true Broiler.JS/Broiler.DateTime/src/Broiler.DateTime/Broiler.DateTime.csproj
+          expect true Broiler.JS/Broiler.Unicode/src/UnicodeProperties/UnicodeProperties.csproj
+
+          exit "$status"
+
+      # The mapping must apply ONCE. Four submodules vendor their own copy of it for
+      # their standalone builds, so for the -Linux/-Windows names the configuration is
+      # already decomposed by the time the targets-side import runs; without the guard
+      # in eng/Broiler.Configurations.props that appended RELEASE and WINDOWS a second
+      # time. Harmless to the compiler, but it makes the constants list depend on which
+      # component you ask, which is the question that file exists to answer.
+      #
+      # Broiler.UI is ABSENT FROM THIS LIST and would fail it. It both chains to the
+      # root props AND carries a copy, so both run at props time and no guard on this
+      # side can see the second one coming. That duplicate predates the guard and is
+      # the submodule's to resolve; it is named here rather than left as an unexplained
+      # gap in the list.
+      - name: Verify the mapping is applied once
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+
+          for project in \
+            Broiler.Input/src/Broiler.Input/Broiler.Input.csproj \
+            Broiler.Media/src/Broiler.Media/Broiler.Media.csproj \
+            Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj \
+            Broiler.CSS/Broiler.CSS/Broiler.CSS.csproj \
+            src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
+          do
+            constants="$(dotnet msbuild "$project" -p:Configuration=Release-Windows -getProperty:DefineConstants -nologo 2>/dev/null | tr -d '[:space:]')"
+            count="$(printf '%s' "$constants" | tr ';' '\n' | grep -c '^RELEASE$' || true)"
+            if [ "$count" = "1" ]; then
+              printf '   ok  RELEASE x1  %s\n' "$project"
+            else
+              echo "::error file=$project::Release-Windows defines RELEASE $count times ($constants). The configuration mapping ran more than once; see the guard in eng/Broiler.Configurations.props."
+              status=1
+            fi
+          done
+
+          exit "$status"
+
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them
   # true is failing here when a checked-in solution no longer matches the real
@@ -168,12 +273,14 @@ jobs:
           - name: Windows head
             os: windows-latest
             solution: Broiler.Windows.Browser.slnx
+            configuration: Release
             test: false
           # The Linux head is plain net10.0 with P/Invoke into X11 and GL, so it
           # compiles anywhere; building it on Linux keeps that honest.
           - name: Linux head
             os: ubuntu-latest
             solution: Broiler.Linux.Browser.slnx
+            configuration: Release
             test: false
           # The suite is all net10.0. Running it on both hosts is deliberate: the
           # shared chrome does clipboard and file-dialog work that is easy to make
@@ -181,11 +288,34 @@ jobs:
           - name: Tests (Linux)
             os: ubuntu-latest
             solution: Broiler.Browser.Tests.slnx
+            configuration: Release
             test: true
           - name: Tests (Windows)
             os: windows-latest
             solution: Broiler.Browser.Tests.slnx
+            configuration: Release
             test: true
+          # Release-VM builds the browser against the Broiler.VM JavaScript profile
+          # (docs/vm-javascript-profile.md). The suite is the entry that carries its
+          # weight: VmScriptEngineTests is compiled only under this configuration, so
+          # this job is the one that runs JavaScript on the VM rather than only
+          # linking it. A configuration nothing builds is a configuration that rots,
+          # and this one changes the project graph rather than just a runtime
+          # identifier, so "it still compiles" is a real question about it.
+          - name: Tests (Linux, VM profile)
+            os: ubuntu-latest
+            solution: Broiler.Browser.Tests.slnx
+            configuration: Release-VM
+            test: true
+          # And one real head under the same configuration, on the other host: the
+          # heads add the platform backends over Broiler.Browser.Core, and the
+          # Windows one is the combination -- net10.0-windows plus the VM's net10.0
+          # assemblies -- that nothing else here covers.
+          - name: Windows head (VM profile)
+            os: windows-latest
+            solution: Broiler.Windows.Browser.slnx
+            configuration: Release-VM
+            test: false
 
     steps:
       - name: Check out
@@ -197,11 +327,11 @@ jobs:
         uses: ./.github/actions/setup-broiler
 
       - name: Build
-        run: dotnet build ${{ matrix.solution }} -c Release
+        run: dotnet build ${{ matrix.solution }} -c ${{ matrix.configuration }}
 
       - name: Test
         if: matrix.test
-        run: dotnet test ${{ matrix.solution }} -c Release --no-build
+        run: dotnet test ${{ matrix.solution }} -c ${{ matrix.configuration }} --no-build
 
   # Split out because it needs the android workload, which costs several minutes
   # the other jobs should not pay for.

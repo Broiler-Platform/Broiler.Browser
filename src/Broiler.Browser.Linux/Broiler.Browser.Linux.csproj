@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Configurations>Debug;Release;Debug-Linux;Release-Linux</Configurations>
+    <Configurations>Debug;Release;Debug-Linux;Release-Linux;Debug-VM;Release-VM</Configurations>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Release-Linux'">linux-x64</RuntimeIdentifier>
   </PropertyGroup>
 

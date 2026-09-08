@@ -572,11 +572,43 @@ internal sealed class BrowserApp : IDisposable
     /// </remarks>
     internal static readonly TimeSpan MetaRefreshFollowLimit = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// The browser's script engine: the one place a configuration decides which one runs.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>Debug-VM</c> and <c>Release-VM</c> define <c>BROILER_VM_JS</c>
+    /// (eng/Broiler.Configurations.props) and add the ProjectReference that puts
+    /// <c>VmScriptEngine</c> in reach. Every other configuration compiles the second branch and
+    /// links nothing of Broiler.VM at all.
+    /// </para>
+    /// <para>
+    /// <b>The Broiler.JS engine is constructed on both paths, and under <c>-VM</c> it is handed to
+    /// the VM engine rather than replaced.</b> The VM's JavaScript profile runs the script-only
+    /// execution paths; the ones that need a live document are served by the engine that has one.
+    /// <c>VmScriptEngine</c>'s remarks say why that is a property of the VM's host boundary rather
+    /// than an unfinished port, and docs/vm-javascript-profile.md says what would have to change.
+    /// </para>
+    /// </remarks>
+    private static IScriptEngine NewScriptEngine()
+    {
+#if BROILER_VM_JS
+        RenderLogger.LogDebug(
+            LogCategory.JavaScript,
+            nameof(BrowserApp),
+            "Script runs on the Broiler.VM JavaScript profile; document-bearing execution is served by Broiler.JS.");
+
+        return new VmScriptEngine(new ScriptEngine());
+#else
+        return new ScriptEngine();
+#endif
+    }
+
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(PageRequest request, LoadProgress progress, CancellationToken cancellationToken)
     {
         using var pipeline = new RenderingPipeline(
             new PageLoader(PageHttpClient),
-            new ScriptEngine());
+            NewScriptEngine());
 
         // Keyed by everything ahead of the query, because that is what separates a chain moving on
         // from a page re-submitting itself. See TryFollowNavigation.

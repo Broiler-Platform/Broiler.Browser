@@ -1,22 +1,14 @@
 <Project>
+  <!--
+    The configuration-name mapping (Debug-Linux, Release-Windows, Debug-VM, ...)
+    lives in its own file because Directory.Build.targets imports it too, for the
+    submodules whose own Directory.Build.props deliberately does not chain here.
+    That file explains the asymmetry and why it matters.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)eng\Broiler.Configurations.props" />
+
   <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-
-    <BroilerBaseConfiguration Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Debug-Windows'">Debug</BroilerBaseConfiguration>
-    <BroilerBaseConfiguration Condition="'$(Configuration)' == 'Release-Linux' Or '$(Configuration)' == 'Release-Windows'">Release</BroilerBaseConfiguration>
-    <BroilerTargetOperatingSystem Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Release-Linux'">Linux</BroilerTargetOperatingSystem>
-    <BroilerTargetOperatingSystem Condition="'$(Configuration)' == 'Debug-Windows' Or '$(Configuration)' == 'Release-Windows'">Windows</BroilerTargetOperatingSystem>
-
-    <DebugSymbols Condition="'$(BroilerBaseConfiguration)' == 'Debug'">true</DebugSymbols>
-    <DebugType Condition="'$(BroilerBaseConfiguration)' == 'Debug'">portable</DebugType>
-    <Optimize Condition="'$(BroilerBaseConfiguration)' == 'Debug'">false</Optimize>
-    <DefineConstants Condition="'$(BroilerBaseConfiguration)' == 'Debug'">$(DefineConstants);DEBUG</DefineConstants>
-    <DebugType Condition="'$(BroilerBaseConfiguration)' == 'Release'">portable</DebugType>
-    <Optimize Condition="'$(BroilerBaseConfiguration)' == 'Release'">true</Optimize>
-    <DefineConstants Condition="'$(BroilerBaseConfiguration)' == 'Release'">$(DefineConstants);RELEASE</DefineConstants>
-
-    <DefineConstants Condition="'$(BroilerTargetOperatingSystem)' == 'Linux'">$(DefineConstants);LINUX</DefineConstants>
-    <DefineConstants Condition="'$(BroilerTargetOperatingSystem)' == 'Windows'">$(DefineConstants);WINDOWS</DefineConstants>
 
     <!--
       ════════════════════════════════════════════════════════════════════

@@ -250,12 +250,24 @@ function New-SolutionText {
         $groups[$groupName] += $project
     }
 
+    # The build types the .slnx offers. A configuration a solution does not declare cannot be
+    # built THROUGH it at all -- MSBuild answers MSB4126 and stops before evaluating a project --
+    # which is why the Debug-VM/Release-VM pair has to be listed here and not only on the head
+    # projects. They come from the manifest rather than being hardcoded so that a solution which
+    # has no business offering a variant does not offer it.
+    $buildTypes = @($Definition.configurations | Where-Object { -not [string]::IsNullOrWhiteSpace([string] $_) })
+    if ($buildTypes.Count -eq 0) {
+        $buildTypes = @('Debug', 'Release')
+    }
+
     $lines = [Collections.Generic.List[string]]::new()
     $lines.Add('<Solution>')
     $lines.Add('  <!-- Generated from eng/solutions.json by scripts/update-solutions.ps1. -->')
     $lines.Add('  <Configurations>')
-    $lines.Add('    <BuildType Name="Debug" />')
-    $lines.Add('    <BuildType Name="Release" />')
+    foreach ($buildType in $buildTypes) {
+        $buildTypeName = Convert-ToXmlAttribute -Value ([string] $buildType)
+        $lines.Add("    <BuildType Name=`"$buildTypeName`" />")
+    }
     $lines.Add('  </Configurations>')
 
     foreach ($group in $groups.GetEnumerator()) {
