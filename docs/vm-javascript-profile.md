@@ -118,6 +118,21 @@ on the absence of a throw: `eval('21 * 2')` prints `eval=42`, `new Function('ret
 `function=7`, and `import('./main.mjs')` of a declared module prints its export. Under a policy
 that forbids evaluation the same scripts take the rejection branch.
 
+#### One sharp limit on what "`eval` works" means
+
+**A *direct* `eval` inside a function is refused, and registering the provider does not change
+that.** The refusal comes from the profile, before anything is asked of the host:
+
+> `EvalError: a direct eval inside a function is not admitted: this profile resolves every name at
+> lowering, so evaluated source cannot see the calling frame's bindings. An indirect eval —
+> (0, eval)(source) — evaluates in the global scope and is admitted`
+
+So the shapes that work are direct `eval` at global scope, indirect `(0, eval)(source)` anywhere,
+and `new Function`. Direct `eval` inside a function — common enough in real page script — is not
+one of them, and no composition choice can make it one: it follows from the profile resolving names
+at lowering rather than at run time. Both halves are pinned by tests so the boundary is not
+rediscovered.
+
 The instruction allowance is the profile's own declared default. The VM charges fuel per
 instruction rather than per second, so a script that never terminates ends after a bounded number
 of instructions, at the same instruction on a fast machine and a slow one.
