@@ -97,19 +97,50 @@ for solution in "${solutions[@]}"; do
   probe="$work/probe.proj"
   : >"$report"
 
-  python3 - "$solution" "$probe" >"$work/counts.txt" <<'PY' || { annotate "$solution: could not read the solution."; status=1; continue; }
-import os, re, sys, xml.etree.ElementTree as ET, xml.sax.saxutils as x
+  python3 - "$solution" "$probe" "$work/wanted.txt" >"$work/counts.txt" <<'PY' || { annotate "$solution: could not read the solution."; status=1; continue; }
+import os, sys, xml.etree.ElementTree as ET, xml.sax.saxutils as x
 
-solution, out = sys.argv[1], sys.argv[2]
-tree = ET.parse(solution)
-root = tree.getroot()
-
-build_types = sorted({b.get("Name") for b in root.iter("BuildType")
-                      if b.get("Name") and b.get("Project") is None})
-
+solution, out, wanted_out = sys.argv[1], sys.argv[2], sys.argv[3]
+root = ET.parse(solution).getroot()
 base = os.path.dirname(os.path.abspath(solution))
-projects = sorted({os.path.normpath(os.path.join(base, p.get("Path").replace("\\", "/")))
-                   for p in root.iter("Project") if p.get("Path")})
+
+def full(path):
+    return os.path.normpath(os.path.join(base, path.replace("\\", "/")))
+
+# A <BuildType> with no Project attribute declares a build type the solution
+# offers. One WITH a Project attribute is a per-project mapping: it says this
+# solution build type resolves to a DIFFERENT project configuration for this
+# project, so the project is not required to declare the solution's name.
+#
+# The generated solutions here use none of those -- every build type maps by
+# identity, which is why every project has to declare every name. Broiler.Layout's
+# hand-authored solution does use them, mapping Debug-Linux onto plain Debug, and
+# reading its mappings as requirements would report a wall of failures against a
+# solution that is correct.
+offered = sorted({b.get("Name") for b in root.iter("BuildType")
+                  if b.get("Name") and b.get("Project") is None})
+
+projects, required = [], {}
+for p in root.iter("Project"):
+    if not p.get("Path"):
+        continue
+    path = full(p.get("Path"))
+    if path in required:
+        continue
+    projects.append(path)
+
+    # Solution="Debug-Linux|*" is "this build type, any platform"; the part before
+    # the bar is the solution configuration being mapped.
+    mapped = {}
+    for b in p.iter("BuildType"):
+        if b.get("Project") and b.get("Solution"):
+            mapped[b.get("Solution").split("|")[0]] = b.get("Project")
+    required[path] = [mapped.get(name, name) for name in offered]
+
+projects.sort()
+with open(wanted_out, "w", encoding="utf-8") as f:
+    for path in projects:
+        f.write("%s|%s\n" % (path, ";".join(sorted(set(required[path])))))
 
 items = "\n".join('    <ProjectToProbe Include=%s />' % x.quoteattr(p) for p in projects)
 open(out, "w", encoding="utf-8").write(f"""<Project>
@@ -130,13 +161,13 @@ open(out, "w", encoding="utf-8").write(f"""<Project>
 </Project>
 """)
 print(len(projects))
-print(";".join(build_types))
+print(";".join(offered))
 PY
 
   listed="$(sed -n 1p "$work/counts.txt")"
-  wanted="$(sed -n 2p "$work/counts.txt")"
+  offered="$(sed -n 2p "$work/counts.txt")"
 
-  if [ -z "$wanted" ]; then
+  if [ -z "$offered" ]; then
     annotate "$solution: declares no build types, so this proves nothing about it."
     status=1
     continue
@@ -175,8 +206,22 @@ PY
   # arrives for a whole solution at once -- a mapping that regressed took 87
   # projects with it -- and stopping at the first would misrepresent the size of it.
   missing=0
+  unmatched=0
   while IFS='|' read -r project declared; do
     [ -n "$project" ] || continue
+
+    # What THIS project must declare, which is the solution's list only where the
+    # solution does not map the build type onto some other name for it.
+    # Through the environment, not through `awk -v`: -v processes escape sequences
+    # in the value it assigns, so a Windows path arrives with its \B and \s eaten
+    # and never matches. ENVIRON does not.
+    wanted="$(BROILER_PROJECT="$project" awk -F'|' '$1 == ENVIRON["BROILER_PROJECT"] { print $2; found = 1 } END { exit !found }' "$work/wanted.txt")" || {
+      annotate "$solution: $project reported a configuration list but is not one of the projects read from the solution. Not proving anything about it would be worse than failing."
+      unmatched=1
+      status=1
+      continue
+    }
+
     absent=""
     IFS=';' read -ra want <<<"$wanted"
     for name in "${want[@]}"; do
@@ -189,12 +234,12 @@ PY
       missing=$((missing + 1))
       status=1
       absent="${absent# }"
-      annotate "${project#$root/} does not declare ${absent// /, }, which $solution offers. Visual Studio refuses to map a solution build type onto a project configuration that does not exist; the command line accepts it silently."
+      annotate "${project#$root/} does not declare ${absent// /, }, which $solution needs it to. Visual Studio refuses to map a solution build type onto a project configuration that does not exist; the command line accepts it silently."
     fi
   done <"$report"
 
-  if [ "$missing" -eq 0 ]; then
-    printf '   ok  %d projects, each declaring %s\n' "$checked" "${wanted//;/, }"
+  if [ "$missing" -eq 0 ] && [ "$unmatched" -eq 0 ]; then
+    printf '   ok  %d projects, for build types %s\n' "$checked" "${offered//;/, }"
   fi
 done
 
