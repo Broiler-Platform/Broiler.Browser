@@ -118,6 +118,23 @@ on the absence of a throw: `eval('21 * 2')` prints `eval=42`, `new Function('ret
 `function=7`, and `import('./main.mjs')` of a declared module prints its export. Under a policy
 that forbids evaluation the same scripts take the rejection branch.
 
+#### Strict mode reaches the document's scripts and not `eval`
+
+`StrictModeEnabled` makes the document's own scripts strict — on the VM engine as the compiler's
+`ForceStrict`, on Broiler.JS by prepending the directive — and neither engine applies it to what
+`eval` compiles. Reading the two side by side makes that look like a VM-engine oversight; it is not.
+Measured, with an assignment to an undeclared name as the probe:
+
+| | `eval`'d source | document script |
+|---|---|---|
+| VM engine, flag set | sloppy | strict |
+| Broiler.JS, flag set | sloppy | strict |
+
+The agreement is the point, and it is also what the specification says: an indirect `eval` evaluates
+a new script whose strictness comes from its own source, so a host forcing it strict would make one
+page behave differently here than anywhere else. `StrictModeReachesDocumentScriptsAndNotEval` pins
+both engines against each other, so a change that "fixes" one has to fix both or neither.
+
 #### One sharp limit on what "`eval` works" means
 
 **A *direct* `eval` inside a function is refused, and registering the provider does not change
