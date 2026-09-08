@@ -210,23 +210,42 @@ claim rather than a result — not a benchmark, and not a promise about any othe
 #### Guest-supplied source has its own cache, per engine
 
 `eval`, `new Function` and dynamic `import()` are compiled through a **second** cache, owned by the
-`VmScriptEngine` instance rather than shared across the process. Two reasons, and both survive
-inspection:
+`VmScriptEngine` instance rather than shared across the process.
 
-**A timing signal, which on this profile is not theoretical.** The realm installs `Date` with a
-working `now`, so a page can time its own `eval`. Were the cache shared, one page could evaluate a
-string and learn from the latency whether another page had already evaluated it — a question about
-another document's content, asked through a cache. Real browsers key code caches by origin for this
-reason; this engine has no origin, so it takes the conservative scope instead.
+**Separating it is a policy choice, not a correctness fix**, and that is worth saying first because
+the reasons below would otherwise read as safety. Sharing would be *sound*: the provider is a pure
+function of the payload and its constants, nothing in a `VmArtifactRequest` reaches the compiled
+bytes, and the contract explicitly endorses a host caching a provider's answers — ADR 0008: *"The
+compile cost is still paid once: the code cache is the host-keyed persisted envelope … and only
+verification repeats."* The rule that restricts reuse is about *handles*, and this caches bytes
+re-verified into a fresh handle every time.
 
-**Eviction.** A page chooses how many distinct strings it evaluates, and a cache is bounded — so a
-page that evaluated enough of them would push out every other page's compiled documents. Per
-engine, a page can only evict itself. That half *is* asserted by a test; the timing half is an
-argument about what a page could learn, not something a counter can show.
+**The reason that decides it is eviction.** The shared cache holds 64 entries, and a document's
+entry is stamped once before its scripts run and then ages like any other. So:
 
-What this gives up is a repeat across page loads. What it keeps is the pattern that actually
-repeats: one `new Function` body called from a loop, or a template evaluated once per row. A loop of
-five identical `eval`s compiles once and hits four times, which is what the test asserts. When every
+```js
+for (var i = 0; i < 64; i++) eval('var x' + i);
+```
+
+evicts every compiled document in the process. No hostility required — one loop-happy page destroys
+the other cache's whole reason for existing. Separated, a page can only evict itself. This half is
+asserted by a test.
+
+**A timing signal is the second and weaker reason.** The realm installs `Date` with a working `now`,
+so a page can time its own `eval` and, from a shared cache, learn whether another page had already
+evaluated a given string. Real rather than theoretical — but the clock is milliseconds, there is no
+`performance`, no timer and no `SharedArrayBuffer` to build a better one, and the attacker must
+guess the other page's source byte for byte. It supports the decision; it does not carry it. It is
+also not something a counter can show, so it lives in the remarks rather than in a test.
+
+**The isolation is per navigation chain, not per page.** `BrowserApp` builds one engine *before* its
+hop loop and reuses it across meta-refresh and script-initiated navigations, which can cross origins
+— so two documents in one redirect chain do share this cache. Clearing it per hop is the fix if the
+VM engine ever reaches that path.
+
+What this gives up is a repeat across navigations. What it keeps is the pattern that repeats: one
+`new Function` body called from a loop, or a template evaluated once per row. A loop of five
+identical `eval`s compiles once and hits four times, which is what the test asserts. When every
 string is distinct it never hits, and the cost of missing is one hash of the source — small beside
 compiling it, but not nothing.
 
