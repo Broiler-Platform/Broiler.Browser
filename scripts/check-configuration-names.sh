@@ -28,6 +28,14 @@
 # Usage: scripts/check-configuration-names.sh [solution ...]
 #        Defaults to every .slnx at the repository root.
 #
+# It reads per-project <BuildType Project Solution> mappings and asks each project
+# only for the names that actually resolve to it. It does NOT read the sibling
+# <Build Project="false" Solution="..."/>, which excludes a project from building
+# in a configuration rather than renaming the one it gets -- a project still needs
+# a configuration there, so ignoring it is the conservative reading. None of the
+# four generated solutions uses either form; Broiler.Graphics and Broiler.Layout
+# use both.
+#
 # Evaluating a project needs whatever workloads it requires, so
 # Broiler.Android.Browser.slnx is checked from the CI job that installs the
 # android workload rather than from the one that does not.

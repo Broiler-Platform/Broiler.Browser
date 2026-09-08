@@ -421,8 +421,16 @@ Measured after the change, and unchanged for every name that already worked:
 |---|---|---|
 | `Release` | `true` | `TRACE;RELEASE` |
 | `Release-Windows` | `true` | `;RELEASE;WINDOWS;TRACE;RELEASE_WINDOWS` |
-| `Release-VM` | `true` | `TRACE;RELEASE;BROILER_VM_JS;RELEASE_VM` |
-| `Debug-VM` | `false` (symbols on) | `TRACE;DEBUG;BROILER_VM_JS;DEBUG_VM` |
+| `Release-VM` | `true` | `;BROILER_VM_JS;RELEASE;TRACE;RELEASE_VM` |
+| `Debug-VM` | `false` (symbols on) | `;BROILER_VM_JS;DEBUG;TRACE;DEBUG_VM` |
+
+All four measured against `src/Broiler.Browser.Core`, which matters: the leading `;` is the
+signature of the mapping in `eng/Broiler.Configurations.props` appending to an empty
+`$(DefineConstants)`, and plain `Release` has no leading `;` because the SDK's own path produced it.
+`RELEASE_VM` and `DEBUG_VM` are **not ours** — the SDK derives an implicit define from the
+configuration name, upper-cased with `-` replaced by `_`. Nothing in the tree reads them, and the
+constant to condition on is `BROILER_VM_JS`, which is defined from `$(BroilerJavaScriptEngine)` and
+so also answers to `-p:BroilerJavaScriptEngine=Vm`.
 
 A standalone Broiler.JS checkout has no `Directory.Build.targets` above it, so the search returns
 empty, the condition is false and nothing is imported — verified against a worktree with no parent
@@ -501,6 +509,43 @@ edits. It is a **`.targets`**, imported **unconditionally**, and both of those m
 Only two `Directory.Build.targets` exist in the whole tree — this repository's and Broiler.JS's,
 which chains here — so one unconditional import reaches all 88.
 
+**Visual Studio reads the evaluated property, not the csproj XML**, which is what makes a fix in an
+imported file work at all. Measured by driving `devenv.com` 18.9.2 against a scratch two-project
+solution outside this repository, changing nothing but the presence of a `Directory.Build.targets`
+that appends the name:
+
+| | Result |
+|---|---|
+| without it | `Skipped Build: Project: Lib`, and the head fails `CS0006` |
+| with it | `Build started: Project: Lib, Configuration: Debug-VM Any CPU`, both build, exit 0 |
+
+The library's csproj is byte-identical across the two runs and declares no `<Configurations>` at all.
+
+### The alternative that would have been worse than the error
+
+The other way to silence the error is a per-project `.slnx` mapping, the form
+`Broiler.Layout/Broiler.Layout.slnx` uses:
+
+```xml
+<BuildType Project="Debug" Solution="Debug-VM|*" />
+```
+
+That resolves `Debug-VM` onto plain `Debug` for a project rather than requiring the project to
+declare it — and **the solution's mapping beats the configuration a parent project would otherwise
+pass down.** `AssignProjectConfiguration` turns it into `SetConfiguration` metadata and
+`ResolveProjectReferences` hands that to the `MSBuild` task as `Properties`, which override
+inherited global properties.
+
+Driven through `devenv.com`, that builds the dependency as `Configuration=Debug` — `DEBUG` defined,
+`Optimize` false — while the head builds as `Debug-VM`. Exit 0, no error, no warning.
+
+`src/Broiler.Browser.Core` declares no `<Configurations>` of its own, so it is one of the projects
+that mapping would catch. `BROILER_VM_JS` comes only from `$(BroilerJavaScriptEngine)`, which is set
+only when `$(Configuration)` is literally `Debug-VM` or `Release-VM` — so the constant would go
+undefined, the conditional `ProjectReference` to `Broiler.HtmlBridge.Scripting.Vm` would drop out,
+and selecting `Debug-VM` in Visual Studio would stop erroring and quietly build a browser with no VM
+in it. **Declaring the names is the fix; mapping them away removes the message and the feature.**
+
 ## Verifying a change to any of this
 
 The mapping is observable without building anything:
@@ -509,7 +554,7 @@ The mapping is observable without building anything:
 dotnet msbuild src/Broiler.Browser.Core/Broiler.Browser.Core.csproj -p:Configuration=Release-VM -getProperty:DefineConstants -getProperty:Optimize -getProperty:BroilerJavaScriptEngine
 ```
 
-`RELEASE;BROILER_VM_JS`, `true`, `Vm`. The same question against a Broiler.VM project answers
+`;BROILER_VM_JS;RELEASE;TRACE;RELEASE_VM`, `true`, `Vm`. The same question against a Broiler.VM project answers
 `RELEASE` and `true` through the targets-side import:
 
 ```bash
