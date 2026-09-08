@@ -155,17 +155,28 @@ bytes from outside are verified.
 
 #### What actually hits
 
-**The same document again — not "every library once".** The key is a digest over the whole ordered
-unit list *including each unit's referrer*, so a library shared by two pages is not separately keyed
-(it is one unit inside a whole-document digest) and two documents have two referrers and never
-collide. A hit is a reload, a back or forward, or any return to a URL already visited in this
-process with the same scripts.
+The key is a digest over the **whole ordered unit list** plus the compilation inputs, so:
 
-That is narrower than a per-library cache and it is what the engine's own design forces: a
-document's scripts are compiled into **one** artifact so they share one realm, and splitting them
-per script to widen the cache would change what the page runs. The cache is shared across engines
-rather than held per engine because `BrowserApp` builds a new engine per navigation — a per-engine
-cache would never hit at all.
+- **A shared library is not separately keyed.** It is one unit inside a whole-document digest. That
+  is what the engine's design forces rather than a defect in the key: a document's scripts compile
+  into **one** artifact so they share one realm, and splitting them per script to make a library
+  separately cacheable would change what the page runs.
+- **Through `Execute(scripts)` there is no document URL, so two documents with byte-identical
+  script lists share an entry** — correctly, because they compile to the same program byte for
+  byte. Sharing here is the point, not a collision.
+- **Through the module-capable overload the document URL is part of the identity**, because it is
+  what a relative specifier resolves against, so the same text under two documents is two programs.
+
+Both halves are pinned by tests, because this description was wrong twice before it was right.
+
+The cache is shared across engines rather than held per engine because a new engine is built per
+navigation; a per-engine cache would never hit at all.
+
+**In this repository the callers are the tests.** `RenderingPipeline` only calls
+`ExecuteInteractive`, which is forwarded — so the cache serves the document-free entry points, whose
+real consumers (`Broiler.Cli`, `Broiler.Wpt`, `Broiler.DevConsole`) are not in this checkout. It is
+built and proven here; it is not on a path this repository's own browser takes yet, for the same
+reason nothing else on the VM is.
 
 The key covers everything that reaches the compiler. Two components are worth naming because
 neither is obvious:
