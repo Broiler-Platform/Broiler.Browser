@@ -356,6 +356,8 @@ must not do.
 | `eng/Broiler.Configurations.props` | Maps every configuration name to a base configuration; sets `$(BroilerJavaScriptEngine)` and defines `BROILER_VM_JS` |
 | `Directory.Build.props` | Imports it, for projects that chain to the root |
 | `Directory.Build.targets` | Imports it again for the ones that do not — see below |
+| `eng/Broiler.ConfigurationNames.targets` | Adds `Debug-VM`/`Release-VM` to every project's `$(Configurations)`, so an IDE can map them — see below |
+| `scripts/check-configuration-names.sh` | Asserts that outcome, because no build can |
 | `src/Broiler.Browser.Core/*.csproj` | The one conditional `ProjectReference` |
 | `src/Broiler.Browser.Core/BrowserApp.cs` | The one `#if BROILER_VM_JS` |
 | `eng/solutions.json` | `configurations` per solution, becoming the `.slnx` `<BuildType>` list |
@@ -465,6 +467,40 @@ free of Broiler.VM is the project-level one:
 dotnet build src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj -c Release
 ```
 
+### Why every project has to declare the names too
+
+A solution declaring `Debug-VM` is necessary and was not sufficient. Visual Studio resolves a
+solution build type onto a project configuration **of the same name** and checks that the project
+has one; there is no fallback. Selecting `Debug-VM` after the work above therefore gave
+
+> Invalid project mappings. See log file
+
+against **87 of the 88** projects in `Broiler.Windows.Browser.slnx` — every one whose
+`$(Configurations)` was still the SDK default `Debug;Release`. Only `src/Broiler.Browser.Windows`
+was fine, because it spells its own list out.
+
+**No command-line build can reproduce this.** `dotnet build <solution> -c Debug-VM` hands a project
+a configuration it never mentioned and builds it, which is why the configurations shipped, passed
+CI, and were still unusable from an IDE. The gap is not a weaker check on this side; it is a
+question the command line does not ask at all.
+
+`eng/Broiler.ConfigurationNames.targets` appends the two names to `$(Configurations)` wherever they
+are absent, which is how eighty-seven projects across nine repositories get them without eighty-seven
+edits. It is a **`.targets`**, imported **unconditionally**, and both of those matter:
+
+- A project's own `<Configurations>` is an unconditional assignment in the csproj body, evaluated
+  *after* `Directory.Build.props`. Appending from the props side reached 83 of the 88 and was
+  silently overwritten in the Windows variants of Broiler.Graphics, Broiler.Input and
+  Broiler.Media, which declare `Debug;Release;Debug-Windows;Release-Windows` themselves.
+  `Directory.Build.targets` is the first point that sees what a project actually ended up with.
+- The mapping above is imported under a sentinel so it applies once. That is right for a
+  decomposition and wrong for this, which must apply *last*. The append tests before it adds, so
+  it is idempotent and needs no sentinel — and having none is what lets it reach the chaining
+  projects, whose sentinel is already set by the time the targets side runs.
+
+Only two `Directory.Build.targets` exist in the whole tree — this repository's and Broiler.JS's,
+which chains here — so one unconditional import reaches all 88.
+
 ## Verifying a change to any of this
 
 The mapping is observable without building anything:
@@ -491,4 +527,17 @@ And the duplicate-assembly check takes the configuration from the environment:
 
 ```bash
 CONFIGURATION=Release-VM ./scripts/check-component-graph.sh Broiler.Linux.Browser.slnx
+```
+
+The declaration is a different question, and the one a build cannot answer. This asks every
+project in a solution whether it declares every build type that solution offers:
+
+```bash
+./scripts/check-configuration-names.sh Broiler.Windows.Browser.slnx
+```
+
+A single project answers it too, and this is the form that was wrong for 87 of them:
+
+```bash
+dotnet msbuild src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj -getProperty:Configurations
 ```
