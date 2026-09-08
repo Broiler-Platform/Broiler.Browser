@@ -1,0 +1,260 @@
+#!/usr/bin/env bash
+#
+# Fails when a solution offers a build type that one of its projects does not declare.
+#
+# A solution's <Configurations> lists the build types you can pick. Visual Studio
+# then resolves the chosen one onto a project configuration OF THE SAME NAME and
+# checks that the project has one; it does not fall back. So a solution offering
+# Debug-VM to a project whose $(Configurations) is still the SDK default
+# `Debug;Release` is an unbuildable combination, and VS says so on open:
+#
+#   Invalid project mappings. See log file
+#
+# with a temp file naming every project it could not map. That is what happened
+# here: 87 of the 88 projects in Broiler.Windows.Browser.slnx, all at once.
+#
+# THE COMMAND LINE CANNOT REPRODUCE IT. `dotnet build <solution> -c Debug-VM`
+# hands a project a configuration it never mentioned and builds it happily, which
+# is why the whole -VM configuration pair shipped, passed CI, and was still broken
+# for anyone who opened the solution in an IDE. Nothing but a check like this one
+# closes that gap, because the thing that notices is not on this machine.
+#
+# eng/Broiler.ConfigurationNames.targets is what makes the declaration true for
+# every project without editing eighty-seven project files, most of which live in
+# other repositories. This asserts the outcome rather than trusting the mechanism:
+# a project that spells out its own <Configurations> in its csproj body overwrites
+# what a parent set, and that overwrite is silent.
+#
+# Usage: scripts/check-configuration-names.sh [solution ...]
+#        Defaults to every .slnx at the repository root.
+#
+# It reads per-project <BuildType Project Solution> mappings and asks each project
+# only for the names that actually resolve to it. It does NOT read the sibling
+# <Build Project="false" Solution="..."/>, which excludes a project from building
+# in a configuration rather than renaming the one it gets -- a project still needs
+# a configuration there, so ignoring it is the conservative reading. None of the
+# four generated solutions uses either form; Broiler.Graphics and Broiler.Layout
+# use both.
+#
+# Evaluating a project needs whatever workloads it requires, so
+# Broiler.Android.Browser.slnx is checked from the CI job that installs the
+# android workload rather than from the one that does not.
+#
+# Requires: dotnet, python3.
+
+set -uo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$root" || exit 1
+
+if [ "$#" -gt 0 ]; then
+  solutions=("$@")
+else
+  mapfile -t solutions < <(find . -maxdepth 1 -name '*.slnx' -printf '%f\n' | sort)
+fi
+
+if [ "${#solutions[@]}" -eq 0 ]; then
+  echo "::error::No solutions found to check. This cannot pass vacuously."
+  exit 1
+fi
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+annotate() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::error::$1"
+  else
+    echo "ERROR: $1" >&2
+  fi
+}
+
+# $(Configurations) is a property, and no built-in target reports one. This target
+# does, and the two CustomAfter* extension points below inject it into every
+# project the probe evaluates -- so the whole solution costs ONE dotnet invocation
+# instead of one per project. It is injected for the probe only and is not part of
+# any build.
+#
+# It RETURNS the answer rather than writing it. The projects are probed in
+# parallel, and having each append to one shared file is a race that fails as
+# "the process cannot access the file"; the parent collects TargetOutputs and
+# writes once instead.
+cat >"$work/report.targets" <<'TARGETS'
+<Project>
+  <Target Name="BroilerReportConfigurations" Returns="@(BroilerConfigurationReport)">
+    <ItemGroup>
+      <BroilerConfigurationReport Include="$(MSBuildProjectFullPath)">
+        <Declared>$(Configurations)</Declared>
+      </BroilerConfigurationReport>
+    </ItemGroup>
+  </Target>
+</Project>
+TARGETS
+
+status=0
+checked_total=0
+
+for solution in "${solutions[@]}"; do
+  echo "── $solution"
+
+  # The projects the SOLUTION lists, not the whole reference closure. VS validates
+  # a mapping for each project the solution loads; a ProjectReference reached from
+  # one is given its configuration as a global property and never consulted about
+  # what it declares, so the closure is a different question from this one.
+  report="$work/report.txt"
+  probe="$work/probe.proj"
+  : >"$report"
+
+  python3 - "$solution" "$probe" "$work/wanted.txt" >"$work/counts.txt" <<'PY' || { annotate "$solution: could not read the solution."; status=1; continue; }
+import os, sys, xml.etree.ElementTree as ET, xml.sax.saxutils as x
+
+solution, out, wanted_out = sys.argv[1], sys.argv[2], sys.argv[3]
+root = ET.parse(solution).getroot()
+base = os.path.dirname(os.path.abspath(solution))
+
+def full(path):
+    return os.path.normpath(os.path.join(base, path.replace("\\", "/")))
+
+# A <BuildType> with no Project attribute declares a build type the solution
+# offers. One WITH a Project attribute is a per-project mapping: it says this
+# solution build type resolves to a DIFFERENT project configuration for this
+# project, so the project is not required to declare the solution's name.
+#
+# The generated solutions here use none of those -- every build type maps by
+# identity, which is why every project has to declare every name. Broiler.Layout's
+# hand-authored solution does use them, mapping Debug-Linux onto plain Debug, and
+# reading its mappings as requirements would report a wall of failures against a
+# solution that is correct.
+offered = sorted({b.get("Name") for b in root.iter("BuildType")
+                  if b.get("Name") and b.get("Project") is None})
+
+projects, required = [], {}
+for p in root.iter("Project"):
+    if not p.get("Path"):
+        continue
+    path = full(p.get("Path"))
+    if path in required:
+        continue
+    projects.append(path)
+
+    # Solution="Debug-Linux|*" is "this build type, any platform"; the part before
+    # the bar is the solution configuration being mapped.
+    mapped = {}
+    for b in p.iter("BuildType"):
+        if b.get("Project") and b.get("Solution"):
+            mapped[b.get("Solution").split("|")[0]] = b.get("Project")
+    required[path] = [mapped.get(name, name) for name in offered]
+
+projects.sort()
+with open(wanted_out, "w", encoding="utf-8") as f:
+    for path in projects:
+        f.write("%s|%s\n" % (path, ";".join(sorted(set(required[path])))))
+
+items = "\n".join('    <ProjectToProbe Include=%s />' % x.quoteattr(p) for p in projects)
+open(out, "w", encoding="utf-8").write(f"""<Project>
+  <ItemGroup>
+{items}
+  </ItemGroup>
+  <Target Name="Probe">
+    <MSBuild Projects="@(ProjectToProbe)"
+             Targets="BroilerReportConfigurations"
+             BuildInParallel="true"
+             SkipNonexistentProjects="false">
+      <Output TaskParameter="TargetOutputs" ItemName="Probed" />
+    </MSBuild>
+    <WriteLinesToFile File="$(BroilerConfigurationReport)"
+                      Lines="@(Probed->'%(Identity)|%(Declared)')"
+                      Overwrite="true" />
+  </Target>
+</Project>
+""")
+print(len(projects))
+print(";".join(offered))
+PY
+
+  listed="$(sed -n 1p "$work/counts.txt")"
+  offered="$(sed -n 2p "$work/counts.txt")"
+
+  if [ -z "$offered" ]; then
+    annotate "$solution: declares no build types, so this proves nothing about it."
+    status=1
+    continue
+  fi
+
+  # Both extension points, because a project declaring <TargetFrameworks> does not
+  # import Microsoft.Common.targets in its outer build and would answer MSB4057 --
+  # which the count check below turns into a failure rather than a silent gap, but
+  # covering them is better than reporting them.
+  if ! dotnet msbuild "$probe" -t:Probe \
+        -p:BroilerConfigurationReport="$report" \
+        -p:CustomAfterMicrosoftCommonTargets="$work/report.targets" \
+        -p:CustomAfterMicrosoftCommonCrossTargetingTargets="$work/report.targets" \
+        -nologo -v:q >"$work/probe.log" 2>&1; then
+    annotate "$solution: could not evaluate its projects."
+    sed 's/^/    /' "$work/probe.log" >&2
+    status=1
+    continue
+  fi
+
+  # WriteLinesToFile uses the platform line ending, so a run on Windows leaves a
+  # carriage return on the last field. Without this the check reports every project
+  # as missing the LAST build type the solution offers and nothing else -- which
+  # looks exactly like a real finding.
+  tr -d '\r' <"$report" >"$report.lf" && mv "$report.lf" "$report"
+
+  checked="$(grep -c . "$report" 2>/dev/null || echo 0)"
+  if [ "$checked" -ne "$listed" ]; then
+    annotate "$solution lists $listed projects but only $checked reported. This check cannot pass on a partial answer."
+    status=1
+    continue
+  fi
+  checked_total=$((checked_total + checked))
+
+  # Report every project that is missing every name it is missing. This failure
+  # arrives for a whole solution at once -- a mapping that regressed took 87
+  # projects with it -- and stopping at the first would misrepresent the size of it.
+  missing=0
+  unmatched=0
+  while IFS='|' read -r project declared; do
+    [ -n "$project" ] || continue
+
+    # What THIS project must declare, which is the solution's list only where the
+    # solution does not map the build type onto some other name for it.
+    # Through the environment, not through `awk -v`: -v processes escape sequences
+    # in the value it assigns, so a Windows path arrives with its \B and \s eaten
+    # and never matches. ENVIRON does not.
+    wanted="$(BROILER_PROJECT="$project" awk -F'|' '$1 == ENVIRON["BROILER_PROJECT"] { print $2; found = 1 } END { exit !found }' "$work/wanted.txt")" || {
+      annotate "$solution: $project reported a configuration list but is not one of the projects read from the solution. Not proving anything about it would be worse than failing."
+      unmatched=1
+      status=1
+      continue
+    }
+
+    absent=""
+    IFS=';' read -ra want <<<"$wanted"
+    for name in "${want[@]}"; do
+      case ";$declared;" in
+        *";$name;"*) ;;
+        *) absent="$absent $name" ;;
+      esac
+    done
+    if [ -n "$absent" ]; then
+      missing=$((missing + 1))
+      status=1
+      absent="${absent# }"
+      annotate "${project#$root/} does not declare ${absent// /, }, which $solution needs it to. Visual Studio refuses to map a solution build type onto a project configuration that does not exist; the command line accepts it silently."
+    fi
+  done <"$report"
+
+  if [ "$missing" -eq 0 ] && [ "$unmatched" -eq 0 ]; then
+    printf '   ok  %d projects, for build types %s\n' "$checked" "${offered//;/, }"
+  fi
+done
+
+echo
+if [ "$status" -eq 0 ]; then
+  echo "Every project declares every build type its solution offers, across ${#solutions[@]} solution(s), $checked_total projects."
+else
+  echo "A solution offers a build type a project does not declare. See the errors above."
+fi
+exit "$status"

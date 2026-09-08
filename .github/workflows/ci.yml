@@ -140,6 +140,29 @@ jobs:
         run: |
           ./scripts/check-component-graph.sh             Broiler.Windows.Browser.slnx             Broiler.Linux.Browser.slnx             Broiler.Browser.Tests.slnx
 
+      # Declaring the names is a SEPARATE problem from making them behave, and it
+      # is the one no command-line build can notice. Visual Studio maps a solution
+      # build type onto a project configuration of the same name and refuses when
+      # the project has none; `dotnet build -c Debug-VM` just builds. So Debug-VM
+      # shipped, passed every job below, and still gave
+      #
+      #   Invalid project mappings. See log file
+      #
+      # against 87 of the 88 projects in the Windows solution the first time anyone
+      # opened it. eng/Broiler.ConfigurationNames.targets is the fix; this is the
+      # only thing on this side that can see whether it still works.
+      #
+      # Broiler.Android.Browser.slnx is checked from the `android` job, which
+      # installs the workload its projects need. Evaluation only, like the passes
+      # above.
+      - name: Verify every project declares every build type
+        shell: bash
+        run: |
+          ./scripts/check-configuration-names.sh \
+            Broiler.Windows.Browser.slnx \
+            Broiler.Linux.Browser.slnx \
+            Broiler.Browser.Tests.slnx
+
       # A configuration name the SDK does not recognise gets neither Optimize nor
       # DebugSymbols: `-c Release-VM` would compile UNOPTIMISED, succeed, and say
       # nothing. eng/Broiler.Configurations.props is what stops that, reaching part
@@ -359,6 +382,10 @@ jobs:
       - name: Verify one assembly per name
         shell: bash
         run: ./scripts/check-component-graph.sh Broiler.Android.Browser.slnx
+
+      - name: Verify every project declares every build type
+        shell: bash
+        run: ./scripts/check-configuration-names.sh Broiler.Android.Browser.slnx
 
       - name: Build
         run: dotnet build Broiler.Android.Browser.slnx -c Release

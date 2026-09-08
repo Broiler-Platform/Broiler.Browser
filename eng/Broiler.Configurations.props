@@ -59,6 +59,16 @@
     either engine:
 
       dotnet build ... -p:BroilerJavaScriptEngine=Vm
+
+    ── What this file does NOT do ────────────────────────────────────────
+
+    It makes the names BEHAVE. It does not make projects DECLARE them, which is a
+    separate problem with a separate answer in eng/Broiler.ConfigurationNames.targets
+    — separate because a project's own <Configurations> is evaluated after this and
+    overwrites it, so the declaration has to run later than the mapping can.
+
+    Leaving that undone did not break any build; it broke opening the solution in
+    Visual Studio, which is the one reader that checks.
   -->
 
   <!--

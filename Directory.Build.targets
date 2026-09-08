@@ -27,6 +27,14 @@
           Condition="'$(BroilerConfigurationMappingApplied)' != 'true'" />
 
   <!--
+    Making the names BEHAVE is above; making them EXIST is here, and the two cannot share an
+    import. This one has to be unconditional and has to be last: a project that spells out its own
+    <Configurations> in the csproj body overwrites anything the props side set, and this is the
+    first point that sees the result. That file says what breaks when it runs any earlier.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)eng\Broiler.ConfigurationNames.targets" />
+
+  <!--
     Standalone Broiler.HTML builds use the Graphics checkout nested inside that submodule.
     Root builds instead use the canonical top-level Graphics checkout, which for the Win32
     demo means the src/ layout Broiler.Graphics publishes today.
