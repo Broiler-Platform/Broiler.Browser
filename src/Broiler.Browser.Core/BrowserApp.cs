@@ -43,6 +43,12 @@ internal sealed class BrowserApp : IDisposable
     private readonly StandardButton _stopButton;
     private readonly StandardButton _goButton;
     private readonly StandardButton _starButton;
+
+#if BROILER_VM_JS
+    /// <summary>Clears the VM code cache. Present only where that cache can exist.</summary>
+    private readonly StandardButton _clearCacheButton;
+#endif
+
     private readonly StandardEdit _address;
     private readonly StandardLabel _status;
     private readonly BrowserViewport _viewport;
@@ -75,6 +81,9 @@ internal sealed class BrowserApp : IDisposable
         _stopButton = CreateChromeButton("Stop", "Stop");
         _goButton = CreateChromeButton("Go", "Go");
         _starButton = CreateChromeButton("*", "Favorite");
+#if BROILER_VM_JS
+        _clearCacheButton = CreateChromeButton("Cache", "Clear code cache");
+#endif
         _address = new StandardEdit
         {
             PreferredSize = new BSize(420, 28),
@@ -102,6 +111,11 @@ internal sealed class BrowserApp : IDisposable
             _address,
             _starButton,
             _goButton,
+#if BROILER_VM_JS
+            _clearCacheButton,
+#else
+            null,
+#endif
             _viewport,
             _status);
 
@@ -122,6 +136,9 @@ internal sealed class BrowserApp : IDisposable
         _stopButton.Clicked += (_, _) => StopLoading();
         _goButton.Clicked += (_, _) => NavigateTo(_address.Text);
         _starButton.Clicked += (_, _) => ToggleFavorite();
+#if BROILER_VM_JS
+        _clearCacheButton.Clicked += (_, _) => ConfirmClearCodeCache();
+#endif
         _address.Submitted += (_, _) => NavigateTo(_address.Text);
         _viewport.LinkActivated += OnViewportLinkActivated;
         _viewport.FilePickRequested += OnViewportFilePickRequested;
@@ -393,7 +410,7 @@ internal sealed class BrowserApp : IDisposable
         resend.Clicked += (_, _) => dialog.Accept();
         cancel.Clicked += (_, _) => dialog.Cancel();
 
-        dialog.AddChild(new ResubmitPrompt(message, resend, cancel));
+        dialog.AddChild(new ConfirmPrompt(message, resend, cancel));
         dialog.ResultCompleted += (_, e) =>
         {
             if (e.Result.Kind == UiDialogResultKind.Accepted)
@@ -407,6 +424,72 @@ internal sealed class BrowserApp : IDisposable
     }
 
     private static readonly BSize ResubmitDialogSize = new(420, 170);
+
+#if BROILER_VM_JS
+    private static readonly BSize ClearCacheDialogSize = new(460, 190);
+
+    /// <summary>
+    /// Asks before deleting the compiled artifacts the VM code cache has written to disk.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This is the control that has to exist before the on-disk store may be turned on.</b> The
+    /// artifacts hold a page's string literals and interned names as text, so the directory is a
+    /// readable record of what has been browsed; a browser that can write that and not erase it is
+    /// one whose users cannot undo a visit. docs/vm-javascript-profile.md carries the measurement
+    /// and the reasoning.
+    /// </para>
+    /// <para>
+    /// <b>It clears the default directory whether or not caching is switched on</b>, because the
+    /// files that most need deleting are the ones left behind by a run when it WAS on. A store
+    /// constructed here for the purpose is not the one the cache holds and does not enable
+    /// anything.
+    /// </para>
+    /// </remarks>
+    private void ConfirmClearCodeCache()
+    {
+        StandardDialog dialog = new()
+        {
+            Title = "Clear code cache",
+            PreferredSize = ClearCacheDialogSize,
+        };
+
+        StandardLabel message = new()
+        {
+            Text =
+                "Delete the compiled scripts saved on this computer? They record the text of pages " +
+                "that have been opened. Pages will load as usual afterwards.",
+            Font = new BFontStyle("Segoe UI", 13),
+            Foreground = BrowserPalette.Text,
+            Trimming = UiTextTrimming.None,
+        };
+
+        StandardButton clear = CreateChromeButton("Delete", "Delete");
+        StandardButton cancel = CreateChromeButton("Cancel", "Cancel");
+
+        clear.Clicked += (_, _) => dialog.Accept();
+        cancel.Clicked += (_, _) => dialog.Cancel();
+
+        dialog.AddChild(new ConfirmPrompt(message, clear, cancel));
+        dialog.ResultCompleted += (_, e) =>
+        {
+            if (e.Result.Kind == UiDialogResultKind.Accepted)
+                ClearCodeCache();
+
+            _host.RequestInvalidate();
+        };
+
+        dialog.ShowModal(_rootWindow, GetDialogPlacement(ClearCacheDialogSize));
+        _host.RequestInvalidate();
+    }
+
+    /// <summary>Deletes the on-disk artifacts and says so.</summary>
+    private void ClearCodeCache()
+    {
+        new HtmlBridge.VmArtifactStore(HtmlBridge.VmArtifactStore.DefaultDirectory, 0).Clear();
+        SetStatus("Code cache cleared.");
+    }
+#endif
 
     private void StopLoading()
     {
@@ -1331,6 +1414,7 @@ internal sealed class BrowserApp : IDisposable
         private const double StopButtonWidth = 58;
         private const double GoButtonWidth = 54;
         private const double StarWidth = 62;
+        private const double CacheButtonWidth = 62;
         private const double MinWidth = 720;
         private const double MinHeight = 480;
 
@@ -1341,10 +1425,28 @@ internal sealed class BrowserApp : IDisposable
         private readonly StandardEdit _address;
         private readonly StandardButton _starButton;
         private readonly StandardButton _goButton;
+
+        /// <summary>
+        /// The optional maintenance control, present only in builds that have something to
+        /// maintain.
+        /// </summary>
+        /// <remarks>
+        /// <b>Nullable rather than conditionally compiled.</b> The clear-code-cache command exists
+        /// only under Debug-VM/Release-VM, where the VM script engine and its on-disk store are in
+        /// the graph at all. Wrapping a constructor parameter and four layout sites in
+        /// <c>#if</c> would make this element's shape differ by build configuration, which is a bad
+        /// thing for layout arithmetic to do; an absent optional control is something the arrange
+        /// pass already knows how to express.
+        /// </remarks>
+        private readonly StandardButton? _cacheButton;
+
         private readonly BrowserViewport _viewport;
         private readonly StandardLabel _status;
         private readonly List<StandardButton> _favorites = [];
         private bool _isCompact;
+
+        /// <summary>The width the cache control claims, which is none when there is not one.</summary>
+        private double CacheWidthWhenShown => _cacheButton is null ? 0 : CacheButtonWidth + Margin;
 
         public BrowserContent(
             StandardButton backButton,
@@ -1354,6 +1456,7 @@ internal sealed class BrowserApp : IDisposable
             StandardEdit address,
             StandardButton starButton,
             StandardButton goButton,
+            StandardButton? cacheButton,
             BrowserViewport viewport,
             StandardLabel status)
         {
@@ -1364,6 +1467,7 @@ internal sealed class BrowserApp : IDisposable
             _address = address;
             _starButton = starButton;
             _goButton = goButton;
+            _cacheButton = cacheButton;
             _viewport = viewport;
             _status = status;
 
@@ -1374,6 +1478,8 @@ internal sealed class BrowserApp : IDisposable
             AddChild(_address);
             AddChild(_starButton);
             AddChild(_goButton);
+            if (_cacheButton is not null)
+                AddChild(_cacheButton);
             AddChild(_viewport);
             AddChild(_status);
         }
@@ -1400,7 +1506,9 @@ internal sealed class BrowserApp : IDisposable
         {
             double width = double.IsInfinity(availableSize.Width) ? MinWidth : Math.Max(0, availableSize.Width);
             double height = double.IsInfinity(availableSize.Height) ? MinHeight : Math.Max(0, availableSize.Height);
-            double addressWidth = Math.Max(90, width - 4 * NavButtonWidth - StopButtonWidth - StarWidth - GoButtonWidth - 9 * Margin);
+            double addressWidth = Math.Max(
+                90,
+                width - 4 * NavButtonWidth - StopButtonWidth - StarWidth - GoButtonWidth - CacheWidthWhenShown - 9 * Margin);
             BSize controlSize = new(double.PositiveInfinity, ControlHeight);
 
             _backButton.Measure(new BSize(NavButtonWidth, ControlHeight));
@@ -1410,6 +1518,7 @@ internal sealed class BrowserApp : IDisposable
             _address.Measure(new BSize(addressWidth, ControlHeight));
             _starButton.Measure(new BSize(StarWidth, ControlHeight));
             _goButton.Measure(new BSize(GoButtonWidth, ControlHeight));
+            _cacheButton?.Measure(new BSize(CacheButtonWidth, ControlHeight));
             foreach (StandardButton button in _favorites)
                 button.Measure(controlSize);
 
@@ -1427,6 +1536,8 @@ internal sealed class BrowserApp : IDisposable
             _refreshButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
             _stopButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
             _starButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
+            if (_cacheButton is not null)
+                _cacheButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
 
             double x = finalRect.Left + Margin;
             double y = finalRect.Top + (ToolbarHeight - ControlHeight) / 2;
@@ -1446,7 +1557,8 @@ internal sealed class BrowserApp : IDisposable
                 x += StopButtonWidth + Margin;
             }
 
-            double rightControls = (compact ? 0 : StarWidth + Margin) + GoButtonWidth + Margin;
+            double rightControls =
+                (compact ? 0 : StarWidth + Margin) + (compact ? 0 : CacheWidthWhenShown) + GoButtonWidth + Margin;
             double addressWidth = Math.Max(90, finalRect.Right - Margin - x - rightControls);
             _address.Arrange(new BRect(x, y, addressWidth, controlHeight));
             x += addressWidth + Margin;
@@ -1454,6 +1566,12 @@ internal sealed class BrowserApp : IDisposable
             {
                 _starButton.Arrange(new BRect(x, y, StarWidth, ControlHeight));
                 x += StarWidth + Margin;
+
+                if (_cacheButton is not null)
+                {
+                    _cacheButton.Arrange(new BRect(x, y, CacheButtonWidth, ControlHeight));
+                    x += CacheButtonWidth + Margin;
+                }
             }
             _goButton.Arrange(new BRect(x, y, GoButtonWidth, controlHeight));
 
@@ -2126,7 +2244,7 @@ internal sealed class BrowserApp : IDisposable
     /// on a row at the bottom right. A dialog's default child arrangement stretches
     /// every child over the whole surface, so this places them itself.
     /// </summary>
-    private sealed class ResubmitPrompt : UiElement
+    private sealed class ConfirmPrompt : UiElement
     {
         private const double Margin = 16;
         private const double ButtonHeight = 28;
@@ -2137,7 +2255,7 @@ internal sealed class BrowserApp : IDisposable
         private readonly StandardButton _accept;
         private readonly StandardButton _cancel;
 
-        public ResubmitPrompt(StandardLabel message, StandardButton accept, StandardButton cancel)
+        public ConfirmPrompt(StandardLabel message, StandardButton accept, StandardButton cancel)
         {
             _message = message;
             _accept = accept;
