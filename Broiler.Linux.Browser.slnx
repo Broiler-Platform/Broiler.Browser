@@ -3,6 +3,8 @@
   <Configurations>
     <BuildType Name="Debug" />
     <BuildType Name="Release" />
+    <BuildType Name="Debug-VM" />
+    <BuildType Name="Release-VM" />
   </Configurations>
   <Folder Name="/Entry points/">
     <Project Path="src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj" />
@@ -100,10 +102,19 @@
     <Project Path="Broiler.UI/src/Implementations/Standard/ValueAndSelection/Broiler.UI.ListView.Standard/Broiler.UI.ListView.Standard.csproj" />
     <Project Path="Broiler.UI/src/Implementations/Standard/ValueAndSelection/Broiler.UI.RadioButton.Standard/Broiler.UI.RadioButton.Standard.csproj" />
   </Folder>
+  <Folder Name="/Dependencies/Broiler.VM/">
+    <Project Path="Broiler.VM/src/Broiler.VM.Abstractions/Broiler.VM.Abstractions.csproj" />
+    <Project Path="Broiler.VM/src/Broiler.VM.Binary/Broiler.VM.Binary.csproj" />
+    <Project Path="Broiler.VM/src/Broiler.VM.Profile.JavaScript.Compiler/Broiler.VM.Profile.JavaScript.Compiler.csproj" />
+    <Project Path="Broiler.VM/src/Broiler.VM.Profile.JavaScript.Format/Broiler.VM.Profile.JavaScript.Format.csproj" />
+    <Project Path="Broiler.VM/src/Broiler.VM.Profile.JavaScript/Broiler.VM.Profile.JavaScript.csproj" />
+    <Project Path="Broiler.VM/src/Broiler.VM.Runtime/Broiler.VM.Runtime.csproj" />
+  </Folder>
   <Folder Name="/Dependencies/src/">
     <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Core/Broiler.HtmlBridge.Core.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj" />
+    <Project Path="src/Broiler.HtmlBridge.Scripting.Vm/Broiler.HtmlBridge.Scripting.Vm.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Scripting/Broiler.HtmlBridge.Scripting.csproj" />
   </Folder>
 </Solution>

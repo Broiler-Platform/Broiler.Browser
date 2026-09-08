@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Configurations>Debug;Release;Debug-Windows;Release-Windows</Configurations>
+    <Configurations>Debug;Release;Debug-Windows;Release-Windows;Debug-VM;Release-VM</Configurations>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Debug-Windows' Or '$(Configuration)' == 'Release-Windows'">win-x64</RuntimeIdentifier>
   </PropertyGroup>
 

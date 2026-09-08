@@ -1,8 +1,25 @@
 {
+  "$comment": [
+    "Each entry declares one focused solution: the entry points it is rooted at, the build types",
+    "it offers, and the platform boundaries its project closure must not cross.",
+    "",
+    "'configurations' becomes the .slnx <BuildType> list and defaults to Debug/Release when",
+    "omitted. It has to name every configuration anyone builds THROUGH the solution: MSBuild",
+    "answers MSB4126 for one a solution does not declare, before it evaluates a project. The",
+    "runtime-identifier-pinned names (Release-Windows, Release-Linux) are deliberately absent --",
+    "they are published per project, which is why CI's publish job is a project-level build.",
+    "",
+    "Debug-VM/Release-VM build the browser against the Broiler.VM JavaScript profile. Note what",
+    "they do NOT do here: the generator reads every ProjectReference regardless of its Condition,",
+    "so the Broiler.VM projects land in these solutions under all four build types even though",
+    "Broiler.Browser.Core only references them under the -VM pair. See",
+    "docs/vm-javascript-profile.md."
+  ],
   "solutions": [
     {
       "path": "Broiler.Windows.Browser.slnx",
       "description": "Windows browser application and its transitive dependencies.",
+      "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],
       "roots": [
         "src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj"
       ],
@@ -14,6 +31,7 @@
     {
       "path": "Broiler.Linux.Browser.slnx",
       "description": "Linux browser application and its transitive dependencies.",
+      "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],
       "roots": [
         "src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj"
       ],
@@ -25,6 +43,7 @@
     {
       "path": "Broiler.Android.Browser.slnx",
       "description": "Android browser application and its transitive dependencies.",
+      "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],
       "roots": [
         "src/Broiler.Browser.Android/Broiler.Browser.Android.csproj"
       ],
@@ -35,6 +54,7 @@
     {
       "path": "Broiler.Browser.Tests.slnx",
       "description": "Browser test projects; component unit tests stay in component-owned solutions.",
+      "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],
       "roots": [
         "src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj"
       ],

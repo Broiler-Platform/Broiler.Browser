@@ -19,6 +19,15 @@
     <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    The same conditional reference Broiler.Browser.Core carries, for the same reason and with the
+    same effect on the generated solutions. Without it VmScriptEngineTests could not name the type
+    it tests, and the -VM configurations would be gated on nothing but whether they compile.
+  -->
+  <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
+    <ProjectReference Include="..\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

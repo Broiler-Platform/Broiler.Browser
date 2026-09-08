@@ -65,6 +65,29 @@ dotnet test Broiler.Browser.Tests.slnx -c Release
   `android-x64`, and produces an `.aab` in `Release` and an `.apk` otherwise. Override
   `BroilerAndroidAbis` to package a single ABI.
 
+### Configurations
+
+Every configuration name decomposes into a base (`Debug` or `Release`, deciding symbols and
+optimisation) and one axis, in [`eng/Broiler.Configurations.props`](eng/Broiler.Configurations.props):
+
+| Configuration | What it adds | Built through |
+|---|---|---|
+| `Debug` / `Release` | — | solution or project |
+| `Debug-Linux` / `Release-Linux` | pins `linux-x64` on the Linux head | project only |
+| `Debug-Windows` / `Release-Windows` | pins `win-x64` on the Windows head | project only |
+| `Debug-VM` / `Release-VM` | runs script on the Broiler.VM JavaScript profile | solution or project |
+
+The runtime-identifier-pinned pairs are absent from the solutions on purpose — they are published
+per project, and a solution-level build of a configuration a `.slnx` does not declare fails
+`MSB4126`. The `-VM` pair *is* declared, so it works both ways:
+
+```bash
+dotnet build Broiler.Windows.Browser.slnx -c Debug-VM
+```
+
+See [docs/vm-javascript-profile.md](docs/vm-javascript-profile.md) for what that changes — and for
+the two things it does **not**: it does not remove Broiler.JS, and no page load runs on the VM yet.
+
 ## Solutions
 
 Each head has a focused solution containing exactly its transitive closure, so opening one
@@ -72,10 +95,16 @@ does not drag in another platform's backends.
 
 | Solution | Entry point | Projects |
 |---|---|---|
-| `Broiler.Windows.Browser.slnx` | `src/Broiler.Browser.Windows` | 80 |
-| `Broiler.Linux.Browser.slnx` | `src/Broiler.Browser.Linux` | 80 |
-| `Broiler.Android.Browser.slnx` | `src/Broiler.Browser.Android` | 81 |
-| `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests` | 75 |
+| `Broiler.Windows.Browser.slnx` | `src/Broiler.Browser.Windows` | 88 |
+| `Broiler.Linux.Browser.slnx` | `src/Broiler.Browser.Linux` | 87 |
+| `Broiler.Android.Browser.slnx` | `src/Broiler.Browser.Android` | 88 |
+| `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests` | 82 |
+
+Seven of those projects in each — the Broiler.VM JavaScript profile and the script engine over it
+— are only *referenced* under `Debug-VM`/`Release-VM`, but the generator reads every
+`ProjectReference` regardless of its `Condition`, so they are listed and built in all four
+configurations. That is the price of one solution per head; a project-level build under `Debug` or
+`Release` is free of them.
 
 The solutions are **generated, not hand-edited**. `eng/solutions.json` declares each entry
 point and the platform boundaries it must not cross; `scripts/update-solutions.ps1` walks
@@ -101,13 +130,21 @@ projects by changing the reference graph, then regenerate.
 - **Solution manifest** — `scripts/update-solutions.ps1 -Verify`, which fails if a
   checked-in `.slnx` no longer matches the reference graph. This is what catches a new
   `ProjectReference` that was never folded into a solution.
+- **Component graph** — one assembly per name across each solution's whole closure, in `Debug`
+  and again in `Debug-VM`, which is a different closure rather than the same one built twice.
+  The same job pins that the configuration mapping reaches every component and is applied exactly
+  once — a configuration the mapping misses compiles unoptimised and says nothing, and one it maps
+  twice defines `RELEASE` twice.
 - **Build** — the Windows head on `windows-latest`, the Linux head on `ubuntu-latest`.
 - **Tests** — the suite on both hosts, because the shared chrome does clipboard and
   file-dialog work that is easy to make accidentally platform-specific.
+- **VM profile** — the suite on Linux and the Windows head under `Release-VM`. The suite is the
+  one that carries weight: `VmScriptEngineTests` compiles only under that configuration, so this
+  is where JavaScript actually runs on the Broiler.VM profile rather than merely linking against it.
 - **Android head** — a separate job, since it pays for the `android` workload.
 - **Publish** — `Release-Windows` and `Release-Linux`, the runtime-identifier-pinned
-  configurations. They are project-level builds by necessity: the solutions declare only
-  `Debug` and `Release`, so a solution-level build with either fails `MSB4126`.
+  configurations. They are project-level builds by necessity: no solution declares them, so a
+  solution-level build with either fails `MSB4126`.
 
 [`release.yml`](.github/workflows/release.yml) is dispatch-only and uploads build
 artifacts for manual testing — `win-x64`, `linux-x64` and a **debug-signed**
@@ -131,15 +168,23 @@ The nested-submodule set the browser needs is defined once, in
 | `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
 | `src/Broiler.HtmlBridge.Core` | Bridge models, logging, CSP and script-extraction support |
 | `src/Broiler.HtmlBridge.Dom` | DOM bridge, tree building, JavaScript DOM objects |
-| `src/Broiler.HtmlBridge.Scripting` | JavaScript execution integration |
+| `src/Broiler.HtmlBridge.Scripting` | JavaScript execution integration (Broiler.JS) |
+| `src/Broiler.HtmlBridge.Scripting.Vm` | The same integration over the Broiler.VM JavaScript profile, referenced only under `Debug-VM`/`Release-VM` |
 | `Broiler.Layout` | Vendored layout engine — see *Dependencies* below |
-| `Broiler.VM.Profile.JavaScript` | JavaScript language profile for `Broiler.VM`. Documents only — `docs/roadmap.md` and its delivery, gates and status files. No source tree yet. |
-| `Broiler.VM.Profile.WebAssembly` | WebAssembly language profile for `Broiler.VM`. Documents only, same shape. No source tree yet. |
-| `eng/`, `scripts/` | Solution manifest and generator |
+| `eng/`, `scripts/` | Solution manifest, configuration mapping and generator |
+
+*(Corrected 2026-09-08. Two rows here described `Broiler.VM.Profile.JavaScript` and
+`Broiler.VM.Profile.WebAssembly` as top-level directories of this repository holding "documents
+only — no source tree yet". Neither is a path here at all: both are product projects inside the
+`Broiler.VM` submodule, at `Broiler.VM/src/`, and both have had source for some time. The rows are
+removed rather than repaired because a repository-layout table should list paths that exist. What
+replaces them is the row above, which is a real directory this change added.)*
 
 ## Dependencies
 
-Nine components are submodules, pinned to `main`:
+Nine components are submodules. Eight are pinned to `main`; `Broiler.VM`'s entry in
+[`.gitmodules`](.gitmodules) names no branch, so `git submodule update --remote` leaves it where
+the gitlink puts it while moving the other eight.
 
 | Component | Purpose |
 |---|---|
@@ -156,9 +201,18 @@ Nine components are submodules, pinned to `main`:
 `Broiler.JS` carries `Broiler.DateTime`, `Broiler.Regex` and `Broiler.Unicode` as its own
 nested submodules.
 
-`Broiler.VM` is not yet used by the browser heads. It is a separate clean-room component with its
-own roadmap, and `Broiler.JS` does not depend on it. The two intended language profiles live in
-this repository — see *Repository layout* — and are documents only: neither has a source tree yet.
+`Broiler.VM` is reached by the browser heads **only under the `Debug-VM` and `Release-VM`
+configurations**, through `src/Broiler.HtmlBridge.Scripting.Vm`. It remains a separate clean-room
+component with its own roadmap, `Broiler.JS` does not depend on it, and neither depends on the
+other. Its two language profiles — JavaScript and WebAssembly — are product projects inside that
+submodule under `Broiler.VM/src/`; the browser references the JavaScript one and none of the
+WebAssembly one, which every head's solution manifest also forbids by pattern. See
+[docs/vm-javascript-profile.md](docs/vm-javascript-profile.md).
+
+*(Corrected 2026-09-08. This paragraph read "`Broiler.VM` is not yet used by the browser heads"
+and described both profiles as living in this repository as documents with no source tree. The
+first half is what this change made false, so it is restated rather than deleted; the second half
+was already false before it — see the note under* Repository layout.*)*
 
 ### Broiler.Layout is vendored, not a submodule
 
