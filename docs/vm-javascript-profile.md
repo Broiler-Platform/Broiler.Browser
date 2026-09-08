@@ -207,15 +207,37 @@ So compilation was about 93% of the work and verification plus execution the res
 figure from one machine on one shape of input, recorded because a cache with no measurement is a
 claim rather than a result — not a benchmark, and not a promise about any other page.
 
+#### Guest-supplied source has its own cache, per engine
+
+`eval`, `new Function` and dynamic `import()` are compiled through a **second** cache, owned by the
+`VmScriptEngine` instance rather than shared across the process. Two reasons, and both survive
+inspection:
+
+**A timing signal, which on this profile is not theoretical.** The realm installs `Date` with a
+working `now`, so a page can time its own `eval`. Were the cache shared, one page could evaluate a
+string and learn from the latency whether another page had already evaluated it — a question about
+another document's content, asked through a cache. Real browsers key code caches by origin for this
+reason; this engine has no origin, so it takes the conservative scope instead.
+
+**Eviction.** A page chooses how many distinct strings it evaluates, and a cache is bounded — so a
+page that evaluated enough of them would push out every other page's compiled documents. Per
+engine, a page can only evict itself. That half *is* asserted by a test; the timing half is an
+argument about what a page could learn, not something a counter can show.
+
+What this gives up is a repeat across page loads. What it keeps is the pattern that actually
+repeats: one `new Function` body called from a loop, or a template evaluated once per row. A loop of
+five identical `eval`s compiles once and hits four times, which is what the test asserts. When every
+string is distinct it never hits, and the cost of missing is one hash of the source — small beside
+compiling it, but not nothing.
+
 ### What is still not there
 
 **The on-disk form.** The contract calls the cache a *persisted* envelope; this one lives for the
 process. The step is safe by construction, per the round-trip rule above, but it needs a storage
 location, eviction across runs, and corruption handling, none of which exist here yet.
 
-**Caching what `eval` compiles.** `VmSourceProvider` compiles guest-initiated source on every call.
-Left out deliberately: eval strings are usually unique, so the hit rate would be near zero while a
-page could still push entries through a shared cache.
+**A guest-source cache that outlives the page.** See below — the one that exists is deliberately
+per-engine.
 
 **A DOM.** Unchanged, and it is the reason the document-bearing paths are still forwarded.
 
