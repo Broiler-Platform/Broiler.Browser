@@ -166,9 +166,42 @@ approved as contract and not as a release feature with no envelope member expose
 > a host that needs it caches source-to-artifact bytes itself and re-verifies on every load, which
 > is the contract's intended behaviour rather than a workaround
 
-So **every use is still verified**, under its own allowance, and what is saved is the lowering. That
-is also why a future on-disk form is safe by construction: cached bytes are bytes from outside, and
-bytes from outside are verified.
+So **every use is still verified**, under its own allowance, and what is saved is the lowering.
+
+#### The on-disk tier, which is off unless asked for
+
+`VmArtifactStore` gives the cache a second tier: memory first, disk second, the compiler last, with
+a disk hit promoted into memory. It buys exactly one thing over the in-memory tier — **surviving a
+restart** — and it is `null` by default, so out of the box nothing is written anywhere.
+
+One file per entry under `LocalApplicationData/Broiler/vm-code-cache`, named by the key's hex.
+*Local* rather than the roaming folder `FavoritesManager` uses: favourites are the user's and should
+follow them to another machine, while an artifact is derived, disposable, and keyed partly by the
+identity of the compiler that produced it. Written to a temporary name and moved into place, so a
+reader never sees a half-written file. Bounded on total bytes, oldest written evicted first — which
+is also what collects the garbage a Broiler.VM bump leaves behind, since a new compiler MVID makes
+every existing key unreachable.
+
+**Every failure is a miss.** Missing, short, wrong magic, wrong embedded key, locked, unreadable
+directory — all mean "compile it". Tests cover truncation, garbage, and an unusable directory.
+
+**What verification does and does not protect.** It stops *corruption*: malformed bytes are refused
+by the verifier rather than run. It does **not** stop *substitution* — a valid artifact compiled
+from other source, planted under this key's name, is well formed and would be accepted. The file
+carries its key in its header and that is checked on read, which catches a copied directory, a
+partial rename or a case-folding filesystem; it does not stop someone who can write both the name
+and the contents. What makes that acceptable is that such a person can replace the browser
+executable itself, so it is not an escalation — stated because *"every load is verified"* reads like
+a stronger guarantee than it is.
+
+**Why off by default.** A file named by a content digest records that a document with those exact
+scripts was loaded, and this browser has no private-browsing mode and no way to clear a cache.
+Turning that on for every user is a product decision rather than a consequence of building the
+mechanism. Enabling it is one line:
+
+```csharp
+VmCompilationCache.Shared.Store = new VmArtifactStore(VmArtifactStore.DefaultDirectory, 64 * 1024 * 1024);
+```
 
 #### What actually hits
 
@@ -268,12 +301,13 @@ compiling it, but not nothing.
 
 ### What is still not there
 
-**The on-disk form.** The contract calls the cache a *persisted* envelope; this one lives for the
-process. The step is safe by construction, per the round-trip rule above, but it needs a storage
-location, eviction across runs, and corruption handling, none of which exist here yet.
+**A guest-source cache that outlives the page.** See above — the one that exists is deliberately
+per-engine, and is deliberately never persisted.
 
-**A guest-source cache that outlives the page.** See below — the one that exists is deliberately
-per-engine.
+**Broiler.VM's own persisted envelope.** Distinct from the on-disk store below, and not available:
+decision 4 approves it as contract and not as a release feature, and release 1 exposes no envelope
+member. What that would buy over the store is skipping *verification*, which the store does not and
+must not do.
 
 **A DOM.** Unchanged, and it is the reason the document-bearing paths are still forwarded.
 
