@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch] $Verify
 )
@@ -111,6 +111,19 @@ function Resolve-ProjectReference {
     $resolvedInclude = $resolvedInclude.Replace(
         '$(BroilerInputRoot)',
         (Join-Path $repositoryRoot 'Broiler.Input'))
+
+    # Added with the Broiler.Layout extraction (2026-09-09). Broiler.Layout is a
+    # submodule now rather than a directory here, and both it and Broiler.HTML address
+    # Broiler.CSS, Broiler.DOM and Broiler.Layout through roots so they build standalone.
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerCssRoot)',
+        (Join-Path $repositoryRoot 'Broiler.CSS'))
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerDomRoot)',
+        (Join-Path $repositoryRoot 'Broiler.DOM'))
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerLayoutRoot)',
+        (Join-Path $repositoryRoot 'Broiler.Layout'))
 
     # Broiler.Regex prefers a Broiler.Unicode checkout nested beside it and falls back to the
     # one Broiler.JS owns. Both gitlinks point at the same commit, and the mapping table folds
