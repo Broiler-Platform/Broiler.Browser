@@ -60,31 +60,38 @@ profile inside this repository's own suite. The step from there to a page is ite
 
 ### Why the document paths cannot run on the VM yet
 
-Three separate obstacles, none of which is an unfinished port:
+This section listed three obstacles. **The first one is closed, and it was the one the other two
+were said to depend on** — so what remains is stated here in the order it now blocks.
 
-1. **The host boundary is bytes.** A host capability of the JavaScript profile is
-   `VmHostBytesCapabilityHandler` — a `VmBytes` in, a `VmOpaqueRef` out. A DOM is not a byte
-   string, and there is no surface on the profile through which a live object graph could be
-   projected.
+1. ~~**The host boundary is bytes.**~~ **Closed.** The argument was that a host capability of the
+   JavaScript profile is `VmHostBytesCapabilityHandler` — a `VmBytes` in, a `VmOpaqueRef` out —
+   that a DOM is not a byte string, and that therefore no surface on the profile could carry a live
+   object graph. Every clause is true and the conclusion does not follow: a host object never
+   travels through the capability channel. The profile publishes an in-realm host surface, and
+   `src/Broiler.HtmlBridge.Jseal.Vm` is a JSEAL provider over it that declares
+   `JsCapabilities.Document` and passes the conformance suite in full. See
+   [`docs/jseal.md`](jseal.md), which records this mistake and the two others of the same shape.
 2. **The DOM bridge is written against Broiler.JS.** `Broiler.HtmlBridge.Dom` defines the
    document's JavaScript objects as `Broiler.JavaScript` types whose accessors are CLR delegates
-   over live nodes — **891 references across 250 files**. Nothing about that is portable to a
-   different engine by configuration.
+   over live nodes — **891 references across 250 files** on the day the migration started.
+   [JSEAL](jseal.md) is the engine-neutral seam it is migrating onto, and
+   `eng/jseal-budget.json` carries the current number and may only let it fall.
 
-   *This one is now being worked on rather than merely stated.* [JSEAL](jseal.md) is the
-   engine-neutral seam the bridge is migrating onto; the count above is the day it started, and
-   `eng/jseal-budget.json` carries the current number and may only let it fall. Note what that does
-   and does not change for this document: a migrated binding stops naming Broiler.JS, and a page
-   still runs on Broiler.JS, because obstacle (1) is upstream of all of it — see
-   *Broiler.VM: why there is no provider yet* in `docs/jseal.md`, which names the three things the
-   profile would have to publish.
+   **With (1) closed, this is now the obstacle rather than a consequence of one.** The bridge's
+   remaining engine references are structural rather than unmigrated, and the load-bearing one is
+   `IDomBridgeRuntime.Attach`, which takes a `JSContext`: a bridge can only adopt a realm of the
+   engine that minted that object, so a page load reaches Broiler.JS however capable a second
+   provider is.
 3. **`InteractiveSession` cannot be built from outside Broiler.JS.** Its constructor is internal
-   and takes a `JSContext`, so `ExecuteInteractive` could not return one even if the first two
-   were solved.
+   and takes a `JSContext`, so `ExecuteInteractive` could not return one even if (2) were solved.
+   This remains literally true.
 
-Closing (1) is the prerequisite for the rest. Until then, a `-VM` build renders pages through
-Broiler.JS and runs document-free script — the WPT-style batches, `ExecuteDetailed` callers, and
-anything a future headless script path asks for — on the VM.
+**Closing (2) is now the prerequisite, and its first step is an `Attach` that takes an `IJsRealm`.**
+Until then, a `-VM` build renders pages through Broiler.JS and runs document-free script — the
+WPT-style batches, `ExecuteDetailed` callers, and anything a future headless script path asks for —
+on the VM. Stated plainly, because a closed obstacle invites the other reading: **no page script has
+ever run on the VM in this repository**, and `RenderingPipeline` — the only consumer of
+`IScriptEngine` here — calls `ExecuteInteractive`, which is a forwarded member.
 
 A fourth obstacle is smaller but blocks the same door from the other side: `InteractiveSession`'s
 only constructor is `internal` to `Broiler.HtmlBridge.Scripting`, and
@@ -355,7 +362,10 @@ decision 4 approves it as contract and not as a release feature, and release 1 e
 member. What that would buy over the store is skipping *verification*, which the store does not and
 must not do.
 
-**A DOM.** Unchanged, and it is the reason the document-bearing paths are still forwarded.
+**A DOM.** Changed, and no longer the reason the document-bearing paths are forwarded. The profile
+publishes a host surface a document-shaped embedder can build in, and this repository has a JSEAL
+provider over it declaring `JsCapabilities.Document`. What forwards those paths now is
+`IDomBridgeRuntime.Attach` taking a `JSContext` — this repository's seam, not the profile's ceiling.
 
 ## The build wiring
 
