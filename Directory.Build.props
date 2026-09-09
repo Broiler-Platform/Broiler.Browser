@@ -152,6 +152,24 @@
       System.TypeLoadException: Method 'DecodeAsync' in type
       'Broiler.Media.Image.Managed.PngImageCodec' ... does not have an implementation.
   -->
+  <!--
+    Broiler.Layout stopped being a directory here on 2026-09-09 and became a submodule,
+    because Broiler.HTML depends on it structurally and could not build alone while the
+    only way to reach it was as a sibling of that repository. Its own build now resolves
+    Broiler.CSS, Broiler.DOM and Broiler.Graphics through roots, and Broiler.HTML resolves
+    Broiler.Layout, Broiler.CSS and Broiler.DOM the same way.
+
+    Which means those roots have to be set HERE, or an in-tree build sends each submodule
+    to its OWN nested checkout and the graph grows a second Broiler.Dom, a second
+    Broiler.CSS and a second Broiler.Layout - the duplicate-assembly failure the two
+    property groups above already exist to prevent, arriving by a new route.
+  -->
+  <PropertyGroup>
+    <BroilerCssRoot>$(MSBuildThisFileDirectory)Broiler.CSS</BroilerCssRoot>
+    <BroilerDomRoot>$(MSBuildThisFileDirectory)Broiler.DOM</BroilerDomRoot>
+    <BroilerLayoutRoot>$(MSBuildThisFileDirectory)Broiler.Layout</BroilerLayoutRoot>
+  </PropertyGroup>
+
   <PropertyGroup>
     <BroilerMediaRoot>$(MSBuildThisFileDirectory)Broiler.Media</BroilerMediaRoot>
     <BroilerInputRoot>$(MSBuildThisFileDirectory)Broiler.Input</BroilerInputRoot>
