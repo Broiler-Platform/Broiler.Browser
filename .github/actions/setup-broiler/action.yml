@@ -21,10 +21,15 @@ runs:
     #
     # They no longer do. Every component reference now goes through a root property --
     # $(BroilerDomPath), $(BroilerGraphicsPath), $(BroilerGraphicsRoot),
-    # $(BroilerMediaRoot), $(BroilerInputRoot) -- which the root Directory.Build.props
-    # sets to the top-level checkout, so the nested copies are not in any solution's
-    # project closure and initialising them only costs time. Verified by emptying all
-    # of them and building all four solutions clean.
+    # $(BroilerMediaRoot), $(BroilerInputRoot), and since 2026-09-09 also
+    # $(BroilerCssRoot), $(BroilerDomRoot) and $(BroilerLayoutRoot) -- which the root
+    # Directory.Build.props sets to the top-level checkout, so the nested copies are
+    # not in any solution's project closure and initialising them only costs time.
+    # Verified by emptying all of them and building all four solutions clean.
+    #
+    # The last three arrived with the Broiler.Layout extraction: Broiler.Layout is a
+    # submodule now rather than a directory here, and both it and Broiler.HTML resolve
+    # their own dependencies through roots, so those roots have to be set above them.
     #
     # Broiler.JS is the exception, and the reason this step still exists: DateTime,
     # Regex and Unicode have no top-level equivalent to be redirected to.

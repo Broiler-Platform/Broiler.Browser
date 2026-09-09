@@ -33,3 +33,7 @@
 [submodule "Broiler.VM"]
 	path = Broiler.VM
 	url = https://github.com/Broiler-Platform/Broiler.VM.git
+[submodule "Broiler.Layout"]
+	path = Broiler.Layout
+	url = https://github.com/Broiler-Platform/Broiler.Layout.git
+	branch = main
