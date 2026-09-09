@@ -28,6 +28,22 @@
     <ProjectReference Include="..\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
   </ItemGroup>
 
+  <!--
+    THE JSEAL CONFORMANCE SUITE NAMES NO ENGINE TYPE, which is what makes it a conformance suite and
+    what stops it loading a provider assembly on its own. JsEngineHosting.EnsureRegistered names the
+    Broiler.JS provider, and it cannot name this one: Broiler.HtmlBridge.Scripting is linked in every
+    configuration and this provider is linked in two, so a reference from there would drag Broiler.VM
+    into every build. So the naming happens here, in the assembly that already knows which
+    configuration it is, under the same condition as the reference above.
+  -->
+  <ItemGroup>
+    <Compile Remove="Jseal\VmProviderRegistration.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
+    <Compile Include="Jseal\VmProviderRegistration.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
