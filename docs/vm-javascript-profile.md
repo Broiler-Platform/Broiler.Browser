@@ -70,6 +70,14 @@ Three separate obstacles, none of which is an unfinished port:
    document's JavaScript objects as `Broiler.JavaScript` types whose accessors are CLR delegates
    over live nodes — **891 references across 250 files**. Nothing about that is portable to a
    different engine by configuration.
+
+   *This one is now being worked on rather than merely stated.* [JSEAL](jseal.md) is the
+   engine-neutral seam the bridge is migrating onto; the count above is the day it started, and
+   `eng/jseal-budget.json` carries the current number and may only let it fall. Note what that does
+   and does not change for this document: a migrated binding stops naming Broiler.JS, and a page
+   still runs on Broiler.JS, because obstacle (1) is upstream of all of it — see
+   *Broiler.VM: why there is no provider yet* in `docs/jseal.md`, which names the three things the
+   profile would have to publish.
 3. **`InteractiveSession` cannot be built from outside Broiler.JS.** Its constructor is internal
    and takes a `JSContext`, so `ExecuteInteractive` could not return one even if the first two
    were solved.

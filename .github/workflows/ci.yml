@@ -255,6 +255,37 @@ jobs:
 
           exit "$status"
 
+  # The DOM bridge is being moved off Broiler.JS and onto the engine-neutral
+  # contracts in src/Broiler.HtmlBridge.Jseal, and that is 250 files. A migration
+  # that size lands incrementally or not at all — and the way an incremental one
+  # fails is not that it stalls, it is that new bindings keep being written in the
+  # old vocabulary, because the neighbouring file still uses it and nothing says
+  # not to. It then finishes wherever the two rates met, with nobody able to name
+  # what is left.
+  #
+  # eng/jseal-budget.json records today's coupling per project and this job
+  # recounts it: a project that went UP fails, and a project that came in under
+  # its budget is reported so the number gets lowered in the same commit. It also
+  # guards the one neutrality claim the compiler makes rather than the budget —
+  # Broiler.HtmlBridge.Jseal.csproj referencing nothing at all — because every 0
+  # in that file is only worth reading while that holds.
+  neutrality:
+    name: Engine neutrality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # No submodules and no dotnet, deliberately. The script reads this
+      # repository's own .cs files as text and its own .csproj files as XML; it
+      # restores nothing, evaluates nothing and builds nothing, so it answers in
+      # under a second and can fail a pull request before anything long starts.
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Verify no project gained engine coupling
+        shell: bash
+        run: ./scripts/check-engine-neutrality.sh
+
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them
   # true is failing here when a checked-in solution no longer matches the real
