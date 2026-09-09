@@ -113,6 +113,45 @@
       ════════════════════════════════════════════════════════════════════
     -->
     <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8620;CS8622;CS8625;CS8631;CS8632;CS8765;CS8767;CS0109;CS0628;CS9113;CA1416;CA2255;SYSLIB0013;RS1038;RS1041</NoWarn>
+
+    <!--
+      ════════════════════════════════════════════════════════════════════
+      PROMOTED TO AN ERROR. The block above is what this repository has
+      decided to tolerate; this is the one thing it has decided not to.
+      ════════════════════════════════════════════════════════════════════
+
+      ── Reference equality on a value type ────────────────────────────
+      CA2013 : Do not pass an argument with value type to
+               ReferenceEquals.
+
+      Reason  : It is the ONE silent failure mode of the JSEAL migration
+                that the compiler can see and would otherwise only
+                mention. Retiring Runtime/JsInterop.cs means retyping the
+                bridge's engine-typed storage — the wrapper roots, the
+                registry, the listener record — from JSObject, a class,
+                to JsValue, a struct. Every other reader of those fields
+                fails loudly when that happens: `f is null` is CS0037 and
+                `f is not { }` is CS8518, both hard errors. ReferenceEquals
+                is the exception. It compiles, it boxes both sides, and it
+                answers false forever — and there are 87 call sites under
+                src/ for it to happen at.
+
+                One of them says what that costs:
+                DomBridge/EventTargetInterface.cs reaches
+                `_windowJSObject is { } window && ReferenceEquals(receiver,
+                window)`, and `is { }` on a struct is itself legal and
+                always true. Retyped naively that site compiles clean and
+                every window-level listener silently stops registering.
+
+                Nothing trips this rule today — the whole tree was built
+                with it as an error before it was promoted — so this costs
+                nothing now and fails the build on the day it would
+                otherwise have cost a defect.
+      Future  : It stays. When JsInterop is gone the rule guards the same
+                mistake for whatever holds a handle next; a value-typed
+                handle is the design, not a phase.
+    -->
+    <WarningsAsErrors>$(WarningsAsErrors);CA2013</WarningsAsErrors>
   </PropertyGroup>
 
   <!--
