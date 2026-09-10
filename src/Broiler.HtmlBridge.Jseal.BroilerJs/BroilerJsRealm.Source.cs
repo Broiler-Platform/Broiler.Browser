@@ -22,7 +22,7 @@ internal sealed partial class BroilerJsRealm
     public JsValue EvaluateHostScript(string source, string label)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return Evaluate(source, label);
+        return Evaluate(ApplyStrictMode(source), label);
     }
 
     /// <summary>
@@ -35,6 +35,23 @@ internal sealed partial class BroilerJsRealm
     /// <c>AllowGuestEval: false</c> gets it here, at the one call that can produce it, without the
     /// engine consulting a policy object mid-execution.
     /// </remarks>
+    /// <summary>
+    /// Runs a classic script the page carries.
+    /// </summary>
+    /// <remarks>
+    /// <b>Unconditional, and its being three lines is the design rather than a shortcut.</b> This
+    /// engine carries a run-time compiler, so the ABILITY the capability names is never in doubt
+    /// here; and the PERMISSION that governs a script element is <c>script-src</c>, which the caller
+    /// decided before it called. There is nothing left for this method to check. On an engine that
+    /// compiles ahead of time the same member would be the one that could not be written, which is
+    /// why the capability exists at all.
+    /// </remarks>
+    public JsValue EvaluateClassicScript(string source, string label)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return Evaluate(source, label);
+    }
+
     public JsValue EvaluateGuestSource(string source, string label)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -51,7 +68,7 @@ internal sealed partial class BroilerJsRealm
 
         try
         {
-            return BroilerJsMarshal.Wrap(_context.Eval(ApplyStrictMode(source), label));
+            return BroilerJsMarshal.Wrap(_context.Eval(source, label));
         }
         catch (JSException engineException)
         {
@@ -60,13 +77,29 @@ internal sealed partial class BroilerJsRealm
     }
 
     /// <summary>
-    /// <c>ForceStrictMode</c>, expressed the only way this engine offers.
+    /// <c>ForceStrictMode</c>, expressed the only way this engine offers, and applied to the source
+    /// THIS REPOSITORY authored rather than to everything the realm evaluates.
     /// </summary>
     /// <remarks>
     /// <para>
     /// Broiler.JS has no realm-wide "everything is strict" switch — <c>JSContextOptions</c> carries
     /// none — so the directive is prepended to the source instead, which is what the language itself
     /// says makes a script strict.
+    /// </para>
+    /// <para>
+    /// <b>It is applied by the caller rather than inside <c>Evaluate</c>, and the difference is a
+    /// specification one.</b> It used to sit in the shared helper, so every member forcing it — the
+    /// page's own evaluations included. An indirect <c>eval</c> evaluates a NEW script whose
+    /// strictness comes from its own source, so a host that forced it strict would make one page
+    /// behave differently here than anywhere else. <c>docs/vm-javascript-profile.md</c> states the
+    /// rule and measures both engines against each other under it; the script-engine path was
+    /// already correct and this realm was not, in the direction of being too strict.
+    /// </para>
+    /// <para>
+    /// The two providers disagreed in OPPOSITE directions and nothing pinned either: this one forced
+    /// strict on both members, and Broiler.VM forced it on neither, because its
+    /// <c>ForceStrictMode</c> reached only the bootstrap unit and never a compile the source provider
+    /// answered. Both are corrected together, and the conformance suite now asks.
     /// </para>
     /// <para>
     /// <b>No newline, deliberately.</b> The prologue goes on the same line as the source's own first

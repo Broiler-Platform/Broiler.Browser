@@ -79,6 +79,7 @@ public sealed class VmEngineProvider : IJsEngineProvider
     /// </remarks>
     public JsCapabilities Capabilities =>
         JsCapabilities.HostScriptSource |
+        JsCapabilities.ClassicScriptSource |
         JsCapabilities.GuestEval |
         JsCapabilities.Promises |
         JsCapabilities.ExoticObjects |
@@ -92,7 +93,7 @@ public sealed class VmEngineProvider : IJsEngineProvider
         ArgumentNullException.ThrowIfNull(options);
 
         var bridge = new VmHostBridge();
-        var sources = new VmSourceProvider(options.AllowGuestEval);
+        var sources = new VmSourceProvider(options.AllowGuestEval, options.ForceStrictMode);
 
         var catalog = VmCatalog.CreateBuilder()
             .Add(JavaScriptProfile.DescriptorHostingRealms(bridge))
@@ -175,7 +176,9 @@ public sealed class VmEngineProvider : IJsEngineProvider
             // declares neither; the bootstrap program that built this realm was compiled and
             // instantiated rather than evaluated, so getting this far proves nothing about `eval`.
             if (bridge.Eval.Kind is not JsHostValueKind.Function)
-                capabilities &= ~(JsCapabilities.HostScriptSource | JsCapabilities.GuestEval);
+                capabilities &= ~(JsCapabilities.HostScriptSource |
+                                  JsCapabilities.ClassicScriptSource |
+                                  JsCapabilities.GuestEval);
 
             return new VmRealm(runtime, artifact, instance, bridge, sources, capabilities, Name);
         }
