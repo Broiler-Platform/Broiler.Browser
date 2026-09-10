@@ -127,12 +127,24 @@ jobs:
         run: |
           ./scripts/check-component-graph.sh             Broiler.Windows.Browser.slnx             Broiler.Linux.Browser.slnx             Broiler.Browser.Tests.slnx
 
-      # Debug-VM is a DIFFERENT closure, not the same one built differently:
-      # Broiler.Browser.Core's reference to the VM script engine is conditional on
-      # it, so this configuration is the only one in which the Broiler.VM
-      # assemblies are reachable from a head. The duplicate-name question has to be
-      # asked of a closure, so it is asked of this one too. Evaluation only, like
-      # the pass above.
+      # THIS PASS DOES NOT ASK ABOUT A DIFFERENT CLOSURE, AND IT USED TO SAY IT DID.
+      # The claim was that Broiler.Browser.Core's reference to the VM script engine
+      # is conditional on Debug-VM, so only this configuration reaches the Broiler.VM
+      # assemblies from a head. The first half is true of the PROJECT and the
+      # conclusion is false of the SOLUTION: scripts/update-solutions.ps1 writes every
+      # ProjectReference regardless of its Condition, so every .slnx carries the union
+      # and both passes evaluate the same project list. Measured on 2026-09-10 --
+      # Windows 91, Linux 90, Tests 85, identical with and without the configuration.
+      #
+      # What it does ask is GetTargetPath under the Debug-VM mapping, which is a real
+      # question -- a project whose AssemblyName or output path varied by configuration
+      # would answer differently here -- and it is the whole of what this step proves.
+      #
+      # The closure question the old comment described is still worth asking and this
+      # job cannot ask it: a solution carries the union by design, because it has to
+      # offer the configuration in the Visual Studio dropdown at all. It has to be
+      # asked of a HEAD PROJECT, where the Condition applies. Evaluation only, like the
+      # pass above.
       - name: Verify one assembly per name (VM profile)
         shell: bash
         env:

@@ -88,8 +88,24 @@ for solution in "${solutions[@]}"; do
   # evaluation for the whole solution, and it descends through every
   # ProjectReference into the submodules rather than stopping at what the .slnx
   # lists. It is a means to the project list here, nothing more.
+  #
+  # $CONFIGURATION is passed to BOTH halves of this check, and today it changes
+  # nothing here. Measured on 2026-09-10, all three solutions this runs against:
+  # the project list is byte-identical with and without it (Windows 91, Linux 90,
+  # Tests 85, zero differing entries either way). The reason is the .slnx files --
+  # scripts/update-solutions.ps1 writes every ProjectReference regardless of its
+  # Condition, so a solution carries the UNION of the configurations and there is
+  # no configuration in which its closure is smaller.
+  #
+  # It is passed anyway because the two halves must agree on the configuration
+  # they are asking about, and only one of them used to. If a solution ever stops
+  # carrying the union -- emitting <Build Project="false" Solution="Release-VM|*" />
+  # is the shape that would do it -- this call would otherwise keep reading the
+  # default closure while the probe below reported on another, and the mismatch
+  # would be silent.
   dg="$work/dg.json"
   if ! dotnet msbuild "$solution" -t:GenerateRestoreGraphFile \
+        -p:Configuration="${CONFIGURATION:-Debug}" \
         -p:RestoreGraphOutputPath="$dg" -nologo -v:q >"$work/dg.log" 2>&1; then
     annotate "$solution: could not evaluate the project graph."
     sed 's/^/    /' "$work/dg.log" >&2
