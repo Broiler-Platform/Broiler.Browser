@@ -82,9 +82,10 @@ were said to depend on** — so what remains is stated here in the order it now 
    `IDomBridgeRuntime.Attach`, which takes a `JSContext`: a bridge can only adopt a realm of the
    engine that minted that object, so a page load reaches Broiler.JS however capable a second
    provider is.
-3. **`InteractiveSession` cannot be built from outside Broiler.JS.** Its constructor is internal
-   and takes a `JSContext`, so `ExecuteInteractive` could not return one even if (2) were solved.
-   This remains literally true.
+3. **`InteractiveSession` no longer names the engine, and that closes only half of this.** Its
+   internal constructor takes an `IDisposable` engine lifetime rather than a `JSContext`. What is
+   left is the fourth obstacle below: `Broiler.HtmlBridge.Scripting.Vm` is not among that
+   assembly's `InternalsVisibleTo` friends, so it still could not build one even if (2) were solved.
 
 **Closing (2) is now the prerequisite, and its first step is an `Attach` that takes an `IJsRealm`.**
 Until then, a `-VM` build renders pages through Broiler.JS and runs document-free script — the
