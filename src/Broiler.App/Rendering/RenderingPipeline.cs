@@ -15,7 +15,7 @@ public sealed class RenderingPipeline(
     /// Load a page from <paramref name="url"/>, extract inline scripts,
     /// and return a <see cref="PageContent"/> ready for rendering.
     /// The normalised URL (with scheme) is included in the result tuple.
-    /// Uses <see cref="Broiler.HtmlBridge.Scripting.ScriptExtractionService.ExtractAll"/> so that deferred
+    /// Uses <see cref="ScriptExtractionService.ExtractAll"/> so that deferred
     /// and external scripts are also captured, matching the CLI's behaviour.
     /// </summary>
     public Task<(string NormalisedUrl, PageContent Content)> LoadPageAsync(

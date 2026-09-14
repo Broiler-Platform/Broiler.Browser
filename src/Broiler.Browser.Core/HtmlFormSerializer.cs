@@ -284,10 +284,12 @@ internal static class HtmlFormSerializer
 
     private static string EscapeQuotes(string text) => text.Replace("\"", "%22", StringComparison.Ordinal);
 
-    /// <summary>Sentinel a <paramref name="valueOverride"/> returns to mark a checkbox/radio checked.</summary>
+    /// <summary>Sentinel a <c>valueOverride</c> passed to <see cref="BuildEntryList"/> returns to mark a
+    /// checkbox/radio checked.</summary>
     public const string CheckedOverride = "checked";
 
-    /// <summary>Sentinel a <paramref name="valueOverride"/> returns to mark a checkbox/radio unchecked.</summary>
+    /// <summary>Sentinel a <c>valueOverride</c> passed to <see cref="BuildEntryList"/> returns to mark a
+    /// checkbox/radio unchecked.</summary>
     public const string UncheckedOverride = "unchecked";
 
     /// <summary>
