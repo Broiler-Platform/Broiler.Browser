@@ -1,5 +1,6 @@
 using Broiler.Browser;
 using Broiler.Graphics;
+using Broiler.Graphics.Geometry;
 
 namespace Broiler.Browser.Core.Tests;
 

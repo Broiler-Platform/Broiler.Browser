@@ -1,5 +1,8 @@
 using System.Drawing;
 using Broiler.Graphics;
+using Broiler.Graphics.Color;
+using Broiler.Graphics.Geometry;
+using Broiler.Graphics.Text;
 using Broiler.HTML.Core.Entities;
 using Broiler.UI;
 using Broiler.UI.Edit.Standard;

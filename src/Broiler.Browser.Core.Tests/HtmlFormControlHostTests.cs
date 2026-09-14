@@ -1,6 +1,7 @@
 using System.Drawing;
 using Broiler.Browser;
 using Broiler.Graphics;
+using Broiler.Graphics.Geometry;
 using Broiler.HtmlBridge;
 using Broiler.UI;
 using Broiler.UI.Button.Standard;

@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
 using Broiler.Graphics;
+using Broiler.Graphics.Geometry;
+using Broiler.Graphics.RenderList;
+using Broiler.Graphics.Rendering;
 
 namespace Broiler.Browser.Core.Tests;
 

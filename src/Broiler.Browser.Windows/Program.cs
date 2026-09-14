@@ -1,3 +1,4 @@
+using Broiler.Graphics.Imaging;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -23,7 +24,7 @@ internal static class Program
         AssemblyLoadContext.Default.Resolving += ResolveFromAppDirectory;
 
         // Composition root: register the concrete image codecs Broiler.Graphics decodes/encodes with.
-        Broiler.Graphics.BImageCodecs.Use(
+        BImageCodecs.Use(
             new Broiler.Media.MediaCodecCatalog(Broiler.Media.Image.Managed.ManagedImageCodecs.CreateCodecs()));
 
         if (!ConfirmPreviewSafetyNotice())

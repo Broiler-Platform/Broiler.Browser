@@ -1,5 +1,9 @@
 using System.Drawing;
 using Broiler.Graphics;
+using Broiler.Graphics.Adapters;
+using Broiler.Graphics.RenderList;
+using Broiler.Graphics.Rendering;
+using Broiler.Graphics.Text;
 using Broiler.HTML.Graphics;
 using Broiler.Layout.IR;
 using HtmlContainer = Broiler.HTML.Image.HtmlContainer;
@@ -64,7 +68,7 @@ public class RenderListTextFidelityTests
             ILayoutFont measured = Assert.IsAssignableFrom<ILayoutFont>(item.FontHandle);
             BRenderCommand.DrawText command = Find(commands, item);
 
-            // RFont.Size is in points; BFontStyle.Size is in this surface's unit, CSS pixels.
+            // BFont.Size is in points; BFontStyle.Size is in this surface's unit, CSS pixels.
             Assert.Equal(BFontStyle.PointsToPixels(measured.Size), command.Text.Font.Size, 3);
         }
     }
@@ -92,7 +96,7 @@ public class RenderListTextFidelityTests
 
         foreach (DrawTextItem item in items)
         {
-            if (item.FontHandle is not RFont measured || string.IsNullOrEmpty(measured.Family))
+            if (item.FontHandle is not BFont measured || string.IsNullOrEmpty(measured.Family))
                 continue;
 
             BRenderCommand.DrawText command = Find(commands, item);
@@ -118,7 +122,7 @@ public class RenderListTextFidelityTests
 
         foreach (DrawTextItem item in items)
         {
-            if (item.FontHandle is not RFont measured)
+            if (item.FontHandle is not BFont measured)
                 continue;
 
             BRenderCommand.DrawText command = Find(commands, item);
