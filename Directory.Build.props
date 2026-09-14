@@ -120,12 +120,15 @@
       decided to tolerate; these are the two things it has decided not to.
 
       Both are one defect seen from two sides. Retiring
-      Runtime/JsInterop.cs means retyping the bridge's engine-typed
-      storage — the wrapper roots (DomBridge.cs:98-100) and the listener
-      record (DomBridge/RuntimeStates.cs:7) — from JSObject and JSValue,
-      which are CLASSES, to JsValue, which is a STRUCT. What each reader
-      of those fields does on the day that happens, MEASURED in a probe
-      project rather than assumed:
+      Runtime/JsInterop.cs was to mean retyping the bridge's engine-typed
+      storage — the wrapper roots (now DomBridge's DocumentHandle,
+      WindowHandle and VisualViewportHandle) and the listener record
+      (EventListenerRegistration's Listener) — from JSObject and JSValue,
+      which are CLASSES, to JsValue, which is a STRUCT. Both were retyped,
+      the roots in 6d1e7aa and the record in cb0ecb2, and JsInterop.cs
+      remains, for two operations the JSEAL contract lacks; its class
+      remarks name them. What each reader of those fields would do on the
+      day it happened, MEASURED in a probe project rather than assumed:
 
           f is null              error CS0037    loud
           f is not { }           error CS8518    loud
@@ -157,13 +160,15 @@
                 forever — measurably so: ReferenceEquals(v, v) on one
                 struct VALUE is False, not merely on two copies of it.
 
-                One call site says what that costs.
-                DomBridge/EventTargetInterface.cs:138 reaches
+                One call site said what that costs.
+                DomBridge/EventTargetInterface.cs reached
                 `_windowJSObject is { } window && ReferenceEquals(
-                receiver, window)`. This rule catches the ReferenceEquals
-                half; the `is { }` half stays silent (see below).
-                Uncaught, every window-level listener would silently stop
-                registering.
+                receiver, window)` until the roots were retyped
+                (6d1e7aa). This rule catches the ReferenceEquals half;
+                the `is { }` half stays silent (see below). Uncaught,
+                every window-level listener would silently have stopped
+                registering. RouteEventTargetMethod now asks
+                `call.This == WindowHandle`, which is handle equality.
 
                 There are 84 call sites under src/ for it to happen at.
                 The filter that matters is `*.cs`: an unfiltered
@@ -202,24 +207,28 @@
                 that used to mean "absent" comes to mean nothing and the
                 code runs on with an empty handle.
 
-                Three sites are written this way today, and all three are
-                CORRECT today, because the field is still a nullable
-                class:
+                Three sites were written this way when this was
+                promoted, and all three were CORRECT then, because each
+                field was still a nullable class. Each was rewritten
+                when its field was retyped rather than left to warn:
 
-                  DomBridge.WindowLoad.cs:346
+                  DomBridge.WindowLoad.cs, DispatchWindowEvent
                     `_realm is not { } realm || _windowJSObject == null`
-                    The guard disappears; window events would dispatch
-                    against an absent window.
-                  DomBridge/LayoutMetrics.Scrolling.cs:448
+                    would have lost its guard, and window events would
+                    have dispatched against an absent window. It tests
+                    `WindowHandle.IsMissing` since 6d1e7aa.
+                  DomBridge/LayoutMetrics.Scrolling.cs,
+                  DispatchVisualViewportScrollEvent
                     `viewport == null || …Count == 0`
-                    The listener-count clause still guards, so the
-                    listeners run — and see an empty handle as the
-                    event's target.
-                  Features/EventListenerBinding.cs:120
+                    The listener-count clause would still have guarded,
+                    so the listeners would have run and seen an empty
+                    handle as the event's target. It tests
+                    `target.IsMissing` since 6d1e7aa.
+                  Features/EventListenerBinding.cs, GetBooleanOption
                     `value != null && !value.IsNullOrUndefined && …`
-                    Becomes CS8073 only once the listener record is
-                    retyped; the clause after it still guards, so this
-                    one degrades rather than breaks.
+                    Would have become CS8073 once the listener record
+                    was retyped. It became `!value.IsNullish && …` in
+                    cb0ecb2, the commit that retyped it.
 
                 Nothing trips this rule today, checked by a NON
                 INCREMENTAL build, which matters: an incremental
@@ -250,26 +259,26 @@
       `f is { } x` on a struct is legal, always true, and carries NO
       diagnostic — not a warning, not a message. There is nothing to
       promote. Ten sites in Broiler.HtmlBridge.Dom read an engine-typed
-      field this way, and the retype changes what four of them answer:
+      root this way until the roots were retyped (6d1e7aa), and the
+      retype changed what four of them would have answered:
 
         DomBridge/DomBridge.CanvasHost.cs:16          : JsValue.Undefined
-        DomBridge/Registration/CustomElements.cs:240  : JsValue.Null
+        DomBridge/Registration/CustomElements.cs:239  : JsValue.Null
         DomBridge.MessagingHost.cs:30                 : JsValue.Null
         DomBridge.WindowContextHost.cs:29             : JsValue.Undefined
 
-      Each answers a DIFFERENT value for "no window yet" than the Missing
-      a retyped field carries, and Missing is not Undefined and is not
-      Null — the bridge reads argument presence on that distinction.
-      CanvasHost's own comment states the semantics that would go: "A
-      bridge that has not registered a window yet answers `undefined`,
-      which is what the module's `IsObject` guard reads." Drop the
-      `is { }` mechanically at any of those four and the value changes
-      with nothing to say so. The other six fall back to Missing and are
-      safe to collapse.
+      Each answers a DIFFERENT value for a root that is not there yet
+      than the Missing the retyped root carries, and Missing is not
+      Undefined and is not Null — the bridge reads argument presence on
+      that distinction. CanvasHost's own comment says why it still
+      answers `undefined`. Dropping the `is { }` mechanically at any of
+      those four would have changed the value with nothing to say so,
+      so each tests IsMissing and coalesces explicitly now. The other
+      six fell back to Missing and were safe to collapse.
 
-      This paragraph replaces the claim that every other reader "fails
-      loudly when that happens". Most do. These do not, and they are the
-      ones to read before retyping a root.
+      This paragraph replaced the claim that every other reader "fails
+      loudly when that happens". Most did. These did not, and they were
+      the ones to read before retyping a root.
 
       ── The other shape neither of them sees ──────────────────────────
       JsValue.ObjectIdentity is declared `object?`
@@ -283,9 +292,12 @@
       line produced none — and it answers TRUE for any two non-object
       handles, because ObjectIdentity is null for every one of them: two
       different numbers, two Undefineds, two Missings. No site writes it
-      today. Six sites pass ObjectIdentity onward as a
-      ConditionalWeakTable key and every one of them null-guards first, so
-      the collision is unreachable rather than absent.
+      today. In Broiler.HtmlBridge.Dom eight reads in six files pass
+      ObjectIdentity onward as a key into one of seven
+      ConditionalWeakTables, and none passes a null on: six throw instead
+      (`?? throw`, five of them inside an IdentityOf helper) and two test
+      `is { }` first, so the collision is unreachable rather than absent.
+      (This said six sites, every one of them null-guarding first.)
 
       ── How far this reaches, and where it does not ───────────────────
       As far as the props chain. All 13 projects under src/, plus the
