@@ -11,27 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Broiler.Graphics\src\Broiler.Graphics\Broiler.Graphics.csproj" />
-    <ProjectReference Include="..\..\Broiler.Media\src\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input\Broiler.Input.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Keyboard\Broiler.Input.Keyboard.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Mouse\Broiler.Input.Mouse.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Shell\Broiler.UI.Window.Standard\Broiler.UI.Window.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Shell\Broiler.UI.FileDialog.Standard\Broiler.UI.FileDialog.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Shell\Broiler.UI.Dialog.Standard\Broiler.UI.Dialog.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Layout\Broiler.UI.Panel.Standard\Broiler.UI.Panel.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Content\Broiler.UI.Label.Standard\Broiler.UI.Label.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Commands\Broiler.UI.Button.Standard\Broiler.UI.Button.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Text\Broiler.UI.Edit.Standard\Broiler.UI.Edit.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.CheckBox.Standard\Broiler.UI.CheckBox.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.ComboBox.Standard\Broiler.UI.ComboBox.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.ListView.Standard\Broiler.UI.ListView.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\ValueAndSelection\Broiler.UI.RadioButton.Standard\Broiler.UI.RadioButton.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Abstractions\Commands\Broiler.UI.Toolbar\Broiler.UI.Toolbar.csproj" />
-    <ProjectReference Include="..\..\Broiler.UI\src\Implementations\Standard\Commands\Broiler.UI.Toolbar.Standard\Broiler.UI.Toolbar.Standard.csproj" />
-    <ProjectReference Include="..\..\Broiler.HTML\Source\Broiler.HTML.Graphics\Broiler.HTML.Graphics.csproj" />
-    <ProjectReference Include="..\..\Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj" />
-    <ProjectReference Include="..\..\Broiler.DOM\Broiler.Dom.Html\Broiler.Dom.Html.csproj" />
     <ProjectReference Include="..\..\Broiler.JS\Broiler.JS\Broiler.JavaScript.All\Broiler.JavaScript.All.csproj" />
     <ProjectReference Include="..\Broiler.HtmlBridge.Scripting\Broiler.HtmlBridge.Scripting.csproj" />
   </ItemGroup>
@@ -75,6 +54,21 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Broiler.Browser.Android" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.1" />
+    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.1" />
+    <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.4" />
   </ItemGroup>
 
 </Project>

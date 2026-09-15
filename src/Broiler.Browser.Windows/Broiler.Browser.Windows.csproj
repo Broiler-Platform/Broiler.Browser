@@ -22,14 +22,14 @@
   <ItemGroup>
     <Compile Include="..\Broiler.App\WindowsClipboard.cs" Link="WindowsClipboard.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Broiler.Graphics.Windows" Version="0.1.0-preview.3" />
+    <PackageReference Include="Broiler.Input.Keyboard.Windows" Version="0.1.0-preview.2" />
+    <PackageReference Include="Broiler.Input.Mouse.Windows" Version="0.1.0-preview.2" />
+  </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Broiler.Graphics\src\Broiler.Graphics.Windows\Broiler.Graphics.Direct2D.csproj" />
     <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
-    <ProjectReference Include="..\..\Broiler.Media\src\Broiler.Media.Image.Managed\Broiler.Media.Image.Managed.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Windows\Broiler.Input.Windows.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Keyboard.Windows\Broiler.Input.Keyboard.Windows.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Mouse.Windows\Broiler.Input.Mouse.Windows.csproj" />
   </ItemGroup>
 
 </Project>

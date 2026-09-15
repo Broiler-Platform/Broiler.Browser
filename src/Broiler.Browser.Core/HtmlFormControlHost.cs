@@ -5,6 +5,7 @@ using Broiler.Graphics;
 using Broiler.Graphics.Color;
 using Broiler.Graphics.Geometry;
 using Broiler.Graphics.Text;
+using Broiler.HTML.Image;
 using Broiler.HtmlBridge;
 using Broiler.UI;
 using Broiler.UI.Button.Standard;
@@ -16,7 +17,6 @@ using Broiler.UI.ListView;
 using Broiler.UI.ListView.Standard;
 using Broiler.UI.RadioButton;
 using Broiler.UI.RadioButton.Standard;
-using HtmlContainer = Broiler.HTML.Image.HtmlContainer;
 
 namespace Broiler.Browser;
 

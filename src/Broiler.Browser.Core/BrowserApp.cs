@@ -29,7 +29,7 @@ using Broiler.UI.Label;
 using Broiler.UI.Label.Standard;
 using Broiler.UI.Standard;
 using Broiler.UI.Window.Standard;
-using HtmlContainer = Broiler.HTML.Image.HtmlContainer;
+using Broiler.HTML.Image;
 
 namespace Broiler.Browser;
 
