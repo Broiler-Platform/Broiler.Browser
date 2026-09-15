@@ -215,10 +215,8 @@ jobs:
           expect true src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
           expect true Broiler.Layout/Broiler.Layout/Broiler.Layout.csproj
 
-          # Reached through Directory.Build.targets, because their own props
+          # Reached through Directory.Build.targets, because its own props
           # deliberately does not chain to the root.
-          expect true Broiler.Input/src/Broiler.Input/Broiler.Input.csproj
-          expect true Broiler.Media/src/Broiler.Media/Broiler.Media.csproj
           expect true Broiler.VM/src/Broiler.VM.Runtime/Broiler.VM.Runtime.csproj
 
           # Broiler.JS is the only submodule with a Directory.Build.targets of its
@@ -240,8 +238,8 @@ jobs:
       # time. Harmless to the compiler, but it makes the constants list depend on which
       # component you ask, which is the question that file exists to answer.
       #
-      # Broiler.CSS, Broiler.DOM and Broiler.UI are consumed as packages since e60ae02,
-      # so they are no longer checked out here and have no project to ask.
+      # Broiler.CSS, Broiler.DOM, Broiler.UI, Broiler.Graphics, Broiler.Input and Broiler.Media
+      # are consumed as packages, so they are no longer checked out here and have no project to ask.
       - name: Verify the mapping is applied once
         shell: bash
         run: |
@@ -249,8 +247,6 @@ jobs:
           status=0
 
           for project in \
-            Broiler.Input/src/Broiler.Input/Broiler.Input.csproj \
-            Broiler.Media/src/Broiler.Media/Broiler.Media.csproj \
             Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj \
             src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
           do
