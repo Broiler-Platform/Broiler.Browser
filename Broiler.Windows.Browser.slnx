@@ -46,6 +46,7 @@
     <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Core/Broiler.HtmlBridge.Core.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj" />
+    <Project Path="src/Broiler.HtmlBridge.DomBridgeUtils/Broiler.HtmlBridge.DomBridgeUtils.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Jseal.BroilerJs/Broiler.HtmlBridge.Jseal.BroilerJs.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Jseal.Vm/Broiler.HtmlBridge.Jseal.Vm.csproj" />
     <Project Path="src/Broiler.HtmlBridge.Jseal/Broiler.HtmlBridge.Jseal.csproj" />

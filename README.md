@@ -168,6 +168,7 @@ The nested-submodule set the browser needs is defined once, in
 | `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
 | `src/Broiler.HtmlBridge.Core` | Bridge models, logging, CSP and script-extraction support |
 | `src/Broiler.HtmlBridge.Dom` | DOM bridge, tree building, JavaScript DOM objects |
+| `src/Broiler.HtmlBridge.DomBridgeUtils` | The DOM bridge's static helpers that need no bridge instance (`DomBridgeUtils`); references neither Dom nor an engine |
 | `src/Broiler.HtmlBridge.Jseal` | **JSEAL** — the JavaScript Engine Abstraction Layer. Engine-neutral contracts the DOM binds against; has no project reference of any kind, which is what makes the neutrality a compiler-checked claim. See [docs/jseal.md](docs/jseal.md) |
 | `src/Broiler.HtmlBridge.Jseal.BroilerJs` | The JSEAL provider over Broiler.JS |
 | `src/Broiler.HtmlBridge.Scripting` | JavaScript execution integration (Broiler.JS) |
