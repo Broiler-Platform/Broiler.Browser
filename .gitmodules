@@ -6,18 +6,6 @@
 	path = Broiler.CSS
 	url = https://github.com/Broiler-Platform/Broiler.CSS.git
 	branch = main
-[submodule "Broiler.Graphics"]
-	path = Broiler.Graphics
-	url = https://github.com/Broiler-Platform/Broiler.Graphics.git
-	branch = main
-[submodule "Broiler.Input"]
-	path = Broiler.Input
-	url = https://github.com/Broiler-Platform/Broiler.Input.git
-	branch = main
-[submodule "Broiler.Media"]
-	path = Broiler.Media
-	url = https://github.com/Broiler-Platform/Broiler.Media.git
-	branch = main
 [submodule "Broiler.UI"]
 	path = Broiler.UI
 	url = https://github.com/Broiler-Platform/Broiler.UI.git

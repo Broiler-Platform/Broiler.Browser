@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Broiler.Browser.Windows": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "BROILER_TRACE_JS_ENTRY": "1"
+      }
+    }
+  }
+}
