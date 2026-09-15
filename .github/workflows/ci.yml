@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -16,6 +17,10 @@ concurrency:
 env:
   DOTNET_NOLOGO: 'true'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  # NuGet.config maps Broiler.* to GitHub Packages, which answers 401 to anonymous
+  # restores even for public packages. NuGet reads the credential for the source
+  # named `github` from this variable; the component repositories do the same.
+  NuGetPackageSourceCredentials_github: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
 
 jobs:
   # A gitlink can point at a commit that was never pushed. It resolves for
@@ -208,14 +213,12 @@ jobs:
 
           # Reached through Directory.Build.props.
           expect true src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
-          expect true Broiler.CSS/Broiler.CSS/Broiler.CSS.csproj
           expect true Broiler.Layout/Broiler.Layout/Broiler.Layout.csproj
 
           # Reached through Directory.Build.targets, because their own props
           # deliberately does not chain to the root.
           expect true Broiler.Input/src/Broiler.Input/Broiler.Input.csproj
           expect true Broiler.Media/src/Broiler.Media/Broiler.Media.csproj
-          expect true Broiler.UI/src/Foundation/Broiler.UI/Broiler.UI.csproj
           expect true Broiler.VM/src/Broiler.VM.Runtime/Broiler.VM.Runtime.csproj
 
           # Broiler.JS is the only submodule with a Directory.Build.targets of its
@@ -237,10 +240,8 @@ jobs:
       # time. Harmless to the compiler, but it makes the constants list depend on which
       # component you ask, which is the question that file exists to answer.
       #
-      # Broiler.UI was the one component this list had to leave out, because it both
-      # chains to the root props AND carries a copy, so both ran at props time where no
-      # guard on this side could see the second. It now guards its own copy on the same
-      # property (Broiler.UI#61) and is asserted here like everything else.
+      # Broiler.CSS, Broiler.DOM and Broiler.UI are consumed as packages since e60ae02,
+      # so they are no longer checked out here and have no project to ask.
       - name: Verify the mapping is applied once
         shell: bash
         run: |
@@ -251,8 +252,6 @@ jobs:
             Broiler.Input/src/Broiler.Input/Broiler.Input.csproj \
             Broiler.Media/src/Broiler.Media/Broiler.Media.csproj \
             Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj \
-            Broiler.UI/src/Foundation/Broiler.UI/Broiler.UI.csproj \
-            Broiler.CSS/Broiler.CSS/Broiler.CSS.csproj \
             src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
           do
             constants="$(dotnet msbuild "$project" -p:Configuration=Release-Windows -getProperty:DefineConstants -nologo 2>/dev/null | tr -d '[:space:]')"

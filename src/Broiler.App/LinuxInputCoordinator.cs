@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Broiler.Graphics;
+using Broiler.Graphics.Geometry;
+using Broiler.Graphics.Windowing;
 using Broiler.Input;
 using Broiler.Input.Keyboard;
 using Broiler.Input.Keyboard.Linux;
