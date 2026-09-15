@@ -22,12 +22,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Broiler.Graphics.Linux" Version="0.1.0-preview.3" />
+    <PackageReference Include="Broiler.Graphics.Linux.OpenGL" Version="0.1.0-preview.3" />
+    <PackageReference Include="Broiler.Input.Keyboard.Linux" Version="0.1.0-preview.2" />
+    <PackageReference Include="Broiler.Input.Linux" Version="0.1.0-preview.2" />
+    <PackageReference Include="Broiler.Input.Mouse.Linux" Version="0.1.0-preview.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
-    <ProjectReference Include="..\..\Broiler.Graphics\src\Broiler.Graphics.Linux\Broiler.Graphics.Linux.csproj" />
-    <ProjectReference Include="..\..\Broiler.Graphics\src\Broiler.Graphics.Linux.OpenGL\Broiler.Graphics.Linux.OpenGL.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Keyboard.Linux\Broiler.Input.Keyboard.Linux.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Linux\Broiler.Input.Linux.csproj" />
-    <ProjectReference Include="..\..\Broiler.Input\src\Broiler.Input.Mouse.Linux\Broiler.Input.Mouse.Linux.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <!-- TestUiSession and the form-control tests own their controls through StandardPanel. -->
+    <PackageReference Include="Broiler.UI.Panel.Standard" Version="0.1.0-preview.4" />
   </ItemGroup>
 
   <ItemGroup>

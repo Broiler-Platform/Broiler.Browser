@@ -9,7 +9,6 @@
   <Folder Name="/Entry points/">
     <Project Path="src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj" />
   </Folder>
-  <Folder Name="/Dependencies/" />
   <Folder Name="/Dependencies/Broiler.JS/">
     <Project Path="Broiler.JS/Broiler.DateTime/src/Broiler.DateTime/Broiler.DateTime.csproj" />
     <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.All/Broiler.JavaScript.All.csproj" />
