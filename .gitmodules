@@ -1,15 +1,3 @@
-[submodule "Broiler.DOM"]
-	path = Broiler.DOM
-	url = https://github.com/Broiler-Platform/Broiler.DOM.git
-	branch = main
-[submodule "Broiler.CSS"]
-	path = Broiler.CSS
-	url = https://github.com/Broiler-Platform/Broiler.CSS.git
-	branch = main
-[submodule "Broiler.UI"]
-	path = Broiler.UI
-	url = https://github.com/Broiler-Platform/Broiler.UI.git
-	branch = main
 [submodule "Broiler.JS"]
 	path = Broiler.JS
 	url = https://github.com/Broiler-Platform/Broiler.JS.git
