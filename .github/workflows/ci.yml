@@ -215,6 +215,11 @@ jobs:
           expect true src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
           expect true Broiler.Layout/Broiler.Layout/Broiler.Layout.csproj
 
+          # Broiler.HtmlBridge chains to the root props AND vendors its own copy of the
+          # mapping, for its standalone builds. Both routes have to land on the same
+          # answer here, and this is the only thing that can see whether they do.
+          expect true Broiler.HtmlBridge/src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj
+
           # Reached through Directory.Build.targets, because its own props
           # deliberately does not chain to the root.
           expect true Broiler.VM/src/Broiler.VM.Runtime/Broiler.VM.Runtime.csproj
@@ -240,6 +245,11 @@ jobs:
       #
       # Broiler.CSS, Broiler.DOM, Broiler.UI, Broiler.Graphics, Broiler.Input and Broiler.Media
       # are consumed as packages, so they are no longer checked out here and have no project to ask.
+      #
+      # Broiler.HtmlBridge is the newest component with a vendored copy and the one most likely to
+      # trip this: it chains to the root props AND imports its own eng/Broiler.Configurations.props,
+      # so both sides run for every one of its projects. The guards in that file are what keep the
+      # decomposition to once, and this is where a regression in them shows up.
       - name: Verify the mapping is applied once
         shell: bash
         run: |
@@ -248,6 +258,7 @@ jobs:
 
           for project in \
             Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj \
+            Broiler.HtmlBridge/src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj \
             src/Broiler.Browser.Core/Broiler.Browser.Core.csproj
           do
             constants="$(dotnet msbuild "$project" -p:Configuration=Release-Windows -getProperty:DefineConstants -nologo 2>/dev/null | tr -d '[:space:]')"
@@ -262,36 +273,24 @@ jobs:
 
           exit "$status"
 
-  # The DOM bridge is being moved off Broiler.JS and onto the engine-neutral
-  # contracts in src/Broiler.HtmlBridge.Jseal, and that is 250 files. A migration
-  # that size lands incrementally or not at all — and the way an incremental one
-  # fails is not that it stalls, it is that new bindings keep being written in the
-  # old vocabulary, because the neighbouring file still uses it and nothing says
-  # not to. It then finishes wherever the two rates met, with nobody able to name
-  # what is left.
+  # THE ENGINE-NEUTRALITY JOB LEFT WITH THE CODE IT MEASURED.
   #
-  # eng/jseal-budget.json records today's coupling per project and this job
-  # recounts it: a project that went UP fails, and a project that came in under
-  # its budget is reported so the number gets lowered in the same commit. It also
-  # guards the one neutrality claim the compiler makes rather than the budget —
-  # Broiler.HtmlBridge.Jseal.csproj referencing nothing at all — because every 0
-  # in that file is only worth reading while that holds.
-  neutrality:
-    name: Engine neutrality
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      # No submodules and no dotnet, deliberately. The script reads this
-      # repository's own .cs files as text and its own .csproj files as XML; it
-      # restores nothing, evaluates nothing and builds nothing, so it answers in
-      # under a second and can fail a pull request before anything long starts.
-      - name: Check out
-        uses: actions/checkout@v7
-
-      - name: Verify no project gained engine coupling
-        shell: bash
-        run: ./scripts/check-engine-neutrality.sh
+  # eng/jseal-budget.json and scripts/check-engine-neutrality.sh were a ratchet over
+  # src/Broiler.HtmlBridge.*: how much of the DOM bridge still names a JavaScript engine
+  # directly, project by project, with every count allowed to fall and never to rise. That
+  # is a fact about the bridge, and the bridge is now the Broiler.HtmlBridge submodule,
+  # which runs the same check in its own CI over its own src/.
+  #
+  # Seven entries in that budget named projects in THIS repository and none of them was
+  # what the ratchet was about. Six were 0/0/0. The seventh, Broiler.Browser.Core, carries
+  # one unconditional Broiler.JavaScript.All reference because BrowserApp.NewScriptEngine()
+  # still picks an engine with an #if rather than through JsEngineRegistry -- an EMBEDDER's
+  # coupling, argued where the embedder lives, and no longer measured by a file in a
+  # component it does not own.
+  #
+  # If that reference is ever to fall to zero, this is where a check for it belongs. There
+  # is deliberately none today rather than a vacuous one: a check over a single number that
+  # nobody is currently moving is a job that only ever reports success.
 
   # The .slnx files are generated from eng/solutions.json. A hand-edit to one is
   # silently reverted by the next generator run, so the only thing keeping them

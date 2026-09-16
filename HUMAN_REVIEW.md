@@ -13,8 +13,9 @@ before relying on any component.
 
 One submodule listed below, `Broiler.VM`, is a **conditional** dependency of the browser,
 and this paragraph used to say it was no dependency at all. That is no longer true and the
-correction matters to review scope rather than to bookkeeping: `src/Broiler.HtmlBridge.Scripting.Vm`
-and `src/Broiler.HtmlBridge.Jseal.Vm` both reference five of its projects, and
+correction matters to review scope rather than to bookkeeping:
+`Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting.Vm` and
+`Broiler.HtmlBridge/src/Broiler.HtmlBridge.Jseal.Vm` both reference five of its projects, and
 `src/Broiler.Browser.Core` reaches the first of those under the `Debug-VM` and `Release-VM`
 configurations - which CI builds and tests, so the code runs. Under every other configuration
 it is absent from the graph, which is the sense in which the old sentence was reaching.
@@ -48,8 +49,13 @@ different thing. Marks are defined in
 
 | Review | Scope | Status |
 |---|---|---|
-| [ ] | `src/` — browser heads, shared chrome, HtmlBridge | **PENDING** |
+| [ ] | `src/` — browser heads, shared chrome, HTML form hosting | **PENDING** |
 | [ ] | `Broiler.Layout/` — vendored, see component record | see below |
+
+*(This row said "browser heads, shared chrome, HtmlBridge" until 2026-09-16. The HtmlBridge
+became its own component on that date and carries its own record, linked below. **No review
+moved with it, because there was none to move** — this scope was `PENDING` with no reviewer
+assigned, and splitting an unreviewed scope in two produces two unreviewed scopes.)*
 
 Reviewer: _not yet assigned_
 Reviewed commit: _none_
@@ -67,6 +73,7 @@ submodule bump — an approval is revision-scoped and does not carry forward.
 | [ ] | [Broiler.DOM](Broiler.DOM/HUMAN_REVIEW.md) | Approved with conditions |
 | [ ] | [Broiler.Graphics](Broiler.Graphics/HUMAN_REVIEW.md) | Approved with conditions |
 | [ ] | [Broiler.HTML](Broiler.HTML/HUMAN_REVIEW.md) | Approved with conditions — first preview only |
+| [ ] | [Broiler.HtmlBridge](Broiler.HtmlBridge/HUMAN_REVIEW.md) | **PENDING** — extracted from this repository's `src/` on 2026-09-16 carrying no review; it is the code that runs untrusted page script against a live document |
 | [ ] | [Broiler.JS](Broiler.JS/HUMAN_REVIEW.md) | **PENDING** — usable in preview only with its safety warning |
 | [ ] | [Broiler.JS/Broiler.DateTime](Broiler.JS/Broiler.DateTime/HUMAN_REVIEW.md) | Approved for preview |
 | [ ] | [Broiler.JS/Broiler.Regex](Broiler.JS/Broiler.Regex/HUMAN_REVIEW.md) | Approved for preview |
@@ -83,9 +90,9 @@ This repository is suitable only for first-preview, controlled development, test
 evaluation. It must not be presented as production-ready, security-audited, or free of
 defects or vulnerabilities.
 
-Two components in the browser's dependency closure — `Broiler.JS` and `Broiler.UI` — are
-still `PENDING`, and two more — `Broiler.Input` and `Broiler.Media` — carry no review
-record at all. `Broiler.JS` executes untrusted page script and is **not a security
+Three components in the browser's dependency closure — `Broiler.JS`, `Broiler.UI` and
+`Broiler.HtmlBridge` — are still `PENDING`, and two more — `Broiler.Input` and
+`Broiler.Media` — carry no review record at all. `Broiler.JS` executes untrusted page script and is **not a security
 sandbox**; the embedding application must restrict CLR and host capabilities before
 running untrusted content.
 

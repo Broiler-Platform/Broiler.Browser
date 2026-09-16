@@ -22,29 +22,26 @@
   </ItemGroup>
 
   <!--
-    The same conditional reference Broiler.Browser.Core carries, for the same reason and with the
-    same effect on the generated solutions. Without it VmScriptEngineTests could not name the type
-    it tests, and the -VM configurations would be gated on nothing but whether they compile.
-  -->
-  <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
-    <ProjectReference Include="..\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
-  </ItemGroup>
+    WHAT THIS SUITE STILL TESTS UNDER Debug-VM/Release-VM, NOW THAT THE BRIDGE HAS LEFT.
 
-  <!--
-    THE JSEAL CONFORMANCE SUITE NAMES NO ENGINE TYPE, which is what makes it a conformance suite and
-    what stops it loading a provider assembly on its own. JsEngineHosting.EnsureRegistered names the
-    Broiler.JS provider, and it cannot name this one: Broiler.HtmlBridge.Scripting is linked in every
-    configuration and this provider is linked in two, so a reference from there would drag Broiler.VM
-    into every build. So the naming happens here, in the assembly that already knows which
-    configuration it is, under the same condition as the reference above.
-  -->
-  <ItemGroup>
-    <Compile Remove="Jseal\VmProviderRegistration.cs" />
-  </ItemGroup>
+    The conditional ProjectReference to Broiler.HtmlBridge.Scripting.Vm is gone from here,
+    and so are the two files it existed for: VmScriptEngineTests and the JSEAL conformance
+    suite's Jseal/VmProviderRegistration.cs both moved to Broiler.HtmlBridge, which is the
+    component that owns the engine seam and now runs them itself — 723 cases under
+    Release-VM against this repository's 603 under Release.
 
-  <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
-    <Compile Include="Jseal\VmProviderRegistration.cs" />
-  </ItemGroup>
+    THE -VM JOBS HERE ARE STILL WORTH RUNNING, and what they ask is a different question.
+    Broiler.Browser.Core reaches the VM script engine under those two build types and
+    BrowserApp.NewScriptEngine() picks it with an #if, so these jobs exercise THE BROWSER'S
+    OWN HOST CODE — page loading, the render pipeline, the form controls — against an
+    engine that is not Broiler.JS. That is an embedder question and it belongs to an
+    embedder's suite. Whether the engine answers the contracts is the component's question
+    and is asked there.
+
+    The reference itself is not needed for that: this project references
+    Broiler.Browser.Core, which carries the conditional reference, so the assembly is in
+    the closure under exactly the same configurations it always was.
+  -->
 
   <ItemGroup>
     <Using Include="Xunit" />

@@ -98,6 +98,12 @@
     a say. It now applies the same '$(BroilerBaseConfiguration)' == '' test to its own copy, which
     is the only side that could fix it.
 
+    Broiler.HtmlBridge is the second of that shape, added on 2026-09-16, and it is the one that
+    matters most here because the -VM pair is ITS pair: a standalone build of that component has
+    to decompose Release-VM with no parent above it, so it vendors this file AND chains to this
+    one. Both guards are what keep the two runs to one decomposition, and .github/workflows/ci.yml
+    asserts the outcome on one of its projects rather than trusting the reading.
+
     ── Why the engine selection is in a group of its own ──────────────────
 
     Only the DECOMPOSITION is skipped when a vendored copy already did it. The engine selection
@@ -119,7 +125,7 @@
       opaque bytes (VmBytes -> VmOpaqueRef) and a DOM cannot be projected through one.
       That argument is true about the capability channel and was never about the whole
       engine: the profile publishes an in-realm host surface a DOM-shaped embedder can
-      use, and src/Broiler.HtmlBridge.Jseal.Vm is a JSEAL provider over it that declares
+      use, and Broiler.HtmlBridge/src/Broiler.HtmlBridge.Jseal.Vm is a JSEAL provider over it that declares
       JsCapabilities.Document. What keeps Broiler.JS in the graph is this repository's
       own seam — IDomBridgeRuntime.Attach takes a JSContext — and not the VM.
 

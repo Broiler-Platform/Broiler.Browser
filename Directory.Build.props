@@ -119,216 +119,71 @@
       PROMOTED TO AN ERROR. The block above is what this repository has
       decided to tolerate; these are the two things it has decided not to.
 
-      Both are one defect seen from two sides. Retiring
-      Runtime/JsInterop.cs was to mean retyping the bridge's engine-typed
-      storage — the wrapper roots (now DomBridge's DocumentHandle,
-      WindowHandle and VisualViewportHandle) and the listener record
-      (EventListenerRegistration's Listener) — from JSObject and JSValue,
-      which are CLASSES, to JsValue, which is a STRUCT. Both were retyped,
-      the roots in 6d1e7aa and the record in cb0ecb2, and JsInterop.cs
-      remains, for two operations the JSEAL contract lacks; its class
-      remarks name them. What each reader of those fields would do on the
-      day it happened, MEASURED in a probe project rather than assumed:
-
-          f is null              error CS0037    loud
-          f is not { }           error CS8518    loud
-          f == null              warning CS8073  ALWAYS FALSE
-          f != null              warning CS8073  ALWAYS TRUE
-          ReferenceEquals(f, g)  warning CA2013  boxes; false forever
-          f is { } x             nothing at all  always true, silently
-
-      The bottom three are why this block exists, and being warnings is
-      no safety net: NOTHING IN THIS REPOSITORY READS WARNINGS.
-      .github/workflows/ci.yml runs `dotnet build` with no warnaserror
-      switch and no TreatWarningsAsErrors, so a warning is a line of
-      green log. Every id promoted here is one the compiler already
-      knows and would otherwise mention to nobody.
-
-      (This enumeration used to name "the registry" as a third store
-      still to be retyped. JsObjectRegistry was re-typed onto JsValue in
-      45607c6 and holds Dictionary<DomNode, JsValue>; the identical stale
-      clause was removed from Runtime/JsInterop.cs and from
-      eng/jseal-budget.json earlier in this series. It had reached three
-      files.)
-      ════════════════════════════════════════════════════════════════════
-
-      ── Reference equality on a value type ────────────────────────────
-      CA2013 : Do not pass an argument with value type to
-               ReferenceEquals.
-
-      Reason  : It compiles, it boxes both sides, and it answers false
-                forever — measurably so: ReferenceEquals(v, v) on one
-                struct VALUE is False, not merely on two copies of it.
-
-                One call site said what that costs.
-                DomBridge/EventTargetInterface.cs reached
-                `_windowJSObject is { } window && ReferenceEquals(
-                receiver, window)` until the roots were retyped
-                (6d1e7aa). This rule catches the ReferenceEquals half;
-                the `is { }` half stays silent (see below). Uncaught,
-                every window-level listener would silently have stopped
-                registering. RouteEventTargetMethod now asks
-                `call.This == WindowHandle`, which is handle equality.
-
-                There are 84 call sites under src/ for it to happen at.
-                The filter that matters is `*.cs`: an unfiltered
-                `grep -r src` also reads build output and finds four more
-                inside .dll binaries, which is where 88 comes from.
-                Restricting to TRACKED .cs files gives the same 84 and,
-                unlike an exclude-the-build-directories spelling, does not
-                depend on whether a build has run:
-
-                  git ls-files src | grep '\.cs$' |
-                    xargs grep -hoE "ReferenceEquals[[:space:]]*\(" | wc -l
-
-                (spelled without long options because an XML comment may
-                not contain a double hyphen.)
-
-                THIS LINE USED TO SAY 87, AND 87 WAS NEVER A COUNT OF CALL
-                SITES. It is what `git grep -n ReferenceEquals` answered
-                at 47b0f15, the commit that wrote it: a count of LINES
-                MENTIONING the token, three of them comment prose. The
-                call-site count that day was 85. The command is written
-                down so the next person re-measures the same thing.
-      Future  : It stays. When JsInterop is gone the rule guards the same
-                mistake for whatever holds a handle next; a value-typed
-                handle is the design, not a phase.
-
-      ── A handle compared against null ────────────────────────────────
+      ── The rules ─────────────────────────────────────────────────────
+      CA2013 : Do not pass an argument with value type to ReferenceEquals.
+               It compiles, it boxes both sides, and it answers false
+               forever.
       CS8073 : The result of the expression is always 'false' / 'true',
                since a value of type 'T' is never equal to 'null' of
-               type 'T?'.
+               type 'T?'. Both spellings FAIL OPEN: `f == null` is a
+               bail-out guard that stops bailing out, `f != null` is a
+               proceed-only-if-present guard that always proceeds.
 
-      Reason  : The other half of the same retype, and the worse half,
-                because BOTH SPELLINGS FAIL OPEN. `f == null` is a
-                bail-out guard that stops bailing out; `f != null` is a
-                proceed-only-if-present guard that always proceeds. An
-                absent handle is JsValue.Missing, never null, so a test
-                that used to mean "absent" comes to mean nothing and the
-                code runs on with an empty handle.
+      Being warnings is no safety net: NOTHING IN THIS REPOSITORY READS
+      WARNINGS. .github/workflows/ci.yml runs `dotnet build` with no
+      warnaserror switch and no TreatWarningsAsErrors, so a warning is a
+      line of green log.
 
-                Three sites were written this way when this was
-                promoted, and all three were CORRECT then, because each
-                field was still a nullable class. Each was rewritten
-                when its field was retyped rather than left to warn:
+      ── WHY THEY ARE HERE, AND WHERE THE ARGUMENT WENT ────────────────
+      Both were promoted for the DOM bridge: JSEAL's JsValue is a struct
+      and the engine-typed storage it replaced was a class, so retyping a
+      wrapper root or a listener record turned every null test on it into
+      one of the two silent readings above. That code left this
+      repository on 2026-09-16 and the full analysis went with it: the
+      measured table of what each reader does, the four sites whose
+      answer the retype changed, and the two shapes NEITHER rule can see
+      (`f is { } x` on a struct, and ReferenceEquals on the `object?`
+      JsValue.ObjectIdentity). It is in
+      Broiler.HtmlBridge/Directory.Build.props, which declares the same
+      two ids for its own standalone builds. Read it before touching
+      either rule. Appending an id twice is harmless, so an in-tree build
+      simply gets the promotion from both files.
 
-                  DomBridge.WindowLoad.cs, DispatchWindowEvent
-                    `_realm is not { } realm || _windowJSObject == null`
-                    would have lost its guard, and window events would
-                    have dispatched against an absent window. It tests
-                    `WindowHandle.IsMissing` since 6d1e7aa.
-                  DomBridge/LayoutMetrics.Scrolling.cs,
-                  DispatchVisualViewportScrollEvent
-                    `viewport == null || …Count == 0`
-                    The listener-count clause would still have guarded,
-                    so the listeners would have run and seen an empty
-                    handle as the event's target. It tests
-                    `target.IsMissing` since 6d1e7aa.
-                  Features/EventListenerBinding.cs, GetBooleanOption
-                    `value != null && !value.IsNullOrUndefined && …`
-                    Would have become CS8073 once the listener record
-                    was retyped. It became `!value.IsNullish && …` in
-                    cb0ecb2, the commit that retyped it.
+      ── WHY THEY STAY HERE ANYWAY ─────────────────────────────────────
+      This was never a rule only the bridge could trip. Broiler.Graphics
+      declares seven `readonly struct` types with an `operator ==`
+      (BColor, BMatrix3x2, BPoint, BRect, BSize, BImageHandle,
+      BResourceHandle), which is exactly the CS8073-capable shape, and
+      Broiler.HTML and Broiler.UI each vendor a copy of them. All compile
+      clean today. And src/Broiler.App.Android holds a ReferenceEquals
+      call site, at AndroidBroilerView.cs:119.
 
-                Nothing trips this rule today, checked by a NON
-                INCREMENTAL build, which matters: an incremental
-                `dotnet build` of these solutions skips every CoreCompile
-                and reports zero warnings without compiling a line. With
-                the promotion in place, all four solutions rebuild with
-                0 errors (Windows and Tests at Release and Release-VM,
-                Linux and Android at Release), and no log holds a single
-                `warning CS8073`, `error CS8073` or CS0472 of either kind.
+      Nor is the promotion novel: a large share of this graph's
+      compilations already pass a bare /warnaserror+, so CS8073 has been
+      an error in them all along. It is reported only at WarningLevel 5
+      and above, and this graph compiles at /warn:10 apart from three
+      projects at /warn:8, so it is live everywhere it applies.
 
-                (A rebuild of either solution does report 80 warnings, and
-                that is worth knowing because incremental runs have made
-                "0 warnings" folklore here. Every one of the 80 comes from
-                a submodule (Broiler.JavaScript.*, Broiler.HTML.*,
-                Broiler.CSS, Broiler.Layout) and nothing under src/
-                warns at all.)
-
-                Nor is the promotion novel. 38 of this graph's ~94
-                compilations already pass a bare /warnaserror+, so CS8073
-                has been an error in them all along; every project under
-                src/ is in the half that does not. And it is live
-                everywhere it now applies: CS8073 is reported only at
-                WarningLevel 5 and above, and this graph compiles at
-                /warn:10 apart from three projects at /warn:8.
-      Future  : It stays, for the reason CA2013 stays.
-
-      ── The shape NEITHER of them sees ────────────────────────────────
-      `f is { } x` on a struct is legal, always true, and carries NO
-      diagnostic — not a warning, not a message. There is nothing to
-      promote. Ten sites in Broiler.HtmlBridge.Dom read an engine-typed
-      root this way until the roots were retyped (6d1e7aa), and the
-      retype changed what four of them would have answered:
-
-        DomBridge/DomBridge.CanvasHost.cs:16          : JsValue.Undefined
-        DomBridge/Registration/CustomElements.cs:239  : JsValue.Null
-        DomBridge.MessagingHost.cs:30                 : JsValue.Null
-        DomBridge.WindowContextHost.cs:29             : JsValue.Undefined
-
-      Each answers a DIFFERENT value for a root that is not there yet
-      than the Missing the retyped root carries, and Missing is not
-      Undefined and is not Null — the bridge reads argument presence on
-      that distinction. CanvasHost's own comment says why it still
-      answers `undefined`. Dropping the `is { }` mechanically at any of
-      those four would have changed the value with nothing to say so,
-      so each tests IsMissing and coalesces explicitly now. The other
-      six fell back to Missing and were safe to collapse.
-
-      This paragraph replaced the claim that every other reader "fails
-      loudly when that happens". Most did. These did not, and they were
-      the ones to read before retyping a root.
-
-      ── The other shape neither of them sees ──────────────────────────
-      JsValue.ObjectIdentity is declared `object?`
-      (src/Broiler.HtmlBridge.Jseal/Values/JsValue.cs:98), so
-
-          ReferenceEquals(a.ObjectIdentity, b.ObjectIdentity)
-
-      compares two REFERENCE types. CA2013 is blind to it by
-      construction — measured: in one compilation the raw struct form
-      produced two CA2013 errors while the ObjectIdentity form on the next
-      line produced none — and it answers TRUE for any two non-object
-      handles, because ObjectIdentity is null for every one of them: two
-      different numbers, two Undefineds, two Missings. No site writes it
-      today. In Broiler.HtmlBridge.Dom eight reads in six files pass
-      ObjectIdentity onward as a key into one of seven
-      ConditionalWeakTables, and none passes a null on: six throw instead
-      (`?? throw`, five of them inside an IdentityOf helper) and two test
-      `is { }` first, so the collision is unreachable rather than absent.
-      (This said six sites, every one of them null-guarding first.)
-
-      ── How far this reaches, and where it does not ───────────────────
-      As far as the props chain. All 13 projects under src/, plus the
-      submodules whose own Directory.Build.props calls GetPathOfFileAbove:
-      Broiler.CSS (and its nested Broiler.DOM), Broiler.DOM,
-      Broiler.Graphics, Broiler.HTML, Broiler.Layout and Broiler.UI.
-      Broiler.JS and Broiler.VM are STANDALONE — their props import their
-      own eng/ files and nothing above — so neither engine resolves either
-      id, either way. Neither holds a JsValue, so there is nothing in them
-      to guard. This corrects "the whole tree was built with it as an
-      error", which was over-broad.
-
-      Nor is this a rule only src/ can trip. Broiler.Graphics declares
-      seven `readonly struct` types with an `operator ==` (BColor,
-      BMatrix3x2, BPoint, BRect, BSize, BImageHandle, BResourceHandle),
-      which is exactly the CS8073-capable shape, and Broiler.HTML and
-      Broiler.UI each vendor a copy of them. All compile clean today.
+      ── How far this reaches ──────────────────────────────────────────
+      As far as the props chain: every project under src/, plus the
+      submodules whose own Directory.Build.props calls GetPathOfFileAbove,
+      Broiler.HtmlBridge among them. Broiler.JS and Broiler.VM are
+      STANDALONE - their props import their own eng/ files and nothing
+      above - so neither engine resolves either id, either way. Neither
+      holds a JsValue, so there is nothing in them to guard.
 
       TWO PLACES THE FOUR ROOT SOLUTIONS DO NOT REACH, so that a future
-      check knows where to look. Broiler.UI/Broiler.Documents chains up to
-      this file through Broiler.UI and appears in NO root solution: 159
-      projects behind its own Broiler.Documents.slnx. And one src/ project
-      sits outside the two builds usually taken for "the repository": Broiler.App.Android holds a ReferenceEquals call site
-      (AndroidBroilerView.cs:119) and appears only in
+      check knows where to look. Broiler.UI/Broiler.Documents chains up
+      to this file through Broiler.UI and appears in NO root solution:
+      159 projects behind its own Broiler.Documents.slnx. And
+      src/Broiler.App.Android appears only in
       Broiler.Android.Browser.slnx, which CI builds at Release alone.
       Both rules reach it; only that one job proves it.
 
       ── Not promoted, and why ─────────────────────────────────────────
       CS0472 is the same diagnostic for a BUILT-IN value type
       (`i == null` on an int). No handle is a built-in, so it guards
-      nothing in this migration.
+      nothing here.
     -->
     <WarningsAsErrors>$(WarningsAsErrors);CA2013;CS8073</WarningsAsErrors>
   </PropertyGroup>
@@ -392,5 +247,36 @@
     <BroilerMediaRoot>$(MSBuildThisFileDirectory)Broiler.Media</BroilerMediaRoot>
     <BroilerInputRoot>$(MSBuildThisFileDirectory)Broiler.Input</BroilerInputRoot>
     <BroilerGraphicsRoot>$(MSBuildThisFileDirectory)Broiler.Graphics</BroilerGraphicsRoot>
+  </PropertyGroup>
+
+  <!--
+    THE SAME COLLAPSE FOR THE TWO JAVASCRIPT ENGINES, arriving by a new route on 2026-09-16.
+
+    The HtmlBridge left this repository and became the Broiler.HtmlBridge submodule. It is
+    the one component that references BOTH engines - Broiler.JS backs its Broiler.JS JSEAL
+    provider, Broiler.VM backs the VM provider and the VM script engine - and standalone it
+    reaches them through submodules of its own, at Broiler.HtmlBridge/Broiler.JS and
+    Broiler.HtmlBridge/Broiler.VM.
+
+    This repository checks both engines out at its OWN root as well, and reaches Broiler.JS
+    directly from src/Broiler.Browser.Core. So without the two values below an in-tree build
+    would compile Broiler.JavaScript.Engine twice and Broiler.VM.Runtime twice, from two
+    checkouts each - the duplicate-assembly failure the property groups above already exist
+    to prevent, and the one that shipped here once as
+
+      System.TypeLoadException: Method 'DecodeAsync' in type
+      'Broiler.Media.Image.Managed.PngImageCodec' ... does not have an implementation.
+
+    Broiler.HtmlBridge's own Directory.Build.props defaults these two properties with a
+    Condition on their being empty, so these unconditional values win, and its nested
+    checkouts go uncompiled. .github/workflows/ci.yml checks out with `submodules: true`
+    rather than recursively, so CI never fetches them at all; a local clone that did fetch
+    them is harmless for the same reason the vendored Graphics and Dom checkouts are.
+
+    scripts/check-component-graph.sh is what notices if a reference ever escapes them.
+  -->
+  <PropertyGroup>
+    <BroilerJsRoot>$(MSBuildThisFileDirectory)Broiler.JS</BroilerJsRoot>
+    <BroilerVmRoot>$(MSBuildThisFileDirectory)Broiler.VM</BroilerVmRoot>
   </PropertyGroup>
 </Project>

@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [switch] $Verify
 )
@@ -124,6 +124,18 @@ function Resolve-ProjectReference {
     $resolvedInclude = $resolvedInclude.Replace(
         '$(BroilerLayoutRoot)',
         (Join-Path $repositoryRoot 'Broiler.Layout'))
+
+    # Added with the Broiler.HtmlBridge extraction (2026-09-16). That component references both
+    # JavaScript engines and is the only one that does, so it spells them as roots to let this
+    # repository point them at its own checkouts; the root Directory.Build.props sets exactly
+    # these two values, and this generator has to agree with it or the solutions would list the
+    # copies nested inside Broiler.HtmlBridge/ while the build compiles the ones here.
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerJsRoot)',
+        (Join-Path $repositoryRoot 'Broiler.JS'))
+    $resolvedInclude = $resolvedInclude.Replace(
+        '$(BroilerVmRoot)',
+        (Join-Path $repositoryRoot 'Broiler.VM'))
 
     # Broiler.Regex prefers a Broiler.Unicode checkout nested beside it and falls back to the
     # one Broiler.JS owns. Both gitlinks point at the same commit, and the mapping table folds

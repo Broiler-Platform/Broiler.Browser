@@ -13,3 +13,7 @@
 	path = Broiler.Layout
 	url = https://github.com/Broiler-Platform/Broiler.Layout.git
 	branch = main
+[submodule "Broiler.HtmlBridge"]
+	path = Broiler.HtmlBridge
+	url = https://github.com/Broiler-Platform/Broiler.HtmlBridge.git
+	branch = main

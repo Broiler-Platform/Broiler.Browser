@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Broiler.JS\Broiler.JS\Broiler.JavaScript.All\Broiler.JavaScript.All.csproj" />
-    <ProjectReference Include="..\Broiler.HtmlBridge.Scripting\Broiler.HtmlBridge.Scripting.csproj" />
+    <ProjectReference Include="..\..\Broiler.HtmlBridge\src\Broiler.HtmlBridge.Scripting\Broiler.HtmlBridge.Scripting.csproj" />
   </ItemGroup>
 
   <!--
@@ -35,7 +35,7 @@
     all. A project-level build is the one that is genuinely VM-free under Debug and Release.
   -->
   <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
-    <ProjectReference Include="..\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
+    <ProjectReference Include="..\..\Broiler.HtmlBridge\src\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
   </ItemGroup>
 
   <ItemGroup>
