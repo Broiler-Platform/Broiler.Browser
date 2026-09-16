@@ -32,7 +32,7 @@ weaker position, not a stronger one.
 | Broiler.Media | no | - | - | - | - |
 | Broiler.UI | no | - | - | - | - |
 
-`src/` - the browser heads, the shared chrome and HtmlBridge - has not adopted the system either.
+`src/` - the browser heads and the shared chrome - has not adopted the system either. (It read "the browser heads, the shared chrome and HtmlBridge" until 2026-09-16, when the HtmlBridge became its own component. It has not adopted the system either, and its own HUMAN_REVIEW.md records that.)
 
 ## What this table is not
 

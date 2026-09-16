@@ -9,6 +9,16 @@
   <Folder Name="/Entry points/">
     <Project Path="src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj" />
   </Folder>
+  <Folder Name="/Dependencies/Broiler.HtmlBridge/">
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Core/Broiler.HtmlBridge.Core.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.DomBridgeUtils/Broiler.HtmlBridge.DomBridgeUtils.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Jseal.BroilerJs/Broiler.HtmlBridge.Jseal.BroilerJs.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Jseal.Vm/Broiler.HtmlBridge.Jseal.Vm.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Jseal/Broiler.HtmlBridge.Jseal.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting.Vm/Broiler.HtmlBridge.Scripting.Vm.csproj" />
+    <Project Path="Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting/Broiler.HtmlBridge.Scripting.csproj" />
+  </Folder>
   <Folder Name="/Dependencies/Broiler.JS/">
     <Project Path="Broiler.JS/Broiler.DateTime/src/Broiler.DateTime/Broiler.DateTime.csproj" />
     <Project Path="Broiler.JS/Broiler.JS/Broiler.JavaScript.All/Broiler.JavaScript.All.csproj" />
@@ -44,13 +54,5 @@
   </Folder>
   <Folder Name="/Dependencies/src/">
     <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Core/Broiler.HtmlBridge.Core.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.DomBridgeUtils/Broiler.HtmlBridge.DomBridgeUtils.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Jseal.BroilerJs/Broiler.HtmlBridge.Jseal.BroilerJs.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Jseal.Vm/Broiler.HtmlBridge.Jseal.Vm.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Jseal/Broiler.HtmlBridge.Jseal.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Scripting.Vm/Broiler.HtmlBridge.Scripting.Vm.csproj" />
-    <Project Path="src/Broiler.HtmlBridge.Scripting/Broiler.HtmlBridge.Scripting.csproj" />
   </Folder>
 </Solution>

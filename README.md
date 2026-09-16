@@ -166,13 +166,7 @@ The nested-submodule set the browser needs is defined once, in
 | `src/Broiler.Browser.Core.Tests` | xUnit suite for the shared chrome |
 | `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites, per-platform clipboards. It has no project of its own; each head links the files it needs. |
 | `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
-| `src/Broiler.HtmlBridge.Core` | Bridge models, logging, CSP and script-extraction support |
-| `src/Broiler.HtmlBridge.Dom` | DOM bridge, tree building, JavaScript DOM objects |
-| `src/Broiler.HtmlBridge.DomBridgeUtils` | The DOM bridge's static helpers that need no bridge instance (`DomBridgeUtils`); references neither Dom nor an engine |
-| `src/Broiler.HtmlBridge.Jseal` | **JSEAL** — the JavaScript Engine Abstraction Layer. Engine-neutral contracts the DOM binds against; has no project reference of any kind, which is what makes the neutrality a compiler-checked claim. See [docs/jseal.md](docs/jseal.md) |
-| `src/Broiler.HtmlBridge.Jseal.BroilerJs` | The JSEAL provider over Broiler.JS |
-| `src/Broiler.HtmlBridge.Scripting` | JavaScript execution integration (Broiler.JS) |
-| `src/Broiler.HtmlBridge.Scripting.Vm` | The same integration over the Broiler.VM JavaScript profile, referenced only under `Debug-VM`/`Release-VM` |
+| `Broiler.HtmlBridge` | The HTML control — see *Dependencies* below. These eight assemblies were `src/Broiler.HtmlBridge.*` here until 2026-09-16 |
 | `Broiler.Layout` | Vendored layout engine — see *Dependencies* below |
 | `eng/`, `scripts/` | Solution manifest, configuration mapping and generator |
 
@@ -185,9 +179,12 @@ replaces them is the row above, which is a real directory this change added.)*
 
 ## Dependencies
 
-Nine components are submodules. Eight are pinned to `main`; `Broiler.VM`'s entry in
-[`.gitmodules`](.gitmodules) names no branch, so `git submodule update --remote` leaves it where
-the gitlink puts it while moving the other eight.
+`Broiler.VM`'s entry in [`.gitmodules`](.gitmodules) names no branch, so
+`git submodule update --remote` leaves it where the gitlink puts it while moving the others.
+
+*(This paragraph counted the submodules and the count has been wrong more than once, so it no
+longer does. Read [`.gitmodules`](.gitmodules): several of the components below are consumed as
+NuGet packages now rather than checked out, and `Broiler.HtmlBridge` was added on 2026-09-16.)*
 
 | Component | Purpose |
 |---|---|
@@ -198,6 +195,7 @@ the gitlink puts it while moving the other eight.
 | `Broiler.Input` | Keyboard, mouse, pen, touch and text input abstractions |
 | `Broiler.UI` | Platform-neutral retained-mode UI toolkit |
 | `Broiler.HTML` | Modular HTML/CSS renderer |
+| `Broiler.HtmlBridge` | The HTML control: the DOM bridge, JSEAL and the two engine providers. Extracted from `src/` on 2026-09-16 — nothing in it was about being a browser, so this repository is now one embedder of it rather than its owner. Reached from `src/Broiler.Browser.Core` through `Broiler.HtmlBridge.Scripting` |
 | `Broiler.JS` | JavaScript parser, compiler, runtime and built-ins |
 | `Broiler.VM` | Generic execution core — a host for language profiles, not a language. Owns profile selection, bounded loading, the verification boundary, the execution lifecycle, resource authority and diagnostics; owns no opcode set, value representation or language semantics |
 
@@ -205,7 +203,7 @@ the gitlink puts it while moving the other eight.
 nested submodules.
 
 `Broiler.VM` is reached by the browser heads **only under the `Debug-VM` and `Release-VM`
-configurations**, through `src/Broiler.HtmlBridge.Scripting.Vm`. It remains a separate clean-room
+configurations**, through `Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting.Vm`. It remains a separate clean-room
 component with its own roadmap, `Broiler.JS` does not depend on it, and neither depends on the
 other. Its two language profiles — JavaScript and WebAssembly — are product projects inside that
 submodule under `Broiler.VM/src/`; the browser references the JavaScript one and none of the
@@ -221,7 +219,7 @@ was already false before it — see the note under* Repository layout.*)*
 
 `Broiler.Layout` — the graphics-independent CSS box-model and layout engine — has **no
 standalone repository**. It exists only as a directory inside the `Broiler` monorepo, and
-both `Broiler.HTML.Core` and `src/Broiler.HtmlBridge.Core` need it. It is therefore
+both `Broiler.HTML.Core` and `Broiler.HtmlBridge`'s own `Broiler.HtmlBridge.Core` need it. It is therefore
 checked in here as ordinary tracked files under `Broiler.Layout/`.
 
 Should `Broiler-Platform/Broiler.Layout` ever be published, this directory can be replaced

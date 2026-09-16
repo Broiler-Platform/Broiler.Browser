@@ -68,7 +68,7 @@ were said to depend on** — so what remains is stated here in the order it now 
    that a DOM is not a byte string, and that therefore no surface on the profile could carry a live
    object graph. Every clause is true and the conclusion does not follow: a host object never
    travels through the capability channel. The profile publishes an in-realm host surface, and
-   `src/Broiler.HtmlBridge.Jseal.Vm` is a JSEAL provider over it that declares
+   `Broiler.HtmlBridge/src/Broiler.HtmlBridge.Jseal.Vm` is a JSEAL provider over it that declares
    `JsCapabilities.Document` and passes the conformance suite in full. See
    [`docs/jseal.md`](jseal.md), which records this mistake and the two others of the same shape.
 2. **The DOM bridge is written against Broiler.JS.** `Broiler.HtmlBridge.Dom` defines the
@@ -380,7 +380,7 @@ provider over it declaring `JsCapabilities.Document`. What forwards those paths 
 | `src/Broiler.Browser.Core/*.csproj` | The one conditional `ProjectReference` |
 | `src/Broiler.Browser.Core/BrowserApp.cs` | The one `#if BROILER_VM_JS` |
 | `eng/solutions.json` | `configurations` per solution, becoming the `.slnx` `<BuildType>` list |
-| `src/Broiler.HtmlBridge.Scripting.Vm/` | The engine |
+| `Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting.Vm/` | The engine (in the Broiler.HtmlBridge submodule since 2026-09-16) |
 
 ### Why the mapping is imported twice
 
@@ -603,5 +603,5 @@ project in a solution whether it declares every build type that solution offers:
 A single project answers it too, and this is the form that was wrong for 87 of them:
 
 ```bash
-dotnet msbuild src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj -getProperty:Configurations
+dotnet msbuild Broiler.HtmlBridge/src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj -getProperty:Configurations
 ```
