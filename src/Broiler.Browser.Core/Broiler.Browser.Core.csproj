@@ -10,11 +10,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\Broiler.JS\Broiler.JS\Broiler.JavaScript.All\Broiler.JavaScript.All.csproj" />
-    <ProjectReference Include="..\..\Broiler.HtmlBridge\src\Broiler.HtmlBridge.Scripting\Broiler.HtmlBridge.Scripting.csproj" />
-  </ItemGroup>
-
   <!--
     THE ONLY CONDITIONAL REFERENCE IN THIS REPOSITORY, AND THE REASON THE -VM CONFIGURATIONS EXIST.
     $(BroilerJavaScriptEngine) is set from the configuration name by eng/Broiler.Configurations.props
@@ -59,6 +54,8 @@
   <ItemGroup>
     <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.1" />
     <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.1" />
+    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.1" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.1" />
     <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.4" />
     <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.4" />
     <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.4" />
