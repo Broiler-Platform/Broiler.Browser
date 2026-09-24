@@ -388,8 +388,9 @@ Merged and published on 2026-09-24, except the Browser change:
   these documents, and a follow-up moves the HTML pins to 0.1.0-preview.6. Validated against the
   published packages with an empty package cache and nuget.org as the only source: the Windows
   solution builds in Release and Release-VM, and Core.Tests passes 205 of 205 in each, the exit test
-  included. Its CI still fails for an unrelated reason: three solutions and `ci.yml` reference the
-  removed submodule projects (MSB3202), tracked separately.
+  included. Its CI was red for an unrelated reason, three solutions and `ci.yml` still referencing the
+  removed submodule projects (MSB3202), until PR #148 repaired CI on `main`; that is merged into the
+  branch.
 - The main Browser checkout still holds the carried-over changes and these documents uncommitted;
   drop those copies before pulling `main` after the merge.
 - The local validation feeds (`D:\local-packages\broiler-net-stage3`) are obsolete. Their HTML

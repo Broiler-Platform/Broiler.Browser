@@ -192,7 +192,7 @@ Broiler.Layout and Broiler.VM — were replaced by their packages in September 2
 | `Broiler.Input` | Keyboard, mouse, pen, touch and text input abstractions |
 | `Broiler.UI` | Platform-neutral retained-mode UI toolkit |
 | `Broiler.HTML` | Modular HTML/CSS renderer |
-| `Broiler.Net` | Cookie engine, site resolution and the profile's HTTP transport (`BrowserNetworkSession`). A NuGet package; `Broiler.HTML` and `Broiler.HtmlBridge` depend on it too |
+| `Broiler.Net` | Cookie engine, site resolution and the profile's HTTP transport (`BrowserNetworkSession`). `Broiler.HTML` and `Broiler.HtmlBridge` depend on it too |
 | `Broiler.HtmlBridge` | The HTML control: the DOM bridge, JSEAL and the two engine providers. Extracted from `src/` on 2026-09-16 — nothing in it was about being a browser, so this repository is now one embedder of it rather than its owner. Reached from `src/Broiler.Browser.Core` through `Broiler.HtmlBridge.Scripting` |
 | `Broiler.JS` | JavaScript parser, compiler, runtime and built-ins |
 | `Broiler.VM` | Generic execution core — a host for language profiles, not a language. Owns profile selection, bounded loading, the verification boundary, the execution lifecycle, resource authority and diagnostics; owns no opcode set, value representation or language semantics |
