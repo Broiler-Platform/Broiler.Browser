@@ -33,7 +33,9 @@ internal sealed class BrowserWindow : Direct2DWindow, IWindowsInputHost
     // and there is no handle until the window exists.
     private WindowsClipboard? _clipboard;
 
-    public BrowserWindow(string? initialUrl)
+    /// <param name="initialUrl">The page to open first, or <see langword="null"/> for the welcome page.</param>
+    /// <param name="profile">The browsing profile the window loads pages with; the caller owns it.</param>
+    public BrowserWindow(string? initialUrl, BrowserProfile profile)
         : base(new BWindowOptions
         {
             Title = "Broiler Browser",
@@ -51,7 +53,7 @@ internal sealed class BrowserWindow : Direct2DWindow, IWindowsInputHost
             PostToUiThread,
             ReadClipboardText,
             WriteClipboardText);
-        _app = new BrowserApp(_host, () => Renderer, initialUrl, SetAnimationActive);
+        _app = new BrowserApp(_host, () => Renderer, initialUrl, SetAnimationActive, profile);
         _inputDispatcher = new WindowsInputMessageDispatcher(this);
         _keyboardProvider = new WindowsKeyboardProvider();
         _mouseProvider = new WindowsMouseProvider();

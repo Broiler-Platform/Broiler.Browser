@@ -42,7 +42,10 @@ internal static class Program
 
         try
         {
-            using var window = new BrowserWindow(initialUrl);
+            // The process's one profile: its cookies and network session serve every request the
+            // window makes. Declared first so it is disposed last, after the window that uses it.
+            using var profile = BrowserProfile.CreateDefault();
+            using var window = new BrowserWindow(initialUrl, profile);
             return window.Run();
         }
         catch (Exception ex)

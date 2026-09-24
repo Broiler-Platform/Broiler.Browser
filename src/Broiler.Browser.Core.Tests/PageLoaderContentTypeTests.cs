@@ -16,6 +16,11 @@ namespace Broiler.Browser.Core.Tests;
 /// cookie-consent dialog answered <c>POST https://consent.google.de/save</c> with
 /// <c>400 Bad Request</c>, so accepting or declining cookies stranded the search behind the
 /// consent page.
+/// <para>
+/// Every case runs twice: over a plain <see cref="HttpClient"/>, and over the profile's network
+/// session, which is how the browser sends a submission now. The session composes its own message
+/// from the request's fields, so the single media type has to survive that too.
+/// </para>
 /// </remarks>
 public class PageLoaderContentTypeTests
 {
@@ -50,9 +55,17 @@ public class PageLoaderContentTypeTests
         }
     }
 
-    private static async Task<CapturingHandler> SubmitAsync(PageRequest request)
+    private static async Task<CapturingHandler> SubmitAsync(PageRequest request, bool throughProfile)
     {
         CapturingHandler handler = new();
+        if (throughProfile)
+        {
+            using BrowserProfile profile = BrowserProfile.CreateEphemeral(handler);
+            using PageLoader profileLoader = new(profile.Network);
+            _ = await profileLoader.FetchAsync(request);
+            return handler;
+        }
+
         using HttpClient client = new(handler);
         using PageLoader loader = new(client);
 
@@ -63,8 +76,10 @@ public class PageLoaderContentTypeTests
     private static string[] ContentTypeValues(CapturingHandler handler) =>
         handler.Request!.Content!.Headers.GetValues("Content-Type").ToArray();
 
-    [Fact(Timeout = 600000)]
-    public async Task UrlEncodedForm_PostsThatMediaTypeAndNoOther()
+    [Theory(Timeout = 600000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UrlEncodedForm_PostsThatMediaTypeAndNoOther(bool throughProfile)
     {
         // The consent dialog's own body, shortened.
         const string Body = "bl=boq_identityfrontenduiserver&gl=DE&continue=https%3A%2F%2Fwww.google.de%2F";
@@ -73,7 +88,7 @@ public class PageLoaderContentTypeTests
             "https://consent.google.de/save",
             PageRequest.Post,
             PageRequest.FormUrlEncoded,
-            Body));
+            Body), throughProfile);
 
         // The regression is a second value here — the origin reads the first and sees text/plain.
         Assert.Equal(
@@ -82,8 +97,10 @@ public class PageLoaderContentTypeTests
         Assert.Equal(Body, handler.Body);
     }
 
-    [Fact(Timeout = 600000)]
-    public async Task ContentTypeIsAbsentFromTheDefaultedCase()
+    [Theory(Timeout = 600000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ContentTypeIsAbsentFromTheDefaultedCase(bool throughProfile)
     {
         // No media type on the request: the loader falls back to the form default, and that
         // fallback must replace StringContent's text/plain just the same.
@@ -91,25 +108,29 @@ public class PageLoaderContentTypeTests
             "https://consent.google.de/save",
             PageRequest.Post,
             ContentType: null,
-            Body: "q=test"));
+            Body: "q=test"), throughProfile);
 
         Assert.Equal(["application/x-www-form-urlencoded"], ContentTypeValues(handler));
     }
 
-    [Fact(Timeout = 600000)]
-    public async Task TextPlainForm_KeepsTheMediaTypeTheFormChose()
+    [Theory(Timeout = 600000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TextPlainForm_KeepsTheMediaTypeTheFormChose(bool throughProfile)
     {
         var handler = await SubmitAsync(new PageRequest(
             "https://example.com/submit",
             PageRequest.Post,
             "text/plain",
-            "q=test\r\n"));
+            "q=test\r\n"), throughProfile);
 
         Assert.Equal(["text/plain"], ContentTypeValues(handler));
     }
 
-    [Fact(Timeout = 600000)]
-    public async Task MultipartForm_KeepsItsBoundaryParameterAndItsBytes()
+    [Theory(Timeout = 600000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MultipartForm_KeepsItsBoundaryParameterAndItsBytes(bool throughProfile)
     {
         byte[] body = [0x2D, 0x2D, 0x78, 0x79, 0x7A, 0xFF, 0xFE, 0x0D, 0x0A];
 
@@ -119,7 +140,7 @@ public class PageLoaderContentTypeTests
             "multipart/form-data; boundary=xyz")
         {
             BinaryBody = body,
-        });
+        }, throughProfile);
 
         Assert.Equal(["multipart/form-data; boundary=xyz"], ContentTypeValues(handler));
 
@@ -127,22 +148,26 @@ public class PageLoaderContentTypeTests
         Assert.Equal(body, handler.Bytes);
     }
 
-    [Fact(Timeout = 600000)]
-    public async Task AnUnparseableMediaTypeStillGoesOutRatherThanFailingTheRequest()
+    [Theory(Timeout = 600000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnUnparseableMediaTypeStillGoesOutRatherThanFailingTheRequest(bool throughProfile)
     {
         var handler = await SubmitAsync(new PageRequest(
             "https://example.com/submit",
             PageRequest.Post,
             "not a media type",
-            "q=test"));
+            "q=test"), throughProfile);
 
         Assert.Equal(["not a media type"], ContentTypeValues(handler));
     }
 
-    [Fact(Timeout = 600000)]
-    public async Task AGetNavigationSendsNoBodyAndNoContentType()
+    [Theory(Timeout = 600000)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AGetNavigationSendsNoBodyAndNoContentType(bool throughProfile)
     {
-        var handler = await SubmitAsync(PageRequest.ForUrl("https://www.google.de/search?q=test"));
+        var handler = await SubmitAsync(PageRequest.ForUrl("https://www.google.de/search?q=test"), throughProfile);
 
         Assert.Null(handler.Request!.Content);
     }

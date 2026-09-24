@@ -30,13 +30,14 @@
     all. A project-level build is the one that is genuinely VM-free under Debug and Release.
   -->
   <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
-    <PackageReference Include="Broiler.HtmlBridge.Scripting.Vm" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting.Vm" Version="0.1.0-preview.7" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\Broiler.App\Rendering\RenderingPipeline.cs" Link="Rendering\RenderingPipeline.cs" />
     <Compile Include="..\Broiler.App\Rendering\PageLoader.cs" Link="Rendering\PageLoader.cs" />
     <Compile Include="..\Broiler.App\Rendering\PageRequest.cs" Link="Rendering\PageRequest.cs" />
+    <Compile Include="..\Broiler.App\Rendering\PageLoadResult.cs" Link="Rendering\PageLoadResult.cs" />
     <Compile Include="..\Broiler.App\Rendering\IPageLoader.cs" Link="Rendering\IPageLoader.cs" />
     <Compile Include="..\Broiler.App\FavoritesManager.cs" Link="FavoritesManager.cs" />
   </ItemGroup>
@@ -52,10 +53,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.7" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.7" />
+    <PackageReference Include="Broiler.Net" Version="0.1.0-preview.1" />
     <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.5" />
     <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.5" />
     <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.5" />

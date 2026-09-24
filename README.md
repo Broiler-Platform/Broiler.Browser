@@ -195,6 +195,7 @@ NuGet packages now rather than checked out, and `Broiler.HtmlBridge` was added o
 | `Broiler.Input` | Keyboard, mouse, pen, touch and text input abstractions |
 | `Broiler.UI` | Platform-neutral retained-mode UI toolkit |
 | `Broiler.HTML` | Modular HTML/CSS renderer |
+| `Broiler.Net` | Cookie engine, site resolution and the profile's HTTP transport (`BrowserNetworkSession`). A NuGet package; `Broiler.HTML` and `Broiler.HtmlBridge` depend on it too |
 | `Broiler.HtmlBridge` | The HTML control: the DOM bridge, JSEAL and the two engine providers. Extracted from `src/` on 2026-09-16 — nothing in it was about being a browser, so this repository is now one embedder of it rather than its owner. Reached from `src/Broiler.Browser.Core` through `Broiler.HtmlBridge.Scripting` |
 | `Broiler.JS` | JavaScript parser, compiler, runtime and built-ins |
 | `Broiler.VM` | Generic execution core — a host for language profiles, not a language. Owns profile selection, bounded loading, the verification boundary, the execution lifecycle, resource authority and diagnostics; owns no opcode set, value representation or language semantics |
@@ -214,6 +215,26 @@ WebAssembly one, which every head's solution manifest also forbids by pattern. S
 and described both profiles as living in this repository as documents with no source tree. The
 first half is what this change made false, so it is restated rather than deleted; the second half
 was already false before it — see the note under* Repository layout.*)*
+
+### Network and cookies
+
+Every head creates one `BrowserProfile` (`src/Broiler.Browser.Core/BrowserProfile.cs`) and
+hands it to its `BrowserApp`: a cookie store and one Broiler.Net `BrowserNetworkSession` over it.
+That session is the only network the browser uses for a page. Navigations go through
+`PageLoader` as top-level navigation requests that name the document that started them; the
+scripts the extractor fetches, the DOM bridge's loaders (`fetch`, XHR, `sendBeacon`, module
+imports, inserted scripts, stylesheets, frames) and the renderer's images, stylesheets and fonts
+are sub-resource requests of the page's document. A cookie a navigation receives is therefore
+what every one of them carries, under Fetch's credentials, CORS and SameSite rules, and
+`document.cookie` reads the same store without ever seeing an `HttpOnly` cookie. No loader keeps
+a cookie jar of its own. A `BrowserApp` constructed without a profile gets a private, ephemeral
+one; there is no process-global profile.
+
+A page's own navigations (script, refresh meta, links, forms) never open a local file: only the
+user — typed, a bookmark, the command line — or a page that is itself a `file:` document does, and
+a file on a share only the user. A page may go back once to a URL its load was redirected away from
+(a cookie challenge reached by a redirect); every URL of the redirect chain counts towards the
+same-path budget that stops a real loop.
 
 ### Broiler.Layout is vendored, not a submodule
 

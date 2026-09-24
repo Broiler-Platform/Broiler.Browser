@@ -17,7 +17,7 @@ using Broiler.HtmlBridge.Logging;
 using Broiler.Input.Keyboard;
 using Broiler.Input.Mouse;
 using Broiler.Input.Touch;
-using Broiler.Layout.Net;
+using Broiler.Net.Http;
 using Broiler.UI;
 using Broiler.UI.Button.Standard;
 using Broiler.UI.Dialog;
@@ -41,7 +41,9 @@ internal sealed class BrowserApp : IDisposable
     private readonly Func<IBroilerRenderer?> _getRenderer;
     private readonly Action<bool> _setAnimationActive;
     private readonly UiSession _session;
-    private readonly FavoritesManager _favorites = new();
+    private readonly BrowserProfile _profile;
+    private readonly bool _ownsProfile;
+    private readonly FavoritesManager _favorites;
     private readonly List<PageRequest> _history = [];
     private readonly StandardButton _backButton;
     private readonly StandardButton _forwardButton;
@@ -68,12 +70,45 @@ internal sealed class BrowserApp : IDisposable
     // The load whose intermediate document is on screen but not yet painted; RenderFrame releases it.
     private LoadProgress? _progressAwaitingPaint;
 
+    /// <summary>
+    /// A browser window with a private, ephemeral profile of its own: nothing it stores outlives it,
+    /// and nothing is shared with any other window. Composition roots pass the user's profile through
+    /// the overload that takes one.
+    /// </summary>
     public BrowserApp(
         BrowserUiHost host,
         Func<IBroilerRenderer?> getRenderer,
         string? initialUrl,
         Action<bool> setAnimationActive)
+        : this(host, getRenderer, initialUrl, setAnimationActive, BrowserProfile.CreateEphemeral(), ownsProfile: true)
     {
+    }
+
+    /// <summary>
+    /// A browser window on <paramref name="profile"/>: its cookies, its network session and its
+    /// favorites. The profile belongs to the caller and must outlive the window.
+    /// </summary>
+    public BrowserApp(
+        BrowserUiHost host,
+        Func<IBroilerRenderer?> getRenderer,
+        string? initialUrl,
+        Action<bool> setAnimationActive,
+        BrowserProfile profile)
+        : this(host, getRenderer, initialUrl, setAnimationActive, profile ?? throw new ArgumentNullException(nameof(profile)), ownsProfile: false)
+    {
+    }
+
+    private BrowserApp(
+        BrowserUiHost host,
+        Func<IBroilerRenderer?> getRenderer,
+        string? initialUrl,
+        Action<bool> setAnimationActive,
+        BrowserProfile profile,
+        bool ownsProfile)
+    {
+        _profile = profile;
+        _ownsProfile = ownsProfile;
+        _favorites = new FavoritesManager(profile.FavoritesPath);
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _getRenderer = getRenderer ?? throw new ArgumentNullException(nameof(getRenderer));
         _setAnimationActive = setAnimationActive ?? throw new ArgumentNullException(nameof(setAnimationActive));
@@ -247,6 +282,9 @@ internal sealed class BrowserApp : IDisposable
         // A request for the page already shown is refused only when repeating it would change
         // nothing: a GET of the same URL is a timer asking for what is on screen. A POST to the same
         // URL is a submission — the body is the difference, and refusing it would lose the form.
+        //
+        // The request names the page that asked (the bridge's initiator, or the document on screen),
+        // so the transport judges it as that document's navigation rather than the user's own.
         if (_viewport.TakePendingNavigation() is { } requested
             && !(requested.IsRepeatable
                 && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
@@ -269,6 +307,12 @@ internal sealed class BrowserApp : IDisposable
         _viewport.LinkActivated -= OnViewportLinkActivated;
         _viewport.FilePickRequested -= OnViewportFilePickRequested;
         _session.Dispose();
+
+        // After the session, which takes the viewport and its containers with it: nothing left can
+        // start a request on the network being disposed. A load still in flight fails, and its result
+        // is dropped because the window is shutting down.
+        if (_ownsProfile)
+            _profile.Dispose();
     }
 
     /// <summary>
@@ -355,7 +399,9 @@ internal sealed class BrowserApp : IDisposable
         if (target < 0 || target >= _history.Count)
             return;
 
-        PageRequest request = _history[target];
+        // Re-issued as the entry's own navigation: the initiator it was created with, if any, still
+        // started it.
+        PageRequest request = _history[target] with { NavigationType = PageNavigationType.BackForward };
         if (!request.IsRepeatable)
         {
             // Re-issuing a submission can charge a card twice. Ask first, and only
@@ -380,7 +426,9 @@ internal sealed class BrowserApp : IDisposable
         if (_historyIndex < 0 || _historyIndex >= _history.Count)
             return;
 
-        PageRequest request = _history[_historyIndex];
+        // A UI reload: the loader replays the same-site status recorded for the document on screen
+        // (PageLoader.NavigationContext), because the reload itself has no initiator to judge by.
+        PageRequest request = _history[_historyIndex] with { NavigationType = PageNavigationType.Reload };
         if (request.IsRepeatable)
         {
             LoadUrl(request);
@@ -566,10 +614,12 @@ internal sealed class BrowserApp : IDisposable
         NavigationLoadResult? result = null;
         try
         {
-            result = await LoadUrlOnWorkerAsync(request, progress, cancellation.Token).ConfigureAwait(false);
+            result = await LoadUrlOnWorkerAsync(_profile, request, progress, cancellation.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
+            // Stopped or superseded: nothing to show. A cancellation the navigation did not ask for —
+            // the network session's own timeout — is a failed load and takes the error path below.
         }
         catch (Exception ex)
         {
@@ -583,39 +633,11 @@ internal sealed class BrowserApp : IDisposable
         }
     }
 
-    // One connection pool for the whole browser session rather than one per navigation.
-    // An HttpClient *is* a connection pool, so a per-navigation client reconnects to a host
-    // the previous page already had a keep-alive connection to, and — because the pipeline's
-    // `using` disposed it at the end of the load — tore that pool down again immediately.
-    // Disposing a pool closes its pooled connections, and any connection the pool's scavenger
-    // has already armed with a zero-byte read-ahead fails that pending read with
-    // SocketError.OperationAborted, reported as `IOException: Unable to read data from the
-    // transport connection` (Windows spells 995 as "the I/O operation has been aborted because
-    // of either a thread exit or an application request"). A browser window is long-lived, so
-    // unlike the CLI's one-shot capture it stays alive to see it. See
-    // docs/browser-connection-pool-aborts.md.
-    //
-    // Never disposed: it is owned by the process, and outliving every navigation is the point.
-    private static readonly HttpClient PageHttpClient = CreatePageHttpClient();
-
-    internal static HttpClient CreatePageHttpClient()
-    {
-        SocketsHttpHandler handler = new()
-        {
-            // A browser window can stay open for days; recycling a pooled connection
-            // periodically keeps it from pinning a DNS answer for that long.
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-
-            // A host that never completes the handshake otherwise holds the navigation for
-            // the whole request timeout with nothing to show for it.
-            ConnectTimeout = TimeSpan.FromSeconds(15),
-        };
-
-        // Without this the client sends no User-Agent at all, and a server whose policy rejects an
-        // unidentified request answers the navigation itself — mediawiki.org replies 403 Forbidden
-        // before the first byte of the page. See Broiler.Layout.Net.BroilerUserAgent.
-        return BroilerUserAgent.Apply(new HttpClient(handler));
-    }
+    // Page requests go through the profile's network session (BrowserProfile.Network), which is also
+    // the connection pool: one for the profile rather than one per navigation, for the reasons in
+    // docs/browser-connection-pool-aborts.md. It replaced a process-wide HttpClient whose handler kept
+    // an automatic cookie jar of its own; the session sends and stores the profile's cookies per hop,
+    // and every other loader of the page uses the same store.
 
     /// <summary>
     /// How many script-initiated navigations one user-initiated navigation will follow before it
@@ -678,26 +700,55 @@ internal sealed class BrowserApp : IDisposable
     /// <c>VmScriptEngine</c>'s remarks say why that is a property of the VM's host boundary rather
     /// than an unfinished port, and docs/vm-javascript-profile.md says what would have to change.
     /// </para>
+    /// <para>
+    /// <b>Both engines run the document on the profile's network.</b> The bridge every hop of the
+    /// navigation creates sends its loaders — module imports, inserted scripts, stylesheets, frames,
+    /// <c>fetch()</c>, XHR and <c>sendBeacon</c> — through <paramref name="profile"/>'s session, and backs
+    /// <c>document.cookie</c> with the profile's store. Its document's identity comes from
+    /// <paramref name="documents"/>, which answers with the context the pipeline built for the hop, so the
+    /// renderer, the extractor and the bridge all speak for one document object.
+    /// </para>
     /// </remarks>
-    private static IScriptEngine NewScriptEngine()
+    private static IScriptEngine NewScriptEngine(BrowserProfile profile, Func<Uri, DocumentRequestContext> documents)
     {
+        var bridges = new DomBridgeFactory(new DomBridgeSessionOptions
+        {
+            Network = profile.Network,
+            Cookies = profile.DocumentCookies,
+            DocumentContextFactory = documents,
+        });
+
 #if BROILER_VM_JS
         RenderLogger.LogDebug(
             LogCategory.JavaScript,
             nameof(BrowserApp),
             "Script runs on the Broiler.VM JavaScript profile; document-bearing execution is served by Broiler.JS.");
 
-        return new VmScriptEngine(new ScriptEngine());
+        return new VmScriptEngine(new ScriptEngine(bridges));
 #else
-        return new ScriptEngine();
+        return new ScriptEngine(bridges);
 #endif
     }
 
-    private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(PageRequest request, LoadProgress progress, CancellationToken cancellationToken)
+    private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(
+        BrowserProfile profile,
+        PageRequest request,
+        LoadProgress progress,
+        CancellationToken cancellationToken)
     {
+        // The document the current hop loaded, for the bridge the engine attaches to it. One engine
+        // serves every hop, so the bridge asks by URL rather than being told once. The hops run one
+        // after another, and the bridge asks while its hop's scripts are being set up.
+        DocumentRequestContext? currentDocument = null;
+        DocumentRequestContext DocumentFor(Uri url) =>
+            currentDocument is { } document && document.DocumentUrl == url
+                ? document
+                : DocumentRequestContext.CreateTopLevel(url);
+
         using var pipeline = new RenderingPipeline(
-            new PageLoader(PageHttpClient),
-            NewScriptEngine());
+            new PageLoader(profile.Network),
+            NewScriptEngine(profile, DocumentFor),
+            profile.Network);
 
         // Keyed by everything ahead of the query, because that is what separates a chain moving on
         // from a page re-submitting itself. See TryFollowNavigation.
@@ -705,17 +756,30 @@ internal sealed class BrowserApp : IDisposable
 
         for (int hop = 0; ; hop++)
         {
-            var (normalisedUrl, content) = await pipeline.LoadPageAsync(request, cancellationToken).ConfigureAwait(false);
+            LoadedPage page = await pipeline.LoadAsync(request, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
-            string loadedPath = NavigationPathKey(normalisedUrl);
-            loadsPerPath[loadedPath] = loadsPerPath.TryGetValue(loadedPath, out int loaded) ? loaded + 1 : 1;
+            // Everything from here on is about the document the response came from: its final URL is
+            // the base of its links, the key of the loop budget, the URL a script navigation is compared
+            // against and what history records; its context is what its requests carry.
+            string normalisedUrl = page.FinalUrl;
+            DocumentRequestContext document = page.Document;
+            var content = page.Content;
+            currentDocument = document;
+
+            // Every URL the response passed through counts towards the same-path budget: the one asked
+            // for, each redirect and the final one. A script asking for any of them again — `/app`
+            // redirecting to `/login`, whose script replaces the location with `/app` — is allowed its
+            // retry, and keyed by the final URL alone the loop it can become was never counted.
+            IReadOnlyList<string> hopUrls = HopUrls(page.Response, normalisedUrl);
+            foreach (string loadedPath in hopUrls.Select(NavigationPathKey).Distinct(StringComparer.OrdinalIgnoreCase))
+                loadsPerPath[loadedPath] = loadsPerPath.TryGetValue(loadedPath, out int loaded) ? loaded + 1 : 1;
 
             // Read off the fetched markup, before any script runs and whether or not there is any:
             // ExecuteScriptsInteractive returns null for a page with no scripts, and a refresh
             // interstitial is very often exactly that. A script that navigates later supersedes it
             // below, which is the same last-one-wins the bridge applies among script navigations.
-            NavigationRequest? pending = MetaRefreshDiscovery.Find(content.Html, normalisedUrl);
+            NavigationRequest? pending = MetaRefreshDiscovery.Find(content.Html, normalisedUrl, document);
 
             string html = PrepareForBrowsing(content.Html);
             InteractiveSession? session = null;
@@ -738,7 +802,7 @@ internal sealed class BrowserApp : IDisposable
                     // already finished: Acid3 advances its score one test per setTimeout, so the whole
                     // count ran here, before the first paint, and the browser showed only the total.
                     string initial = session.SettleLoadWindow(
-                        serialize => progress.PublishFrame(serialize, normalisedUrl),
+                        serialize => progress.PublishFrame(serialize, normalisedUrl, document),
                         cancellationToken);
                     if (!string.IsNullOrWhiteSpace(initial))
                         html = PrepareForBrowsing(initial);
@@ -767,8 +831,11 @@ internal sealed class BrowserApp : IDisposable
                     }
                 }
 
+                // The next hop is this document's navigation: the bridge names the document whose
+                // script asked (a frame's, when a frame's script navigated the top window), and a
+                // refresh meta or a request that names nobody falls back to this document.
                 if (ShouldFollow(pending, normalisedUrl, hop, loadsPerPath)
-                    && ToPageRequest(pending!, html, normalisedUrl) is { } next)
+                    && ToPageRequest(pending!, html, normalisedUrl, document) is { } next)
                 {
                     // The page asked to leave before this document was ever shown, so it is not the
                     // document to show. Frames already published for it stay on screen until the next
@@ -779,8 +846,17 @@ internal sealed class BrowserApp : IDisposable
                     continue;
                 }
 
-                HtmlContainer container = BrowserViewport.CreateContentContainer(html, normalisedUrl);
-                return NavigationLoadResult.FromSuccess(normalisedUrl, container, session, hop > 0);
+                // The frames the settle painted were this document too: their images, stylesheets and
+                // fonts are already in hand, and the finished page reuses them instead of fetching
+                // every one again, synchronously, on the UI thread's first layout.
+                HtmlContainer container = BrowserViewport.CreateContentContainer(
+                    html, normalisedUrl, profile.Network, document, progress.LastFrame);
+                return NavigationLoadResult.FromSuccess(
+                    normalisedUrl,
+                    container,
+                    session,
+                    hop > 0,
+                    request.ForLoadedDocument(page.Response));
             }
             catch
             {
@@ -802,6 +878,14 @@ internal sealed class BrowserApp : IDisposable
     /// Deciding <i>whether</i> is separate from building <i>what</i> (<see cref="ToPageRequest"/>)
     /// because only the second needs the document: a form submission has to be serialized out of it,
     /// and the rules below would otherwise be untestable without one.
+    /// </para>
+    /// <para>
+    /// Only <paramref name="currentUrl"/> -- where the load landed -- is the document already loaded.
+    /// A URL the load was redirected away from is not: no document was loaded there, it answered with a
+    /// redirect. Going back to it once is the "load, take a token or a cookie, ask again" handshake the
+    /// same-path budget below allows for (a JS cookie challenge reached by a redirect, or a refresh
+    /// interstitial), and every URL of the redirect chain already counts towards that budget, which is
+    /// what stops a real loop.
     /// </para>
     /// </remarks>
     internal static bool ShouldFollow(
@@ -881,25 +965,92 @@ internal sealed class BrowserApp : IDisposable
     /// live state is used for a submission that happens after load, where it does hold something.
     /// </remarks>
     internal static PageRequest? ToPageRequest(NavigationRequest navigation, string pageHtml, string baseUrl) =>
-        BuildRequest(navigation, new HtmlFormState(), pageHtml, baseUrl);
+        ToPageRequest(navigation, pageHtml, baseUrl, document: null);
+
+    /// <summary>
+    /// <see cref="ToPageRequest(NavigationRequest, string, string)"/>, for a navigation of
+    /// <paramref name="document"/>: the request is initiated by the document the bridge recorded as
+    /// asking (<see cref="NavigationRequest.Initiator"/>), or by <paramref name="document"/> when the
+    /// navigation names none.
+    /// </summary>
+    internal static PageRequest? ToPageRequest(
+        NavigationRequest navigation,
+        string pageHtml,
+        string baseUrl,
+        DocumentRequestContext? document) =>
+        BuildRequest(navigation, new HtmlFormState(), pageHtml, baseUrl, document);
 
     private static PageRequest? BuildRequest(
         NavigationRequest navigation,
         HtmlFormState formState,
         string pageHtml,
-        string baseUrl)
+        string baseUrl,
+        DocumentRequestContext? document)
     {
-        if (navigation.Kind != NavigationKind.FormSubmit)
-            return PageRequest.ForUrl(navigation.Url);
-
-        PageRequest? submission = formState.TryBuildScriptSubmitRequest(pageHtml, navigation.FormIndex, baseUrl);
-        if (submission is null)
+        DocumentRequestContext? initiator = navigation.Initiator ?? document;
+        if (!MayNavigateTo(initiator, navigation.Url))
         {
             RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
-                $"form.submit() not followed: form {navigation.FormIndex} is not in the document the host has");
+                $"{navigation.Url} not followed: a web page may not open a local file");
+            return null;
         }
 
-        return submission;
+        PageRequest? request;
+        if (navigation.Kind != NavigationKind.FormSubmit)
+        {
+            request = PageRequest.ForUrl(navigation.Url);
+        }
+        else
+        {
+            request = formState.TryBuildScriptSubmitRequest(pageHtml, navigation.FormIndex, baseUrl);
+            if (request is null)
+            {
+                RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
+                    $"form.submit() not followed: form {navigation.FormIndex} is not in the document the host has");
+                return null;
+            }
+        }
+
+        // A page's own navigation, never the user's: the document that asked is its initiator, which
+        // is what keeps a cross-site page from sending the target's Strict cookies by navigating.
+        return request with
+        {
+            Initiator = initiator,
+            NavigationType = navigation.Kind switch
+            {
+                NavigationKind.FormSubmit => PageNavigationType.FormSubmission,
+                NavigationKind.MetaRefresh => PageNavigationType.MetaRefresh,
+                _ => PageNavigationType.Script,
+            },
+        };
+    }
+
+    /// <summary>
+    /// Whether a navigation <paramref name="initiator"/> started may go to <paramref name="targetUrl"/>:
+    /// anything may, except a document that is not itself a local file opening a <c>file:</c> URL.
+    /// </summary>
+    /// <remarks>
+    /// A browser never lets a web page navigate to a local file. Here a page's script, refresh meta,
+    /// link or form could: the local page then ran with a <c>file:</c> document's privileges (which may
+    /// read local files), and a <c>file://host/share</c> URL made Windows open an SMB session to that
+    /// host with the user's credentials. The user's own navigations -- typed, a bookmark, the command
+    /// line -- have no initiator and are unaffected.
+    /// </remarks>
+    internal static bool MayNavigateTo(DocumentRequestContext? initiator, string targetUrl) =>
+        initiator is null ||
+        initiator.DocumentUrl.IsFile ||
+        !(Uri.TryCreate(targetUrl, UriKind.Absolute, out Uri? target) && target.IsFile);
+
+    /// <summary>
+    /// The URLs a load passed through, in order: its redirect chain, or <paramref name="finalUrl"/>
+    /// alone for a load that recorded none.
+    /// </summary>
+    internal static IReadOnlyList<string> HopUrls(PageLoadResult response, string finalUrl)
+    {
+        var urls = response.RedirectChain.Select(url => url.AbsoluteUri).ToList();
+        if (!urls.Contains(finalUrl, StringComparer.OrdinalIgnoreCase))
+            urls.Add(finalUrl);
+        return urls;
     }
 
     /// <summary>
@@ -973,9 +1124,10 @@ internal sealed class BrowserApp : IDisposable
         /// The share of the settle's own running time that may go on producing frames.
         /// </summary>
         /// <remarks>
-        /// A frame costs a serialise and a full parse, and a parse re-fetches the document's
+        /// A frame costs a serialise and a full parse. A parse used to re-fetch the document's
         /// stylesheets and web fonts every time (<c>docs/browser-load-window-pump.md</c>, "what this
-        /// does not fix"), which on a page carrying several is seconds. Paying that per batch took
+        /// does not fix"), which on a page carrying several is seconds; the frames now share one
+        /// subresource cache (<see cref="LastFrame"/>), so what remains is the parse itself. Paying that per batch took
         /// mediawiki.org from 33 s to 86 s — the page arrived sooner but finished much later.
         /// Holding frame work to a quarter of the settle bounds the whole cost at a third: a
         /// document that is cheap to parse still gets a frame per batch and animates, while an
@@ -994,11 +1146,24 @@ internal sealed class BrowserApp : IDisposable
         private string? _lastPublishedHtml;
 
         /// <summary>
+        /// The container of the last frame published, whose subresource cache the next frame and the
+        /// finished page share (<see cref="HtmlContainer.ShareSubresourceCacheWith"/>): every one of
+        /// them is the same document, and a container of its own would fetch each image again, with
+        /// its cookies, during a layout on the UI thread. Sharing is refused for another document, so
+        /// a frame of an earlier hop of the navigation shares nothing.
+        /// </summary>
+        public HtmlContainer? LastFrame { get; private set; }
+
+        /// <summary>
         /// Offers the document reached after one batch of the load window. Called on the load
         /// worker; returns without serialising when the previous frame has not been painted yet or
         /// when frames have used up their share of the settle.
         /// </summary>
-        public void PublishFrame(Func<string> serialize, string url)
+        /// <remarks>
+        /// The frame is the same document as the final one, so its container loads its stylesheets,
+        /// fonts and images as that document's requests, through the profile's network.
+        /// </remarks>
+        public void PublishFrame(Func<string> serialize, string url, DocumentRequestContext document)
         {
             if (Interlocked.CompareExchange(ref _state, InFlight, Idle) != Idle)
                 return;
@@ -1031,7 +1196,9 @@ internal sealed class BrowserApp : IDisposable
                 }
 
                 _lastPublishedHtml = html;
-                container = BrowserViewport.CreateContentContainer(PrepareForBrowsing(html), url);
+                container = BrowserViewport.CreateContentContainer(
+                    PrepareForBrowsing(html), url, app._profile.Network, document, LastFrame);
+                LastFrame = container;
             }
             catch
             {
@@ -1083,20 +1250,21 @@ internal sealed class BrowserApp : IDisposable
     private void ApplyLoadedPage(NavigationLoadResult result)
     {
         // The history entry was written by NavigateTo before the load, so it names where the
-        // navigation started, not where a script sent it. Point it at the document actually loaded:
-        // reload and back/forward re-issue that entry, and re-issuing the start would walk the user
-        // through the interstitial again instead of back past it. One followed chain is one
-        // navigation, which is also why the hops in between get no entries of their own.
+        // navigation started, not where a redirect or a script sent it. Point it at the document
+        // actually loaded: reload and back/forward re-issue that entry, and re-issuing the start would
+        // walk the user through the interstitial again instead of back past it. One followed chain is
+        // one navigation, which is also why the hops in between get no entries of their own.
         //
-        // Only when a script navigation was followed. The entry can hold a POST body — that is how
-        // revisiting a submission re-issues it — and rewriting it on every load would quietly turn
-        // every form submission into a GET of its own action URL.
-        if (result.FollowedNavigation
-            && !string.IsNullOrEmpty(result.NormalisedUrl)
+        // The entry is the loaded document's request (PageRequest.ForLoadedDocument): at the final
+        // URL, with the same-site status a UI reload replays. It keeps a POST body only while the
+        // request that produced the document was still a POST — a submission answered with a redirect
+        // to a GET leaves a GET, and one answered in place is still the submission, which revisiting
+        // asks before repeating.
+        if (result.HistoryEntry is { } loaded
             && _historyIndex >= 0
             && _historyIndex < _history.Count)
         {
-            _history[_historyIndex] = PageRequest.ForUrl(result.NormalisedUrl);
+            _history[_historyIndex] = loaded;
         }
 
         SetUrlText(result.NormalisedUrl);
@@ -1195,8 +1363,17 @@ internal sealed class BrowserApp : IDisposable
         if (_isShuttingDown)
             return;
 
-        // Only the URL is resolved against the page; a submission's body travels as-is.
-        NavigateTo(e.Request with { Url = ResolveLinkUrl(e.Link) });
+        // Only the URL is resolved against the page; a submission's body travels as-is, and so do
+        // the initiator and navigation type the viewport stamped on it.
+        PageRequest request = e.Request with { Url = ResolveLinkUrl(e.Link) };
+        if (!MayNavigateTo(request.Initiator, request.Url))
+        {
+            RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
+                $"{request.Url} not followed: a web page may not open a local file");
+            return;
+        }
+
+        NavigateTo(request);
     }
 
     private string ResolveLinkUrl(string link)
@@ -1263,7 +1440,7 @@ internal sealed class BrowserApp : IDisposable
             string favUrl = url;
             StandardButton button = CreateChromeButton(FavoriteLabel(url), "Favorite");
             button.PreferredSize = new BSize(EstimateFavoriteWidth(button.Text), 28);
-            button.Clicked += (_, _) => NavigateTo(favUrl);
+            button.Clicked += (_, _) => NavigateTo(PageRequest.ForUrl(favUrl) with { NavigationType = PageNavigationType.Bookmark });
             buttons.Add(button);
         }
 
@@ -1356,16 +1533,25 @@ internal sealed class BrowserApp : IDisposable
             HtmlContainer? container,
             InteractiveSession? session,
             bool followedNavigation,
+            PageRequest? historyEntry,
             Exception? error)
         {
             NormalisedUrl = normalisedUrl;
             _container = container;
             _session = session;
             FollowedNavigation = followedNavigation;
+            HistoryEntry = historyEntry;
             Error = error;
         }
 
+        /// <summary>The URL the document was served from, after every redirect and followed navigation.</summary>
         public string NormalisedUrl { get; }
+
+        /// <summary>
+        /// The request that names the loaded document, for the history entry the navigation made:
+        /// see <see cref="PageRequest.ForLoadedDocument"/>.
+        /// </summary>
+        public PageRequest? HistoryEntry { get; }
 
         /// <summary>
         /// Whether the document loaded is somewhere a script sent the browser rather than where the
@@ -1380,11 +1566,12 @@ internal sealed class BrowserApp : IDisposable
             string normalisedUrl,
             HtmlContainer container,
             InteractiveSession? session,
-            bool followedNavigation) =>
-            new(normalisedUrl, container, session, followedNavigation, null);
+            bool followedNavigation,
+            PageRequest historyEntry) =>
+            new(normalisedUrl, container, session, followedNavigation, historyEntry, null);
 
         public static NavigationLoadResult FromError(Exception error) =>
-            new(string.Empty, null, null, false, error);
+            new(string.Empty, null, null, false, null, error);
 
         public HtmlContainer TakeContainer()
         {
@@ -1689,6 +1876,13 @@ internal sealed class BrowserApp : IDisposable
 
         public string BaseUrl { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// The request context of the document on screen, or <see langword="null"/> for the browser's
+        /// own pages (welcome, loading, error). It initiates every navigation the page starts — a link,
+        /// a form, a script — so the transport judges those as the page's, not the user's.
+        /// </summary>
+        public DocumentRequestContext? DocumentContext => _container.DocumentContext;
+
         // The load window, not "are any timers queued at all" — see
         // InteractiveSession.HasWorkDueInLoadWindow. This drives the busy state, the 16 ms
         // animation tick and StopSession, and on a page holding an interval the unbounded
@@ -1768,7 +1962,7 @@ internal sealed class BrowserApp : IDisposable
             // Consuming, so a request only ever answers once. The load decided about everything the
             // page asked for before it finished; what reaches here is what it asked for since.
             NavigationRequest? pending = _interactiveSession?.TakePendingNavigation();
-            return pending is null ? null : BuildRequest(pending, _formState, GetPageHtml(), BaseUrl);
+            return pending is null ? null : BuildRequest(pending, _formState, GetPageHtml(), BaseUrl, DocumentContext);
         }
 
         public void StopSession()
@@ -1784,14 +1978,44 @@ internal sealed class BrowserApp : IDisposable
             _renderDirty = true;
         }
 
-        public static HtmlContainer CreateContentContainer(string html, string baseUrl)
+        /// <summary>
+        /// Parses <paramref name="html"/> into a container for the viewport.
+        /// </summary>
+        /// <param name="html">The markup, prepared for browsing.</param>
+        /// <param name="baseUrl">The document's URL, which relative references resolve against.</param>
+        /// <param name="network">
+        /// The profile's network for a page's container, or <see langword="null"/> for the browser's own
+        /// pages, which load nothing from the network as anyone's document.
+        /// </param>
+        /// <param name="document">The page's request context; given exactly when <paramref name="network"/> is.</param>
+        /// <param name="sameDocument">
+        /// Another container of the same document (an earlier frame of its load), whose images,
+        /// stylesheets and fonts this one reuses rather than fetching them again; <see langword="null"/>
+        /// for none. Ignored unless it holds the same <paramref name="network"/> and <paramref name="document"/>.
+        /// </param>
+        /// <remarks>
+        /// Both are set before the parse, because the parse is what loads the linked stylesheets and
+        /// <c>@font-face</c> fonts; images follow at layout. Every one of them is a sub-resource request
+        /// of <paramref name="document"/> on <paramref name="network"/> — the same container re-parsed
+        /// by a step of the page's scripts keeps both — and none goes through a client of its own.
+        /// </remarks>
+        public static HtmlContainer CreateContentContainer(
+            string html,
+            string baseUrl,
+            IBrowserRequestTransport? network = null,
+            DocumentRequestContext? document = null,
+            HtmlContainer? sameDocument = null)
         {
             HtmlContainer container = new()
             {
                 AvoidAsyncImagesLoading = true,
                 AvoidImagesLateLoading = true,
                 BaseUrl = baseUrl,
+                RequestTransport = network,
+                DocumentContext = document,
             };
+            if (sameDocument is not null)
+                container.ShareSubresourceCacheWith(sameDocument);
             container.SetHtmlWithStyleSet(html, baseUrl: baseUrl);
             return container;
         }
@@ -2157,8 +2381,12 @@ internal sealed class BrowserApp : IDisposable
 
             // The renderer resolves a submit control to its form's action and nothing
             // more; serialize the form's fields so the submission actually carries them.
-            PageRequest request = _formState.TryBuildSubmitRequest(GetPageHtml(), e.Attributes, e.Link)
-                ?? PageRequest.ForUrl(e.Link);
+            PageRequest? submission = _formState.TryBuildSubmitRequest(GetPageHtml(), e.Attributes, e.Link);
+            PageRequest request = (submission ?? PageRequest.ForUrl(e.Link)) with
+            {
+                Initiator = DocumentContext,
+                NavigationType = submission is null ? PageNavigationType.Link : PageNavigationType.FormSubmission,
+            };
             LinkActivated?.Invoke(this, new BrowserLinkEventArgs(request, e.Attributes));
         }
 
@@ -2190,7 +2418,10 @@ internal sealed class BrowserApp : IDisposable
 
             PageRequest? request = _formState.TryBuildFieldSubmitRequest(GetPageHtml(), fieldId, fieldName, BaseUrl);
             if (request is not null)
+            {
+                request = request with { Initiator = DocumentContext, NavigationType = PageNavigationType.FormSubmission };
                 LinkActivated?.Invoke(this, new BrowserLinkEventArgs(request, new Dictionary<string, string>()));
+            }
         }
 
         private void DisposeRenderList()
