@@ -22,7 +22,9 @@ dotnet build Broiler.Linux.Browser.slnx -c Release -p:BroilerJavaScriptEngine=Vm
 
 **One construction site.** `BrowserApp.NewScriptEngine()` returns
 `new VmScriptEngine(new ScriptEngine())` under these configurations and `new ScriptEngine()`
-under every other. That is the whole of the run-time difference.
+under every other. That is the whole of the run-time difference. The command line
+([command-line.md](command-line.md)) builds its engine there too, so a capture runs on the engine the
+window would.
 
 **`VmScriptEngine` runs the script-only paths on the VM and delegates the document-bearing ones.**
 
@@ -278,9 +280,11 @@ navigation; a per-engine cache would never hit at all.
 
 **In this repository the callers are the tests.** `RenderingPipeline` only calls
 `ExecuteInteractive`, which is forwarded — so the cache serves the document-free entry points, whose
-real consumers (`Broiler.Cli`, `Broiler.Wpt`, `Broiler.DevConsole`) are not in this checkout. It is
-built and proven here; it is not on a path this repository's own browser takes yet, for the same
-reason nothing else on the VM is.
+real consumers (`Broiler.Wpt`, `Broiler.DevConsole`) are still in the Broiler repository. The command
+line came here on 2026-09-24, and it runs pages through `RenderingPipeline` like the window; only its
+`--test-engines` smoke test, one script through `ExecuteDetailed`, takes a document-free path. The
+cache is built and proven here; it is not on a path this repository's own browser takes yet, for the
+same reason nothing else on the VM is.
 
 The key covers everything that reaches the compiler. Two components are worth naming because
 neither is obvious:

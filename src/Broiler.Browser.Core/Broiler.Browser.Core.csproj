@@ -55,6 +55,17 @@
     <InternalsVisibleTo Include="Broiler.Browser.Android" />
   </ItemGroup>
 
+  <!--
+    src/Broiler.Browser.Cli, whose assembly keeps the Broiler.Cli name it had in the Broiler
+    repository (its csproj says why). It composes a page's pipeline from the pieces the window
+    uses: BrowserProfile, PageLoader's timed constructor, BrowserApp.NewScriptEngine and
+    BridgeOptions, and HtmlPostProcessor.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Broiler.Cli" />
+    <InternalsVisibleTo Include="Broiler.Cli.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.6" />
     <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.6" />

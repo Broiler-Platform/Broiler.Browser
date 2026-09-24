@@ -689,7 +689,7 @@ internal sealed class BrowserApp : IDisposable
     /// <remarks>
     /// <para>
     /// <c>Debug-VM</c> and <c>Release-VM</c> define <c>BROILER_VM_JS</c>
-    /// (eng/Broiler.Configurations.props) and add the ProjectReference that puts
+    /// (eng/Broiler.Configurations.props) and add the PackageReference that puts
     /// <c>VmScriptEngine</c> in reach. Every other configuration compiles the second branch and
     /// links nothing of Broiler.VM at all.
     /// </para>
@@ -701,23 +701,13 @@ internal sealed class BrowserApp : IDisposable
     /// than an unfinished port, and docs/vm-javascript-profile.md says what would have to change.
     /// </para>
     /// <para>
-    /// <b>Both engines run the document on the profile's network.</b> The bridge every hop of the
-    /// navigation creates sends its loaders — module imports, inserted scripts, stylesheets, frames,
-    /// <c>fetch()</c>, XHR and <c>sendBeacon</c> — through <paramref name="profile"/>'s session, and backs
-    /// <c>document.cookie</c> with the profile's store. Its document's identity comes from
-    /// <paramref name="documents"/>, which answers with the context the pipeline built for the hop, so the
-    /// renderer, the extractor and the bridge all speak for one document object.
+    /// <b>The command line composes its engine here too</b> (src/Broiler.Browser.Cli), so a capture
+    /// runs a page's scripts on the engine this window would have run them on, under every
+    /// configuration.
     /// </para>
     /// </remarks>
-    private static IScriptEngine NewScriptEngine(BrowserProfile profile, Func<Uri, DocumentRequestContext> documents)
+    internal static IScriptEngine NewScriptEngine(IDomBridgeRuntimeFactory bridges)
     {
-        var bridges = new DomBridgeFactory(new DomBridgeSessionOptions
-        {
-            Network = profile.Network,
-            Cookies = profile.DocumentCookies,
-            DocumentContextFactory = documents,
-        });
-
 #if BROILER_VM_JS
         RenderLogger.LogDebug(
             LogCategory.JavaScript,
@@ -729,6 +719,37 @@ internal sealed class BrowserApp : IDisposable
         return new ScriptEngine(bridges);
 #endif
     }
+
+    /// <summary>
+    /// The options the bridge of every document <paramref name="profile"/> loads is created with.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Both engines run the document on the profile's network.</b> The bridge every hop of the
+    /// navigation creates sends its loaders — module imports, inserted scripts, stylesheets, frames,
+    /// <c>fetch()</c>, XHR and <c>sendBeacon</c> — through <paramref name="profile"/>'s session, and backs
+    /// <c>document.cookie</c> with the profile's store. Its document's identity comes from
+    /// <paramref name="documents"/>, which answers with the context the pipeline built for the hop, so the
+    /// renderer, the extractor and the bridge all speak for one document object.
+    /// </para>
+    /// <para>
+    /// <paramref name="layoutView"/> is what answers a script's geometry questions —
+    /// <c>getBoundingClientRect</c>, <c>offsetWidth</c> and the rest. The window passes none, so its
+    /// scripts are answered by the bridge's null layout view; the command line passes the headless
+    /// view it has always laid documents out with.
+    /// </para>
+    /// </remarks>
+    internal static DomBridgeSessionOptions BridgeOptions(
+        BrowserProfile profile,
+        Func<Uri, DocumentRequestContext> documents,
+        Func<Broiler.Layout.ILayoutView>? layoutView = null) =>
+        new()
+        {
+            Network = profile.Network,
+            Cookies = profile.DocumentCookies,
+            DocumentContextFactory = documents,
+            LayoutViewFactory = layoutView,
+        };
 
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(
         BrowserProfile profile,
@@ -747,7 +768,7 @@ internal sealed class BrowserApp : IDisposable
 
         using var pipeline = new RenderingPipeline(
             new PageLoader(profile.Network),
-            NewScriptEngine(profile, DocumentFor),
+            NewScriptEngine(new DomBridgeFactory(BridgeOptions(profile, DocumentFor))),
             profile.Network);
 
         // Keyed by everything ahead of the query, because that is what separates a chain moving on

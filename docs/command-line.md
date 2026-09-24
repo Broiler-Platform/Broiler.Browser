@@ -1,0 +1,117 @@
+# The command line
+
+`Broiler.Cli` (`src/Broiler.Browser.Cli`) loads a page without a window, runs it, and writes out what
+it left: the document, an image of it, or what its JavaScript computed. It also carries two tools
+that need no page at all, a layout fuzzer and an engine smoke test.
+
+It is the command line from the Broiler repository (`src/Broiler.Cli` at `ac913fd4`, the last
+commit on its `main`), which stayed there when the browser moved out on 2026-08-27. It came here on
+2026-09-24, and on the way it stopped running pages its own way: it now runs them on the window's
+pipeline.
+
+```bash
+dotnet run --project src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj -c Release -- --help
+```
+
+## What it does
+
+| Command | Writes |
+|---|---|
+| `--url <URL> --output <FILE>` | The document the page's scripts left, as HTML — or as text, for a `.txt` output |
+| `--capture-image <URL> --output <FILE>` | A PNG or JPEG of it, `--width` × `--height`, or the whole page with `--full-page`, or scrolled to a `#fragment` |
+| `--evaluate-page <URL> --evaluate <EXPR>… --output <FILE.json>` | A JSON report of each expression's `typeof` and value, run on the page's own global after its load window settled, with the page's work settled between them |
+| `--fuzz-layout [--count N] [--seed N]` | The seeds whose random documents break a layout invariant, each with a minimised reproduction |
+| `--test-engines` | Whether the CSS model and the JavaScript engine this build composes answer a trivial question correctly |
+
+`--url` and `--capture-image` take several inputs and `--output-dir`; each one is then captured in
+its own child process, because the render path still keeps unsynchronised caches on process-wide
+singletons. `--diagnostic-dir` records a bundle for a capture: every JavaScript failure as it
+happens, the page's console, every document, script, stylesheet, fetch and sub-document it loaded,
+the document its scripts left, and a summary ranking the failures and the platform features the
+page asked for and did not get.
+
+## How a page runs
+
+`HeadlessBrowser` composes the page from the pieces the window's load worker composes its own from:
+
+1. `PageLoader`, over the network session of a private, ephemeral `BrowserProfile`, loads the
+   document. `--timeout` bounds it, from the request to the last byte.
+2. `RenderingPipeline` extracts the scripts and fetches the external ones on the same network, as
+   the document's own requests.
+3. They run on the engine `BrowserApp.NewScriptEngine` picks for the configuration — Broiler.JS, or
+   the Broiler.VM JavaScript profile under `Debug-VM`/`Release-VM` — over a bridge made from
+   `BrowserApp.BridgeOptions`.
+4. `InteractiveSession.SettleLoadWindow` runs the load window to a fixed point.
+
+So a capture has run the page the way the window runs it. Three things differ, all on purpose:
+
+- **The bridge has a layout view.** A script asking for `getBoundingClientRect()` or
+  `offsetWidth` is answered from a real layout (`HeadlessLayoutView`). The window has never
+  registered one, and its scripts get the bridge's null view, which answers zero.
+- **The page's own navigations are not followed.** A script assigning `location`, or a refresh
+  `meta`, would move the window on; a capture is of the document asked for. `--follow-first-link`
+  is the one navigation the command line makes, and it makes it as the landing page's navigation.
+- **The engine's microtask queue is current while the page settles and while expressions run.** A
+  promise created in a timer callback then settles at the next checkpoint on the same thread, not on
+  the thread pool.
+
+The image itself is rasterised by Broiler.HTML.Image's `HtmlRender`, over the same render
+preparation the window applies (`HtmlPostProcessor.ProcessForBrowsing`), as the Broiler repository's
+command line always did. The window renders through a container that fetches images, stylesheets
+and fonts on the profile's network; `HtmlRender` fetches them itself.
+
+## What changed on the way
+
+Each of these is a difference from the command line in the Broiler repository.
+
+- **`--url` saves the document the scripts left.** It used to save the markup as fetched, and ran
+  the inline scripts only for their errors, against a stub `window` and `document` rather than the
+  page's DOM. The markup as fetched is still in a diagnostics bundle, next to the document after the
+  scripts.
+- **Scripts are extracted, fetched and run the window's way.** That means the tokenizer-backed
+  extraction, cookies on the profile's network, and the window's CSP handling, instead of the
+  command line's regex pass over the source.
+- **`--test-engines` tests the engine a capture runs on.** It used to build a Broiler.JS context of
+  its own and report it as "YantraJS"; it now asks the window's factory, and reports `Broiler.JS` or,
+  under the `-VM` configurations, `Broiler.VM`.
+- **A followed link is the landing page's navigation.** A page on the network is never followed to a
+  local file, and a local page is followed only within its own directory tree.
+- **Images resolve against the document's own URL**, which after a redirect or a followed link is
+  where its relative references point. A `--full-page` capture used to have no base URL at all.
+- **`--convert-doc` is gone.** Document conversion is Broiler.Documents' own command line,
+  `broilerdoc convert <input> --out <path>`, which reads and writes every format this one did. The
+  flag now says so.
+- **Navigation Timing has no network phases.** The old command line took over the document's socket
+  connect to time the DNS lookup, the connect and the TLS handshake; the profile's network does not
+  expose those, as it does not for the window.
+- **Script geometry does not resolve CSS anchor positioning.** The layout view used to switch the
+  layout engine's native anchor-positioning pass on around each layout. That switch is internal to
+  Broiler.Layout, which grants its internals to `Broiler.Cli.Tests` but not to `Broiler.Cli`.
+
+Two pieces the command line needed had been deleted from Broiler.HTML on 2026-09-15 as dead code,
+because nothing Broiler.HTML could see used them: `HeadlessLayoutView` (603c8083) and the fuzzer's
+`HtmlCssGenerator` and `DeltaMinimizer` (4c5a9d58). They live beside the command line now.
+
+## Why the assembly is still called Broiler.Cli
+
+The project is `Broiler.Browser.Cli`, and the assembly keeps its old name. Scripts and notes spell
+the executable that way, and Broiler.HtmlBridge's packages grant their internals to `Broiler.Cli`
+and `Broiler.Cli.Tests` by name: that is how a capture reaches `ResourceTrace` for its diagnostics
+bundle and the page realm (`DomBridge.Realm`) for `--evaluate-page`. None of those assemblies is
+strong-named, so the name is the whole grant.
+
+## Not here yet
+
+- **The tests that used the command line as a harness.** The Broiler repository's
+  `src/Broiler.Cli.Tests` held 406 files, and all but a dozen test DOM, JavaScript and rendering
+  behaviour through the command line's own script loop. That loop is gone, and the behaviour belongs
+  to Broiler.HtmlBridge and Broiler.HTML, whose suites should take those tests. What came here are
+  the command line's own tests, plus new ones for the pipeline it runs on.
+- **Rendering on the profile's network**, the way the window's container does, and with it the
+  window's image, stylesheet and font caching.
+- **An evaluation seam in Broiler.HtmlBridge.** `--evaluate-page` reaches the realm through an
+  internal the package grants by assembly name. `InteractiveSession` could offer it instead.
+- **Anchor positioning in the layout view**, which needs Broiler.Layout to expose its switch or
+  grant `Broiler.Cli` its internals.
+- **The rest of the Broiler repository's tools**: `Broiler.Wpt`, `Broiler.DevConsole`,
+  `Broiler.Playback`, `Broiler.DevSite` and `Broiler.Engines.Baseline` are still there.

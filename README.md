@@ -7,7 +7,8 @@ Broiler.Browser is the browser application of the [Broiler](https://github.com/B
 managed-code browser stack for .NET. It holds the three platform heads — Windows, Linux
 and Android — and the shared `Broiler.Browser.Core` chrome they have in common, and embeds
 the `Broiler.HtmlBridge` control that binds the DOM, the renderer and the JavaScript engine
-into one page lifecycle.
+into one page lifecycle. `Broiler.Cli`, a headless command line, loads pages through the
+same pipeline to capture, evaluate and diagnose them.
 
 Everything below the browser — DOM, CSS, layout, graphics, media, input, UI toolkit, the
 HTML control and the JavaScript engines — lives in its own repository and is consumed here
@@ -42,6 +43,14 @@ dotnet build Broiler.Windows.Browser.slnx -c Release
 ```bash
 dotnet run --project src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj -c Release
 ```
+
+Capture a page as an image from the command line:
+
+```bash
+dotnet run --project src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj -c Release -- --capture-image https://example.com --output example.png
+```
+
+See [docs/command-line.md](docs/command-line.md) for everything else it does.
 
 Run the tests:
 
@@ -94,7 +103,7 @@ does not drag in another platform's backends.
 | `Broiler.Windows.Browser.slnx` | `src/Broiler.Browser.Windows` | 2 |
 | `Broiler.Linux.Browser.slnx` | `src/Broiler.Browser.Linux` | 2 |
 | `Broiler.Android.Browser.slnx` | `src/Broiler.Browser.Android` | 3 |
-| `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests` | 2 |
+| `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests`, `src/Broiler.Browser.Cli.Tests` | 4 |
 
 The components are packages, and a package is not a project a solution lists, so each solution
 holds only this repository's own projects. The Broiler.VM JavaScript profile and the script engine
@@ -133,8 +142,9 @@ projects by changing the reference graph, then regenerate.
   is applied exactly once — a configuration the mapping misses compiles unoptimised and says
   nothing, and one it maps twice defines `RELEASE` twice.
 - **Build** — the Windows head on `windows-latest`, the Linux head on `ubuntu-latest`.
-- **Tests** — the suite on both hosts, because the shared chrome does clipboard and
-  file-dialog work that is easy to make accidentally platform-specific.
+- **Tests** — the shared chrome's suite and the command line's, on both hosts, because the
+  shared chrome does clipboard and file-dialog work that is easy to make accidentally
+  platform-specific.
 - **VM profile** — the suite on Linux and the Windows head under `Release-VM`. The engine's own
   tests left with it for Broiler.HtmlBridge; what the suite asks here is the embedder's question,
   the browser's host code run against the VM script engine that configuration selects.
@@ -162,6 +172,8 @@ Every job checks out without submodules — there are none — and sets up the S
 | `src/Broiler.Browser.Android` | Android head — activity, manifest, resources |
 | `src/Broiler.Browser.Core` | Shared browser chrome, palette, HTML form hosting |
 | `src/Broiler.Browser.Core.Tests` | xUnit suite for the shared chrome |
+| `src/Broiler.Browser.Cli` | `Broiler.Cli`, the headless command line — see [docs/command-line.md](docs/command-line.md) |
+| `src/Broiler.Browser.Cli.Tests` | xUnit suite for the command line |
 | `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites, per-platform clipboards. It has no project of its own; each head links the files it needs. |
 | `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
 | `eng/`, `scripts/` | Solution manifest, configuration mapping and generator |

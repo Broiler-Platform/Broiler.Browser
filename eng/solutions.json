@@ -53,10 +53,11 @@
     },
     {
       "path": "Broiler.Browser.Tests.slnx",
-      "description": "Browser test projects; component unit tests stay in component-owned solutions.",
+      "description": "Browser test projects, and the command line through its own suite; component unit tests stay in component-owned solutions.",
       "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],
       "roots": [
-        "src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj"
+        "src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj",
+        "src/Broiler.Browser.Cli.Tests/Broiler.Browser.Cli.Tests.csproj"
       ],
       "forbiddenProjectPatterns": [
         "(?i)(^|[./])[^/]*(Windows|Win32|MediaFoundation|Linux|WebAssembly)[^/]*\\.csproj$"

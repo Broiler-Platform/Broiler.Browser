@@ -7,9 +7,11 @@
     <BuildType Name="Release-VM" />
   </Configurations>
   <Folder Name="/Entry points/">
+    <Project Path="src/Broiler.Browser.Cli.Tests/Broiler.Browser.Cli.Tests.csproj" />
     <Project Path="src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj" />
   </Folder>
   <Folder Name="/Dependencies/src/">
+    <Project Path="src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj" />
     <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
   </Folder>
 </Solution>
