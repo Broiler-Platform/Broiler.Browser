@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Broiler.Cli</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    THE ASSEMBLY KEEPS THE NAME IT HAD IN THE BROILER REPOSITORY, AND NOT FOR NOSTALGIA.
+
+    This is src/Broiler.Cli from Broiler-Platform/Broiler, which stayed behind there when the
+    browser moved out. Two things are keyed on the assembly name rather than the project name.
+
+    The executable is called Broiler.Cli, and every script, test page and note that drives it
+    spells it that way.
+
+    And the components it reaches below the public surface still grant their internals to it by
+    that name. Broiler.HtmlBridge.Core, .Dom and .Scripting all carry
+    [InternalsVisibleTo("Broiler.Cli")] and [InternalsVisibleTo("Broiler.Cli.Tests")] in the
+    published packages, which is how a capture reaches ResourceTrace for its diagnostics bundle and
+    the page realm's DomBridge.Realm for evaluate-page. None of those assemblies is strong-named,
+    so the name alone is the grant. Renaming the assembly would take the grants away.
+  -->
+  <PropertyGroup>
+    <AssemblyName>Broiler.Cli</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Broiler.Cli.Tests" />
+  </ItemGroup>
+
+  <!--
+    Everything else arrives through Broiler.Browser.Core: the page is loaded, its scripts run and
+    its load window settles in the code the window uses, and the packages that code needs
+    (Broiler.HtmlBridge.*, Broiler.HTML.Image, Broiler.Net) come with it.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
+  </ItemGroup>
+
+</Project>

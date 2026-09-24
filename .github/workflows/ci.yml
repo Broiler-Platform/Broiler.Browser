@@ -159,7 +159,9 @@ jobs:
             src/Broiler.Browser.Core/Broiler.Browser.Core.csproj \
             src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj \
             src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj \
-            src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj
+            src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj \
+            src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj \
+            src/Broiler.Browser.Cli.Tests/Broiler.Browser.Cli.Tests.csproj
           do
             expect Release-VM Optimize true "$project"
           done
