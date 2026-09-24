@@ -1,0 +1,483 @@
+{
+  "schemaVersion": 2,
+  "auditedOn": "2026-09-24",
+  "correctedOn": "2026-09-24",
+  "updatedOn": "2026-09-24",
+  "updateNote": "Stage 3 added stage3LocalPackages and updated the Broiler.Net repository entry. The packages list keeps the stage 1 audited restore.",
+  "scope": "Stage 1 source and existing restore audit; not a runtime conformance result",
+  "restoreInput": "src/Broiler.Browser.Core/obj/project.assets.json",
+  "restoreInputSha256": "405487cb94578955638c836b68254d6aad62245a7bdfe11bcc02df047df39e34",
+  "restoreNote": "Resolved from the local global-packages cache. The working-tree NuGet.config lists nuget.org only, which carries Broiler.HtmlBridge.* only as 0.1.0-preview.6, Broiler.JSeal* only as 0.1.0-preview.2, Broiler.Layout only as 0.1.0-preview.6 and Broiler.JavaScript.Engine as 0.1.0-preview.3/0.1.0-preview.4; a clean-cache restore resolves a different graph (NU1603). The Core.Tests (2026-09-19) and Linux (2026-09-16) restores are stale.",
+  "sourceRepositories": [
+    {
+      "name": "Broiler.Browser",
+      "commit": "04f65ae76139700147d6c6456d4c97bb3366e8c5",
+      "dirtyAtAudit": true,
+      "auditDependsOnUncommitted": [
+        {
+          "path": "NuGet.config",
+          "sha256": "d34cf83d7302b57a2486047ea09ccc43da495a73364170757f6b39f4637bd422",
+          "change": "Removes the GitHub Packages feed and its Broiler.* source mapping"
+        },
+        {
+          "path": "src/Broiler.Browser.Core/Broiler.Browser.Core.csproj",
+          "sha256": "6aec0d132a871ef21c108e43ecce82d72e14028c18188f7e31f5fe386cdea4c2",
+          "change": "HTML 0.1.0-preview.1 to preview.4, HtmlBridge preview.1 to preview.5, VM ProjectReference to sibling source replaced by a PackageReference, input/UI bumps"
+        },
+        {
+          "path": "src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj",
+          "sha256": "6f0e08c3dc733f18ae808ff137c69195330339fdf6b31b96bda397a53e977114",
+          "change": "Windows graphics/input package bumps"
+        }
+      ],
+      "unrelatedUncommitted": [
+        "src/Broiler.Browser.Core/HtmlPostProcessor.cs",
+        "src/Broiler.Browser.Core.Tests/HtmlPostProcessorTests.cs"
+      ]
+    },
+    {
+      "name": "Broiler.HtmlBridge",
+      "commit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+      "packageCommit": "f316987bf203d806d05d473ab2631cd55519aac9",
+      "alignment": "Eight src files differ (five csproj pins, Window.cs, VmCompilationCache.cs, VmSourceProvider.cs); eleven test, CI/eng, NuGet.config, README and icon files also differ; cookie and network paths inspected at package commit"
+    },
+    {
+      "name": "Broiler.HTML",
+      "commit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+      "packageCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c",
+      "tree": "8e56c7a75dabec66db5c0180d1864372dd0a1e7b",
+      "alignment": "Full Git trees identical"
+    },
+    {
+      "name": "Broiler.Net",
+      "branch": "codex/cookie-engine-stage-2",
+      "commit": "3365a88f643f0ffecfa8efa083d0089d118525a7",
+      "state": "Stage 2 engine, stage 3 transport and the audit fixes in one commit (the stage 2 state was never committed separately). No remote.",
+      "remote": null,
+      "packageProjectUrl": "https://github.com/Broiler-Platform/Broiler.Net"
+    }
+  ],
+  "packageSelection": "The 20 packages on the audited request, script and cookie paths, out of 74 Broiler.* packages in the Core restore. CSS, Dom, Graphics, Input, Native, UI, Unicode, Regex, the remaining JavaScript packages and the VM runtime are omitted.",
+  "contentHashNote": "NuGet signature-independent content hash (SHA-512, base64) from project.assets.json libraries[].sha512 and .nupkg.metadata contentHash; for repository-signed nuget.org packages it differs from the SHA-512 of the .nupkg file",
+  "packages": [
+    {
+      "id": "Broiler.Dom.Html",
+      "version": "0.1.0-preview.8",
+      "contentHash": "gXo26fTJztoab3JBO1tBfCj80IDmFbgFBESF3ewnLNkjfzTPuUW7arp5vWmlbZJsttkHGtOvOyfprfLJzUETgA==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.DOM",
+      "sourceCommit": "7a3b12d197197d0402bbaf533c5e02431dd828db"
+    },
+    {
+      "id": "Broiler.HTML.Core",
+      "version": "0.1.0-preview.4",
+      "contentHash": "1sRi+I8hKJAB3eiSaTZBN9274yVxlVIWYCALoYCcnCg1AmzA6YvfXrX/M0TYUcPqmc6ua8SR+oOjpnnr0tm6gA==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+      "sourceCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c"
+    },
+    {
+      "id": "Broiler.HTML.Dom",
+      "version": "0.1.0-preview.4",
+      "contentHash": "FFoncp8hAVXJFG7FK81Qr5N7bXh0AexBXHSm3CN1SpQTWTSK+724TAl3rLX26daGlOP+309bwCSISqsi+wjIUQ==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+      "sourceCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c"
+    },
+    {
+      "id": "Broiler.HTML.Graphics",
+      "version": "0.1.0-preview.4",
+      "contentHash": "rmVNPnlfQUofvxs0ZBFGFrTFtuZhyRgQOjxNsi/DX3NJ7OfUJsfK9yOCsTZ/6yLMRfITK+E3DkPnco/yg8Wr8A==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+      "sourceCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c"
+    },
+    {
+      "id": "Broiler.HTML.Image.Compat",
+      "version": "0.1.0-preview.4",
+      "contentHash": "VCrAHxxly7iewWIdzTNZ4zz9mOx/phzrm1WrOXbD67EbTxwE2hVzMYdlQvLteQt+DBgsS++e2Ms3wo0r28ru5w==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+      "sourceCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c"
+    },
+    {
+      "id": "Broiler.HTML.Image",
+      "version": "0.1.0-preview.4",
+      "contentHash": "X+nR0EKoFKQgy+JmKrulZ0Qt+mUZdl02UAUzFkUUhhX0XR74RotwaT3sjxLj9613KutdodRyvzHtPOoPiNbADg==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+      "sourceCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c"
+    },
+    {
+      "id": "Broiler.HTML.Orchestration",
+      "version": "0.1.0-preview.4",
+      "contentHash": "hnZv19WzreqIdJ+uKF/GAZewMTCn1ycpq5cj2RqJFU7ieGgix1A4jNx/y8LgKakbxhU1qrIVgLQ2FM8zVSbhQw==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+      "sourceCommit": "9b65488d27fa1d755e701dfd6921f343abfb134c"
+    },
+    {
+      "id": "Broiler.HtmlBridge.Core",
+      "version": "0.1.0-preview.5",
+      "contentHash": "MMoq8qBVskSmEuWjC9Q62QVEPNbkBUAiFr0ZBSUVZHNVQUzgY61BhJeJebxLm3g+ZkIJOcRprcKj2kcYzwQbPw==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+      "sourceCommit": "f316987bf203d806d05d473ab2631cd55519aac9"
+    },
+    {
+      "id": "Broiler.HtmlBridge.Dom",
+      "version": "0.1.0-preview.5",
+      "contentHash": "Y76dVeDhaNo+5+u3uSuKXwTe7APqbGEgyQoIxXEPA5enV0OQa10Cl2xTvzAESVOUcL33LVgq2z+4W3xDMFJlUA==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+      "sourceCommit": "f316987bf203d806d05d473ab2631cd55519aac9"
+    },
+    {
+      "id": "Broiler.HtmlBridge.DomBridgeUtils",
+      "version": "0.1.0-preview.5",
+      "contentHash": "UZSJxztF4cdCmgNfPKQ4kpB8AVCvtEVHRlaoQolRurIqh9X8005iTbLlwDnc7IAXrUpywW1kxZKa+Ak+GtH/Vw==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+      "sourceCommit": "f316987bf203d806d05d473ab2631cd55519aac9"
+    },
+    {
+      "id": "Broiler.HtmlBridge.Scripting.Vm",
+      "version": "0.1.0-preview.5",
+      "contentHash": "iTJjtS/eepFJcD2K9Y0NdLgszflBttbr3Lpv56NPUEdf/yiYMFVA2NHkdXWUPFMalm86JtLmcnwVSnnzg2Z+4A==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+      "sourceCommit": "f316987bf203d806d05d473ab2631cd55519aac9"
+    },
+    {
+      "id": "Broiler.HtmlBridge.Scripting",
+      "version": "0.1.0-preview.5",
+      "contentHash": "4bTbUPqSc0I1RLtUXjM1JXDWtGS+aiZt0CO58E49deo9ACL7dqMrrr6Tubmfw/bVgrO1dRnzhi4WjOmyr/8j7g==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+      "sourceCommit": "f316987bf203d806d05d473ab2631cd55519aac9"
+    },
+    {
+      "id": "Broiler.JavaScript.Engine",
+      "version": "0.1.0-preview.1",
+      "contentHash": "mUsmnQ2SlKbx9u9OelR9RuhxD1QKMdzwwnMc4yZ8DTOV4sLJGbK5phKsuGqUJ1P3cijjoEsHwkqBhX2nAVoazA==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.JS",
+      "sourceCommit": "73f071d1f1e1d5404018bc5337d6dafc74011676"
+    },
+    {
+      "id": "Broiler.JavaScript.Modules",
+      "version": "0.1.0-preview.1",
+      "contentHash": "P4pe8klfjBeC7vWsHmp/mjENtwMUz1VlAfVY28FJGK8vcho+8aRwxmOrhMKthTFrKw+D3PzUuIOYGEPsVZ1GmQ==",
+      "sourceFeed": "GitHub Packages (https://nuget.pkg.github.com/Broiler-Platform, retired)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.JS",
+      "sourceCommit": "73f071d1f1e1d5404018bc5337d6dafc74011676",
+      "feedCollision": "nuget.org serves a different 0.1.0-preview.1 build (commit 0c82a603e1f325735e8f9d256453405cd91b0c8a); the contentHash identifies the audited bits"
+    },
+    {
+      "id": "Broiler.JSeal.BroilerJs",
+      "version": "0.1.0-preview.1",
+      "contentHash": "rI9aLR+M63/u9yFZ2BzNKXLojXnMJyKujmqjT6Kzjvlga617a2khZUA4VAYf2b8wOialdEXgCs/8hRto9uHZwg==",
+      "sourceFeed": "local folder feed (Broiler.JSeal build output)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.JSeal.git",
+      "sourceCommit": null,
+      "sourceNote": "Local build packed before the first JSeal commit; no commit matches, so source alignment is unverified"
+    },
+    {
+      "id": "Broiler.JSeal.Vm",
+      "version": "0.1.0-preview.1",
+      "contentHash": "iT7uL6FYMPZxBdsaaZATDUERZHxXzJSZA2XPEZy3C1JHHprs7nAqamjv9HDrmxISVGOuTQlUQN+36RYWLU9KBg==",
+      "sourceFeed": "local folder feed (Broiler.JSeal build output)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.JSeal.git",
+      "sourceCommit": null,
+      "sourceNote": "Local build packed before the first JSeal commit; no commit matches, so source alignment is unverified"
+    },
+    {
+      "id": "Broiler.JSeal",
+      "version": "0.1.0-preview.1",
+      "contentHash": "dVhBvMq/GiYvw0rajEHbBGKlGhfU5rCqVlpPryXDI6xgerLLJtBffKKMagyJA3FMKoEhGdnvpsdwO8jb2CgDlQ==",
+      "sourceFeed": "local folder feed (Broiler.JSeal build output)",
+      "repository": "https://github.com/Broiler-Platform/Broiler.JSeal.git",
+      "sourceCommit": null,
+      "sourceNote": "Local build packed before the first JSeal commit; no commit matches, so source alignment is unverified"
+    },
+    {
+      "id": "Broiler.Layout",
+      "version": "0.1.0-preview.5",
+      "contentHash": "lpWd+ZpFyrO6JIAIxVHe3B08GV4jOEqub1Wm+iLACh7Df3glScX5k12DYxx9Jq9DS4mK8bdDm7ChTy3gTMA/rw==",
+      "sourceFeed": "temporary local folder feed",
+      "repository": "https://github.com/Broiler-Platform/Broiler.Layout.git",
+      "sourceCommit": "96d9752a38fd72c8150780c4b0d7a168e37ae8ad"
+    },
+    {
+      "id": "Broiler.Media.Image.Managed",
+      "version": "0.1.0-preview.14",
+      "contentHash": "nGkYC4lZXu2lKY4aowg5+rM7h7VkOPsy62Be25fdZ+oTREn5E1KelrGGWv6Qvi3M48N4zBENVG52HlDGNiyNug==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.Media",
+      "sourceCommit": "8e112663bf8ffbed346766e941fd9bb36a18d800"
+    },
+    {
+      "id": "Broiler.Media.Image",
+      "version": "0.1.0-preview.14",
+      "contentHash": "GKqSpbQSIGXJm+KDnBA0dW5IePUHA0kQdbXEb3yjR1sMsWaQfz015NS2XyCdGPCivaZpUJNUQ7Tzk8IjUEeRGQ==",
+      "sourceFeed": "nuget.org",
+      "repository": "https://github.com/Broiler-Platform/Broiler.Media",
+      "sourceCommit": "8e112663bf8ffbed346766e941fd9bb36a18d800"
+    }
+  ],
+  "stage3LocalPackages": {
+    "recordedOn": "2026-09-24",
+    "scope": "Local, unpublished packages built for stage 3 and validated with RestoreConfigFile=D:\\local-packages\\broiler-net-stage3\\NuGet.validation.config and the isolated package cache D:\\local-packages\\broiler-net-stage3\\packages. Not a published baseline; every package must be rebuilt from a commit before release.",
+    "contentHashNote": "SHA-512 (base64) of the unsigned .nupkg in the local feed, identical to the contentHash in the isolated cache's .nupkg.metadata. It changes with every rebuild.",
+    "sourceNote": "The packages were built before the commits, from the same sources (only README text changed afterwards); their nuspec names the base commit or none, so sourceCommit stays null. The publish pipeline must rebuild them from the commits listed under worktrees.",
+    "worktrees": [
+      {
+        "name": "Broiler.Net",
+        "path": "D:\\Broiler.Net",
+        "branch": "codex/cookie-engine-stage-2",
+        "baseCommit": null,
+        "note": "Main checkout; first commit on the branch, no remote",
+        "commit": "3365a88f643f0ffecfa8efa083d0089d118525a7"
+      },
+      {
+        "name": "Broiler.HTML",
+        "path": "D:\\wt\\broiler-net-stage3\\Broiler.HTML",
+        "branch": "claude/broiler-net-stage-3",
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "commit": "0d01e0f1f5e792cc84c1d054a851862b020c1677"
+      },
+      {
+        "name": "Broiler.HtmlBridge",
+        "path": "D:\\wt\\broiler-net-stage3\\Broiler.HtmlBridge",
+        "branch": "claude/broiler-net-stage-3",
+        "baseCommit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+        "commit": "09991a421956e235ade0d4a620a4d2e8a3e9f3a4"
+      },
+      {
+        "name": "Broiler.Browser",
+        "path": "D:\\wt\\broiler-net-stage3\\Broiler.Browser",
+        "branch": "claude/broiler-net-stage-3",
+        "baseCommit": "04f65ae76139700147d6c6456d4c97bb3366e8c5",
+        "note": "580f7a4 carries the previously uncommitted nuget.org migration and the HtmlPostProcessor files; b779ac9 is stage 3; a following commit adds these documents",
+        "commits": [
+          "580f7a406c682e4c3cfd1a2d20f661f29dbaef53",
+          "b779ac965f8a4f6e6df578c4f06d6650805c2e89"
+        ]
+      }
+    ],
+    "packages": [
+      {
+        "id": "Broiler.Net",
+        "version": "0.1.0-preview.1",
+        "contentHash": "6TEUzc7P+hfdl+44Zbt+kutzpSiG2pbHVEnAf2bRtF99Uwqr8x4XtkILqbqb8ep1k25QBczduSP/uTDNqXeqcQ==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-net",
+        "repository": null,
+        "sourceCommit": null,
+        "dependencies": [],
+        "sourceNote": "Built from the D:\\Broiler.Net working tree; no source file is newer than the package. License Apache-2.0 AND MPL-2.0; embedded PSL revision 8af98195397e1891a32e4ad79fa60c87813fbaf7. D:\\Broiler.Net\\artifacts\\packages still holds an older stage 2 build under the same version with different bits."
+      },
+      {
+        "id": "Broiler.HTML.Core",
+        "version": "0.1.0-preview.5",
+        "contentHash": "MsrEHw/zAwISYsl7GIBrnQIhdfhmLspyByrVmSHB1T4ERFUC/YVfKyrFw2iQ9EkHgWRkKlx5knDd+AtcggWoaw==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-html",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "sourceCommit": null,
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "dependencies": [
+          "Broiler.Net 0.1.0-preview.1"
+        ],
+        "sourceNote": "Packed per project with dotnet pack from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HTML.Dom",
+        "version": "0.1.0-preview.5",
+        "contentHash": "3+rvT6FiQYe2fKJLGLVrTgMAZAba/yj8slO2iYm0JUL6CBCw9aUKboH6Wkcrf7ms8HuNgoEpCl5eW5A2pjcmQA==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-html",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "sourceCommit": null,
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "sourceNote": "Packed per project with dotnet pack from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HTML.Graphics",
+        "version": "0.1.0-preview.5",
+        "contentHash": "rBMBcjLVN7/oNz99m1CLGyGnwWvar5K0t06JnOQbUyhyBpqSmkro90kz098cI+6XwSaClmId3McjZLJk6olt7Q==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-html",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "sourceCommit": null,
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "sourceNote": "Packed per project with dotnet pack from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HTML.Image",
+        "version": "0.1.0-preview.5",
+        "contentHash": "paCYiHbpLAmYxPG91Byo+b6xnmNmrL+HiMxdr4Obd0tnC28NVwGGnSSakxQlZcOHYMoqMC6o4z80kglP+FIg+g==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-html",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "sourceCommit": null,
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "sourceNote": "Packed per project with dotnet pack from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HTML.Image.Compat",
+        "version": "0.1.0-preview.5",
+        "contentHash": "s0nB8YrlTwvA3xTVGoZvZmZCwIowOJTIHk89ukv+3SlO61PtqcR1xdLdBCbgLzNPCmKBDb46lylW4LtqmOTXuA==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-html",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "sourceCommit": null,
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "sourceNote": "Packed per project with dotnet pack from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HTML.Orchestration",
+        "version": "0.1.0-preview.5",
+        "contentHash": "ZISYzBwQtRBCMao8bSBRWrDksFRp2jbMzAfHFdbDEF7+HpaRtOqUMeMRpIDuaUzhGw8DjuLFOAXNsHFEdIbV8w==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-html",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "sourceCommit": null,
+        "baseCommit": "14870f7b03296a5b26d0a84365cebe8cf95db53a",
+        "sourceNote": "Packed per project with dotnet pack from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HtmlBridge.Core",
+        "version": "0.1.0-preview.7",
+        "contentHash": "7ZbRHWLqfVGgIm5aYnG3jk+TgeW+HDYgayLKUM3wgQ6TGwI4/1gbM7gNJRHv+59gMAMQPue4ywSH0nKAjsZT3w==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-htmlbridge",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+        "sourceCommit": null,
+        "baseCommit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+        "dependencies": [
+          "Broiler.Net 0.1.0-preview.1"
+        ],
+        "sourceNote": "Packed with eng/pack.ps1 from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HtmlBridge.Dom",
+        "version": "0.1.0-preview.7",
+        "contentHash": "pPtkkOjINbgtf3czrmPpMtovuReRT9qIcKd1RvekTjDzouCzYtnU2ggGB1ai8+98FiNGPSZA2O/RAIKUjsFqAA==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-htmlbridge",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+        "sourceCommit": null,
+        "baseCommit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+        "sourceNote": "Packed with eng/pack.ps1 from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HtmlBridge.DomBridgeUtils",
+        "version": "0.1.0-preview.7",
+        "contentHash": "Oa5zEaBYhahXsSaVpm7u/uNSmkdehxEfT2MIXd9DAkU/T+DIWENGPZG3rMtKlfAX5T2vs1Ly8A4bgHjtUzVvuQ==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-htmlbridge",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+        "sourceCommit": null,
+        "baseCommit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+        "sourceNote": "Packed with eng/pack.ps1 from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HtmlBridge.Scripting",
+        "version": "0.1.0-preview.7",
+        "contentHash": "fLKA3hSYirWkNZ4TU7V94uBM9MAO34eghLakEdgF9gSuZ9DDu6EIEYzdR8iAPP3OYNrQ46iCkaeCds3VQEUlBw==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-htmlbridge",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+        "sourceCommit": null,
+        "baseCommit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+        "sourceNote": "Packed with eng/pack.ps1 from the uncommitted worktree; the nuspec names the base commit"
+      },
+      {
+        "id": "Broiler.HtmlBridge.Scripting.Vm",
+        "version": "0.1.0-preview.7",
+        "contentHash": "sf3kiFBbRf/K+yd0QI1OjyurIh2GmRsJ9vKMPaOTu62p0khWflDkngM+nFYSTLySRkb1Ip1IF7v49Xr4tjmvJw==",
+        "sourceFeed": "D:\\local-packages\\broiler-net-stage3\\feed-htmlbridge",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+        "sourceCommit": null,
+        "baseCommit": "4ba7eabe8e0fb168c25317143a2cb56b8a2f5757",
+        "sourceNote": "Packed with eng/pack.ps1 from the uncommitted worktree; the nuspec names the base commit"
+      }
+    ],
+    "browserReferences": {
+      "project": "src/Broiler.Browser.Core/Broiler.Browser.Core.csproj in the Browser worktree",
+      "Broiler.Net": "0.1.0-preview.1",
+      "Broiler.HTML.Graphics": "0.1.0-preview.5",
+      "Broiler.HTML.Image": "0.1.0-preview.5",
+      "Broiler.HtmlBridge.Dom": "0.1.0-preview.7",
+      "Broiler.HtmlBridge.Scripting": "0.1.0-preview.7",
+      "Broiler.HtmlBridge.Scripting.Vm": "0.1.0-preview.7 (VM engine builds only)"
+    },
+    "nugetOrgCheckedOn2026-09-24": {
+      "Broiler.Net": [],
+      "Broiler.HTML.Core": [
+        "0.1.0-preview.4"
+      ],
+      "Broiler.HtmlBridge.Core": [
+        "0.1.0-preview.6"
+      ],
+      "note": "None of the local versions was taken on nuget.org when checked"
+    },
+    "releaseOrder": "Broiler.Net, then Broiler.HTML and Broiler.HtmlBridge, then the Browser pins; publishing needs separate approval"
+  },
+  "standards": [
+    {
+      "id": "fetch",
+      "repository": "https://github.com/whatwg/fetch.git",
+      "commit": "357bd98924d94b81fbe8608192a2ee1f123b82f4"
+    },
+    {
+      "id": "html",
+      "repository": "https://github.com/whatwg/html.git",
+      "commit": "cd8ac6f1bbf86dd0bd09ef75d27dacaebe7b4c1d"
+    },
+    {
+      "id": "chips",
+      "repository": "https://github.com/privacycg/CHIPS.git",
+      "commit": "fab89df5a6a17f325081beebb38bb66a4f7e8f87"
+    },
+    {
+      "id": "cookie-store",
+      "repository": "https://github.com/whatwg/cookiestore.git",
+      "commit": "54559c0c063b0df26e8ea8214435cbb0e2eea3f9"
+    },
+    {
+      "id": "public-suffix-list",
+      "repository": "https://github.com/publicsuffix/list.git",
+      "commit": "8af98195397e1891a32e4ad79fa60c87813fbaf7"
+    },
+    {
+      "id": "web-platform-tests",
+      "repository": "https://github.com/web-platform-tests/wpt.git",
+      "commit": "e35344a20f922751f5ea8cc678cfd79d65056d5c"
+    }
+  ],
+  "cookieAlgorithmBaseline": "draft-ietf-httpbis-rfc6265bis-22",
+  "cookieAlgorithmBaselineStatus": {
+    "iesgApproved": "2025-12-02",
+    "rfcEditor": "In queue; final review since 2026-08-13",
+    "rfcNumber": null,
+    "action": "Re-pin to the RFC when it is published and diff it against -22"
+  },
+  "successorReviewed": "draft-ietf-httpbis-layered-cookies-02",
+  "referenceLayering": {
+    "cookieSemantics": "draft-ietf-httpbis-rfc6265bis-22 (parsing, storage, retrieval)",
+    "fetch": "Request context only (credentials mode, destination, initiator, redirect chain, cross-site ancestry); its cookie hooks call draft-ietf-httpbis-layered-cookies",
+    "html": "Document cookie access and cookie-averse documents; cites RFC 6265",
+    "chips": "Partition key (top-level site, cross-site-ancestor bit) from spec/draft-cutler-httpbis-partitioned-cookies.md; cites earlier 6265bis revisions",
+    "cookieStore": "Later API surface; cites draft-ietf-httpbis-rfc6265bis-14"
+  },
+  "wptSuites": [
+    "cookies",
+    "cookiestore",
+    "fetch",
+    "xhr",
+    "clear-site-data",
+    "storage-access-api",
+    "html/dom/documents/resource-metadata-management"
+  ],
+  "wptStatus": "Revision pinned and suite directories verified; tests not run",
+  "unsupportedApis": [
+    "HTTP worker scripts and importScripts",
+    "module/shared/service worker networking",
+    "WebSocket and EventSource browser bindings",
+    "network media playback",
+    "network FontFace.load",
+    "Cookie Store API",
+    "Storage Access API"
+  ]
+}
