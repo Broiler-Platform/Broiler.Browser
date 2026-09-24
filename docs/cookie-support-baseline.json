@@ -396,11 +396,12 @@
     "browserReferences": {
       "project": "src/Broiler.Browser.Core/Broiler.Browser.Core.csproj in the Browser worktree",
       "Broiler.Net": "0.1.0-preview.1",
-      "Broiler.HTML.Graphics": "0.1.0-preview.5",
-      "Broiler.HTML.Image": "0.1.0-preview.5",
+      "Broiler.HTML.Graphics": "0.1.0-preview.6",
+      "Broiler.HTML.Image": "0.1.0-preview.6",
       "Broiler.HtmlBridge.Dom": "0.1.0-preview.7",
       "Broiler.HtmlBridge.Scripting": "0.1.0-preview.7",
-      "Broiler.HtmlBridge.Scripting.Vm": "0.1.0-preview.7 (VM engine builds only)"
+      "Broiler.HtmlBridge.Scripting.Vm": "0.1.0-preview.7 (VM engine builds only)",
+      "note": "Pins the published packages; the local HTML build was 0.1.0-preview.5, a number nuget.org gave to a pre-integration build"
     },
     "nugetOrgCheckedOn2026-09-24": {
       "Broiler.Net": [],
@@ -412,7 +413,8 @@
       ],
       "note": "None of the local versions was taken on nuget.org when checked"
     },
-    "releaseOrder": "Broiler.Net, then Broiler.HTML and Broiler.HtmlBridge, then the Browser pins; publishing needs separate approval"
+    "releaseOrder": "Broiler.Net, then Broiler.HTML and Broiler.HtmlBridge, then the Browser pins; publishing needs separate approval",
+    "obsolete": "These local packages are superseded by the published ones in stage3Published; the published HtmlBridge 0.1.0-preview.7 and the local build of that number differ."
   },
   "standards": [
     {
@@ -479,5 +481,39 @@
     "network FontFace.load",
     "Cookie Store API",
     "Storage Access API"
-  ]
+  ],
+  "stage3Published": {
+    "recordedOn": "2026-09-24",
+    "packages": [
+      {
+        "id": "Broiler.Net",
+        "version": "0.1.0-preview.1",
+        "repository": "https://github.com/Broiler-Platform/Broiler.Net",
+        "commit": "5ab213d95eb24e9002bcd9b02b7b1b7a7309b784",
+        "pullRequests": [
+          1,
+          2
+        ]
+      },
+      {
+        "id": "Broiler.HTML.*",
+        "version": "0.1.0-preview.6",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HTML",
+        "commit": "55f64b39da00ba7888b012ff3bab9d9552d1d465",
+        "pullRequests": [
+          233
+        ]
+      },
+      {
+        "id": "Broiler.HtmlBridge.*",
+        "version": "0.1.0-preview.7",
+        "repository": "https://github.com/Broiler-Platform/Broiler.HtmlBridge",
+        "commit": "edd3b4d0a3e05cddb55e7857f510bf65eb3c9b36",
+        "pullRequests": [
+          5
+        ]
+      }
+    ],
+    "note": "Broiler.HTML 0.1.0-preview.5 on nuget.org was published from the pre-integration main 9b65488d27fa1d755e701dfd6921f343abfb134c and has no Broiler.Net dependency. Commits are the repository commits named in each package nuspec."
+  }
 }

@@ -3,7 +3,7 @@
 Completed on 2026-09-24. One profile-owned Broiler.Net `BrowserNetworkSession` now carries
 navigation and every HTTP loader in HTML, HtmlBridge and Browser. The script-access gates planned
 for stage 4 ship in the same change, because a shared cookie jar must not ship while page script
-can bypass its boundaries. The work is committed on local branches, not pushed or published; see
+can bypass its boundaries. Everything except the Browser change is merged and published; see
 **State of the work** below.
 
 The [implementation plan](cookie-support-implementation-plan.md) defines the stages, the
@@ -163,7 +163,7 @@ A frame's module scripts are checked against the frame's CSP, not the page's.
   `file:` URL unless the page is itself a `file:` document; UNC paths only from the user. Loop guards
   count every redirect-chain URL, and a page may return once to a URL its load was redirected away
   from (cookie challenges). Favorites compare canonical URLs. A session timeout shows the error page.
-- References: `Broiler.HTML.Graphics`/`Image` 0.1.0-preview.5, `Broiler.HtmlBridge.Dom`/`Scripting`
+- References: `Broiler.HTML.Graphics`/`Image` 0.1.0-preview.6, `Broiler.HtmlBridge.Dom`/`Scripting`
   (and the VM-only `Scripting.Vm`) 0.1.0-preview.7, `Broiler.Net` 0.1.0-preview.1.
 
 **Request inventory after stage 3**
@@ -370,37 +370,31 @@ Not done in this stage: no WPT run, no runtime validation on Linux or Android, n
 
 **State of the work**
 
-Committed on local branches; nothing is pushed or published.
+Merged and published on 2026-09-24, except the Browser change:
 
-- **Broiler.Net:** `D:\Broiler.Net`, branch `codex/cookie-engine-stage-2`. One commit,
-  `3365a88`, holds stage 2, stage 3 and the audit fixes. The repository has no remote.
-- **HTML, HtmlBridge and Browser:** worktrees under `D:\wt\broiler-net-stage3\`, branch
-  `claude/broiler-net-stage-3`, on base commits `14870f7` (HTML), `4ba7eab` (HtmlBridge) and
-  `04f65ae` (Browser). Commits: HTML `0d01e0f`, HtmlBridge `09991a4`; Browser `580f7a4` (carried-over
-  changes, below), `b779ac9` (stage 3) and a documentation commit with these files. The main checkouts `D:\Broiler.HTML`,
-  `D:\Broiler.HtmlBridge` and `D:\Broiler.Browser` were not modified, apart from these untracked
-  cookie documents.
-- Browser commit `580f7a4` carries the user's previously uncommitted nuget.org migration (`NuGet.config`, the Core
-  and Windows project files; also saved as `D:\wt\broiler-net-stage3\browser-nugetorg.patch`). It also
-  carries unchanged copies of the untracked `HtmlPostProcessor.cs` and `HtmlPostProcessorTests.cs`,
-  without which the committed `BrowserApp.cs` does not compile.
-- **Local feeds:** `D:\local-packages\broiler-net-stage3\feed-net`, `feed-html` and `feed-htmlbridge`,
-  selected by `NuGet.validation.config`, with an isolated package cache in `...\packages`. The user's
-  global NuGet cache holds none of these versions.
-  `D:\Broiler.Net\artifacts\packages` still holds the older stage 2 build of Broiler.Net
-  0.1.0-preview.1, with different bits; only the feed copy was validated.
-- The local packages were built before the commits, from the same sources (only README text changed
-  afterwards); their metadata names the base commits or none. The publish pipeline rebuilds them from
-  the commits. The main checkout still holds the carried-over changes and these documents uncommitted;
-  drop those copies before merging the branch there.
-- On 2026-09-24 nuget.org had HTML 0.1.0-preview.4, HtmlBridge 0.1.0-preview.6 and no Broiler.Net,
-  so the local version numbers are still free. The Browser pins cannot restore from nuget.org until
-  the packages are published.
+| Package | On nuget.org | Built from |
+| --- | --- | --- |
+| `Broiler.Net` | 0.1.0-preview.1 | Broiler.Net `main` `5ab213d`: PR #1 (stages 2 and 3) and PR #2 (the publish workflow) |
+| `Broiler.HTML.*` | 0.1.0-preview.6 | Broiler.HTML `main` `55f64b3` (PR #233) |
+| `Broiler.HtmlBridge.*` | 0.1.0-preview.7 | Broiler.HtmlBridge `main` `edd3b4d` (PR #5) |
 
-Release order, which needs separate approval: push and publish Broiler.Net; then push and publish
-HTML and HtmlBridge, which both depend on Broiler.Net 0.1.0-preview.1; then merge the Browser branch,
-whose pins already name those versions. If a publish workflow assigns different preview
-numbers, the pins follow it.
+- `Broiler.HTML` 0.1.0-preview.5 on nuget.org was published from the pre-integration `main`
+  (`9b65488`) and has none of this work; Browser therefore pins 0.1.0-preview.6.
+- HtmlBridge's Linux CI found two root-relative URL checks (`/frame.html` as a frame `src`,
+  `import "/lib.js"`) that `System.Uri` turned into `file:` paths on Unix; `5b7b622` fixed both before
+  the merge, so the published 0.1.0-preview.7 includes it and the local build of that number did not.
+- **Browser:** branch `claude/broiler-net-stage-3`, PR #147: `580f7a4` carries the user's previously
+  uncommitted nuget.org migration and `HtmlPostProcessor` files, `b779ac9` is stage 3, `d6efbbc` adds
+  these documents, and a follow-up moves the HTML pins to 0.1.0-preview.6. Validated against the
+  published packages with an empty package cache and nuget.org as the only source: the Windows
+  solution builds in Release and Release-VM, and Core.Tests passes 205 of 205 in each, the exit test
+  included. Its CI still fails for an unrelated reason: three solutions and `ci.yml` reference the
+  removed submodule projects (MSB3202), tracked separately.
+- The main Browser checkout still holds the carried-over changes and these documents uncommitted;
+  drop those copies before pulling `main` after the merge.
+- The local validation feeds (`D:\local-packages\broiler-net-stage3`) are obsolete. Their HTML
+  0.1.0-preview.5 and HtmlBridge 0.1.0-preview.7 builds differ from the published packages of the same
+  numbers, so nothing should restore from them.
 
 **Next**
 
