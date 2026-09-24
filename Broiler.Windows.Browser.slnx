@@ -6,10 +6,6 @@
     <BuildType Name="Debug-VM" />
     <BuildType Name="Release-VM" />
   </Configurations>
-  <Folder Name="/Entry points/">
-    <Project Path="src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj" />
-  </Folder>
-  <Folder Name="/Dependencies/src/">
-    <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
-  </Folder>
+  <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
+  <Project Path="src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj" />
 </Solution>
