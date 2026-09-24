@@ -23,9 +23,9 @@
     <Compile Include="..\Broiler.App\WindowsClipboard.cs" Link="WindowsClipboard.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Broiler.Graphics.Windows" Version="0.1.0-preview.3" />
-    <PackageReference Include="Broiler.Input.Keyboard.Windows" Version="0.1.0-preview.2" />
-    <PackageReference Include="Broiler.Input.Mouse.Windows" Version="0.1.0-preview.2" />
+    <PackageReference Include="Broiler.Graphics.Windows" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Input.Keyboard.Windows" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Input.Mouse.Windows" Version="0.1.0-preview.5" />
   </ItemGroup>
 
   <ItemGroup>

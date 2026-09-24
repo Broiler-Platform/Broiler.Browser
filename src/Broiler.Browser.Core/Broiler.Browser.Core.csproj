@@ -30,7 +30,7 @@
     all. A project-level build is the one that is genuinely VM-free under Debug and Release.
   -->
   <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
-    <ProjectReference Include="..\..\Broiler.HtmlBridge\src\Broiler.HtmlBridge.Scripting.Vm\Broiler.HtmlBridge.Scripting.Vm.csproj" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting.Vm" Version="0.1.0-preview.5" />
   </ItemGroup>
 
   <ItemGroup>
@@ -52,20 +52,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.1" />
-    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.1" />
-    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.1" />
-    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.1" />
-    <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.8" />
   </ItemGroup>
 
 </Project>
