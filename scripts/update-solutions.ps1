@@ -8,34 +8,15 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $manifestPath = Join-Path $repositoryRoot 'eng/solutions.json'
 $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
 
-# Each component repository carries nested checkouts of the components it depends on so
-# that it still builds standalone. Composed here, those nested copies duplicate a top-level
-# checkout, so a solution generated straight from the reference graph would list the same
-# assembly twice. Fold every nested path onto the single top-level checkout it duplicates.
-# Longest keys first: the doubly nested Broiler.UI paths have to fold before the shorter
-# Broiler.Graphics ones can match.
-$duplicateCheckoutMappings = [ordered]@{
-    'Broiler.UI/Broiler.Graphics/Broiler.Media/' = 'Broiler.Media/'
-    'Broiler.JS/Broiler.Regex/Broiler.Unicode/' = 'Broiler.JS/Broiler.Unicode/'
-    'Broiler.Graphics/Broiler.Media/' = 'Broiler.Media/'
-    'Broiler.Graphics/Broiler.Input/' = 'Broiler.Input/'
-    'Broiler.Media/Broiler.Graphics/' = 'Broiler.Graphics/'
-    'Broiler.UI/Broiler.Graphics/' = 'Broiler.Graphics/'
-    'Broiler.UI/Broiler.Input/' = 'Broiler.Input/'
-    'Broiler.CSS/Broiler.DOM/' = 'Broiler.DOM/'
-    'Broiler.HTML/Broiler.Graphics/' = 'Broiler.Graphics/'
-}
-
-# Broiler.HTML still spells its top-level Broiler.Media and Broiler.Graphics references in the
-# pre-src/ layout those components used while they were vendored inside the Broiler monorepo.
-# Both now publish their projects under src/, so the reference as written resolves nowhere.
-# Directory.Build.targets rewrites these two references for the build; the same rewrite has to
-# happen here or the generated solutions would disagree with what MSBuild actually compiles.
-# Both tables drop out together once Broiler.HTML follows the components into src/.
-$staleLayoutMappings = [ordered]@{
-    'Broiler.Media/Broiler.Media.' = 'Broiler.Media/src/Broiler.Media.'
-    'Broiler.Graphics/Broiler.Graphics.' = 'Broiler.Graphics/src/Broiler.Graphics.'
-}
+# Every component this repository composes -- Broiler.HTML, Broiler.HtmlBridge, Broiler.JS,
+# Broiler.VM, Broiler.Graphics, Broiler.Input, Broiler.UI and the rest -- is a PackageReference
+# now, not a checkout. A package is not a project a solution can list, so the closure this
+# walks is the ProjectReference graph under src/ and nothing else, and the tables that used to
+# fold nested submodule checkouts onto their top-level copy went with the submodules.
+#
+# A ProjectReference that names a path outside the repository, or one that does not exist, is
+# still an error below rather than something to skip: a component that came back as a checkout
+# would have to come back through this script deliberately.
 
 $referenceCache = @{}
 
@@ -51,20 +32,6 @@ function Convert-ToRepositoryPath {
         throw "Project path escapes the repository: $normalizedFullPath"
     }
     $relativePath = $normalizedFullPath.Substring($rootPrefix.Length).Replace('\', '/')
-
-    foreach ($mapping in $duplicateCheckoutMappings.GetEnumerator()) {
-        if ($relativePath.StartsWith($mapping.Key, [StringComparison]::OrdinalIgnoreCase)) {
-            $relativePath = $mapping.Value + $relativePath.Substring($mapping.Key.Length)
-            break
-        }
-    }
-
-    foreach ($mapping in $staleLayoutMappings.GetEnumerator()) {
-        if ($relativePath.StartsWith($mapping.Key, [StringComparison]::OrdinalIgnoreCase)) {
-            $relativePath = $mapping.Value + $relativePath.Substring($mapping.Key.Length)
-            break
-        }
-    }
 
     $canonicalFullPath = Join-Path $repositoryRoot $relativePath
     if (-not (Test-Path -LiteralPath $canonicalFullPath -PathType Leaf)) {
@@ -90,69 +57,20 @@ function Resolve-ProjectReference {
     $resolvedInclude = $resolvedInclude.Replace(
         '$(MSBuildThisFileDirectory)',
         $projectDirectory + [IO.Path]::DirectorySeparatorChar)
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerDomPath)',
-        (Join-Path $repositoryRoot 'Broiler.DOM/Broiler.Dom/Broiler.Dom.csproj'))
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerGraphicsPath)',
-        (Join-Path $repositoryRoot 'Broiler.Graphics/src/Broiler.Graphics/Broiler.Graphics.csproj'))
 
-    # The component roots are directories, not project paths: a submodule spells its
-    # reference '$(BroilerXRoot)\src\Foo\Foo.csproj' so that the consumer chooses the
-    # checkout and one assembly of each name is built instead of several. These have to
-    # match the values the root Directory.Build.props sets, or the generated solutions
-    # will list a different copy than the build compiles.
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerGraphicsRoot)',
-        (Join-Path $repositoryRoot 'Broiler.Graphics'))
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerMediaRoot)',
-        (Join-Path $repositoryRoot 'Broiler.Media'))
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerInputRoot)',
-        (Join-Path $repositoryRoot 'Broiler.Input'))
-
-    # Added with the Broiler.Layout extraction (2026-09-09). Broiler.Layout is a
-    # submodule now rather than a directory here, and both it and Broiler.HTML address
-    # Broiler.CSS, Broiler.DOM and Broiler.Layout through roots so they build standalone.
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerCssRoot)',
-        (Join-Path $repositoryRoot 'Broiler.CSS'))
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerDomRoot)',
-        (Join-Path $repositoryRoot 'Broiler.DOM'))
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerLayoutRoot)',
-        (Join-Path $repositoryRoot 'Broiler.Layout'))
-
-    # Added with the Broiler.HtmlBridge extraction (2026-09-16). That component references both
-    # JavaScript engines and is the only one that does, so it spells them as roots to let this
-    # repository point them at its own checkouts; the root Directory.Build.props sets exactly
-    # these two values, and this generator has to agree with it or the solutions would list the
-    # copies nested inside Broiler.HtmlBridge/ while the build compiles the ones here.
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerJsRoot)',
-        (Join-Path $repositoryRoot 'Broiler.JS'))
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerVmRoot)',
-        (Join-Path $repositoryRoot 'Broiler.VM'))
-
-    # Broiler.Regex prefers a Broiler.Unicode checkout nested beside it and falls back to the
-    # one Broiler.JS owns. Both gitlinks point at the same commit, and the mapping table folds
-    # the nested spelling onto Broiler.JS/Broiler.Unicode anyway, so resolve to the fallback.
-    $resolvedInclude = $resolvedInclude.Replace(
-        '$(BroilerUnicodeRoot)',
-        (Join-Path $repositoryRoot 'Broiler.JS/Broiler.Unicode/'))
-
+    # $(MSBuildThisFileDirectory) is the only property a ProjectReference here may use. The
+    # $(Broiler*Root) / $(Broiler*Path) properties that pointed a submodule's references at
+    # the top-level checkout left with the submodules, and this script stopped resolving them
+    # when they did: a reference spelled through one is rejected here rather than guessed at.
     if ($resolvedInclude.Contains('$(')) {
         throw "Unsupported property in ProjectReference '$Include' from '$ProjectPath'."
     }
 
     # MSBuild writes ProjectReference includes with backslashes whatever the host. On a
     # non-Windows host a backslash is an ordinary filename character, so GetFullPath below
-    # would fold '..\..\Broiler.Graphics\...' into one nonsensical component instead of
-    # walking up two directories. Fold them onto the platform separator first; on Windows
-    # this is a no-op. The absolute paths substituted above are already host-native.
+    # would fold '..\Broiler.Browser.Core\...' into one nonsensical component instead of
+    # walking up a directory. Fold them onto the platform separator first; on Windows this
+    # is a no-op. The absolute path substituted above is already host-native.
     $resolvedInclude = $resolvedInclude.Replace('\', [IO.Path]::DirectorySeparatorChar)
 
     if (-not [IO.Path]::IsPathRooted($resolvedInclude)) {

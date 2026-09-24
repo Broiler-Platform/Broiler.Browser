@@ -13,7 +13,10 @@
     Directory.Build.targets of its own, which stopped the lookup before it reached here and left
     its twenty-two projects compiling unoptimised under Release-VM. That file now chains to this
     one, which is a change inside that submodule; docs/vm-javascript-profile.md records it, and
-    ci.yml asserts the outcome so it cannot regress quietly.
+    ci.yml asserted the outcome while Broiler.JS was a checkout here. It is a package now and
+    arrives compiled, so nothing in this repository evaluates its projects and ci.yml no longer
+    asks about them. The projects left are this repository's own, all under src/, and all of
+    them get the mapping from the props side, so this import now finds its sentinel already set.
 
     Debug-VM/Release-VM are the first configurations whose project graph reaches into Broiler.VM,
     which is why the gap is worth closing now and cost nothing before: Release-Linux never built a
