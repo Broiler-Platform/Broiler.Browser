@@ -19,6 +19,13 @@ namespace Broiler.Browser.Android;
     WindowSoftInputMode = SoftInput.AdjustResize)]
 public sealed class MainActivity : Activity
 {
+    /// <summary>
+    /// The application process's one profile. It outlives any single activity: Android recreates the
+    /// activity on a relaunch, and the session's cookies must survive that as they would a window
+    /// being reopened. It is never disposed; the process's end releases it.
+    /// </summary>
+    private static readonly System.Lazy<BrowserProfile> Profile = new(BrowserProfile.CreateDefault);
+
     private AndroidBroilerView? _view;
     private BrowserUiHost? _host;
     private BrowserApp? _app;
@@ -50,7 +57,8 @@ public sealed class MainActivity : Activity
             {
                 _view.AnimationActive = active;
                 _view.InvalidateFrame();
-            });
+            },
+            Profile.Value);
 
         _view.RenderFrame = _app.RenderFrame;
         _view.DispatchInput = _app.Dispatch;

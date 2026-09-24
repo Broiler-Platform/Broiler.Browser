@@ -204,6 +204,8 @@ nothing in the tree records which signal it is failing on.
 The polyfills this page needs are registered as "Google Search Compliance" work in
 `Registration/Polyfills.cs` and `Registration/Window.cs`: `performance` (with a `timeOrigin`
 belonging to the navigation, not to the call), `Image`, `IntersectionObserver`, `ResizeObserver`,
-`TextEncoder`/`TextDecoder`, `URL`/`URLSearchParams`, `AbortController`, `crypto`, `CSS`, and an
-in-memory `document.cookie`. The content-rendering set is a versioned embedded asset,
+`TextEncoder`/`TextDecoder`, `URL`/`URLSearchParams`, `AbortController`, `crypto`, `CSS`, and
+`document.cookie` — an in-memory string when this was written, and now backed by the browser
+profile's cookie store (the one the navigation's `Set-Cookie` lands in), without `HttpOnly`
+cookies. The content-rendering set is a versioned embedded asset,
 `Polyfills/content-rendering-polyfills.js`, rather than inline C# string literals.

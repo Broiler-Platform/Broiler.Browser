@@ -69,7 +69,9 @@ internal static class LinuxBrowserRunner
             },
             () => clipboard is not null && clipboard.TryGetText(out string text) ? text : null,
             text => clipboard?.SetText(text));
-        using BrowserApp app = new(host, () => renderer, options.InitialUrl, static _ => { });
+        // The run's one profile, declared before the app so it is disposed after it.
+        using BrowserProfile profile = BrowserProfile.CreateDefault();
+        using BrowserApp app = new(host, () => renderer, options.InitialUrl, static _ => { }, profile);
 
         await using LinuxInputCoordinator input = new(
             canUseEvdev,

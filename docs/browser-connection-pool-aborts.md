@@ -46,20 +46,33 @@ An `HttpClient` **is** a connection pool. Two consequences, both learned the har
   everybody. `PageLoader` takes `ownsHttpClient: false` by default for exactly this reason,
   and `PageLoaderLifetimeTests` guards it.
 
-Pools are process-scoped and never disposed. `BrowserApp.PageHttpClient` is the model.
+Pools live as long as what owns them and outlive every unit of work. The profile's
+`BrowserNetworkSession` (`BrowserProfile.Network`) is the model: created once by the
+composition root, disposed after the last window that uses it.
 
 ## Pools in the browser process
 
-| Pool | Timeout | Notes |
-| --- | --- | --- |
-| `BrowserApp.PageHttpClient` | 100 s default | Navigation. `PooledConnectionLifetime` 5 min, `ConnectTimeout` 15 s |
-| `ResourceLoader.SharedClient` | 5 s | Stylesheets, `fetch`, XHR, sub-documents |
-| `ImageDownloader.SharedHttpClient` | 5 s | `<img>`, cancelled per render-tree teardown |
-| `StylesheetLoadHandler.SharedHttpClient` | 5 s | `<link>` on the render path |
-| `ScriptExtractionService.SharedHttpClient` | 30 s | External `<script>` |
-| `HtmlContainerInt.SharedFontHttpClient` | 10 s | `@font-face` |
+The browser has **one** pool for page traffic: the profile's `BrowserNetworkSession`
+(Broiler.Net). Navigation, the scripts the extractor fetches, the DOM bridge's loaders
+(stylesheets, `fetch`, XHR, `sendBeacon`, sub-documents, module imports, inserted scripts) and
+the renderer's images, stylesheets and fonts all send through it, each with its own budget as a
+linked cancellation:
 
-None of them sets `PooledConnectionIdleTimeout`, so all six inherit the .NET default of
+| Traffic | Budget | Notes |
+| --- | --- | --- |
+| Navigation (`PageLoader`) | 100 s from send to the last byte (the loader's budget; the session `Timeout` ends at the headers) | `PooledConnectionLifetime` 5 min, `ConnectTimeout` 15 s |
+| Bridge resources | 5 s | Stylesheets, `fetch`, XHR, sub-documents |
+| Images | 5 s | Cancelled per render-tree teardown |
+| `<link>` on the render path | 5 s | |
+| External `<script>` | 30 s | |
+| `@font-face` | 10 s | |
+
+The components' process-wide clients (`ResourceLoader.SharedClient`,
+`ImageDownloader.SharedHttpClient`, `StylesheetLoadHandler.SharedHttpClient`,
+`ScriptExtractionService.SharedHttpClient`, `HtmlContainerInt.SharedFontHttpClient`) remain only
+as the fallback for a host that supplies no transport, and keep no cookies.
+
+None of these sets `PooledConnectionIdleTimeout`, so all inherit the .NET default of
 **one minute**.
 
 ## Triggers, and which are defects
@@ -138,6 +151,11 @@ Two rounds of the same diagnosis, both reached from this exception with no Broil
    `ImageDownloader.Dispose`: the `CancellationTokenSource` was disposed while an in-flight
    `HttpClient.Send` still held its token, and the callback dictionary was cleared outside the
    lock its other accessors take.
+
+3. **One profile network.** The process-scoped `BrowserApp.PageHttpClient` was replaced by the
+   profile's `BrowserNetworkSession`, which every loader now shares. `PageLoader` never owns a
+   transport it is given; the `ownsHttpClient` flag still governs a loader built over a plain
+   `HttpClient`, and `PageLoaderLifetimeTests` still guards it.
 
 The CLI never saw any of this. It is a one-shot capture that exits before the pool scavenges
 anything; a browser window stays open long enough to watch it happen.

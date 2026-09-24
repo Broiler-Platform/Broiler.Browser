@@ -59,7 +59,19 @@ public class PageLoaderLifetimeTests
             () => client.GetStringAsync("https://example.com/second"));
     }
 
+    // Cast, because a bare null now binds to the transport constructor: the HttpClient one needs its
+    // default argument and loses the tie-break, so this test would pass with its guard removed.
     [Fact(Timeout = 600000)]
-    public void Constructor_RejectsAMissingClient() =>
-        Assert.Throws<ArgumentNullException>(() => new PageLoader(null!));
+    public void Constructor_RejectsAMissingClient()
+    {
+        var error = Assert.Throws<ArgumentNullException>(() => new PageLoader((HttpClient)null!));
+        Assert.Equal("httpClient", error.ParamName);
+    }
+
+    [Fact(Timeout = 600000)]
+    public void Constructor_RejectsAMissingTransport()
+    {
+        var error = Assert.Throws<ArgumentNullException>(() => new PageLoader((Broiler.Net.Http.IBrowserRequestTransport)null!));
+        Assert.Equal("transport", error.ParamName);
+    }
 }
