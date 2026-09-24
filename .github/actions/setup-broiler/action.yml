@@ -1,8 +1,7 @@
 name: Set up Broiler.Browser
 description: >-
-  Initialises the nested component submodules the browser's project closure
-  reaches, and installs the .NET SDK. Run this after actions/checkout with
-  `submodules: true` — a local action cannot perform the checkout itself,
+  Installs the .NET SDK the browser builds with. Run this after
+  actions/checkout — a local action cannot perform the checkout itself,
   because its own files have to be in the workspace first.
 
 inputs:
@@ -14,36 +13,12 @@ inputs:
 runs:
   using: composite
   steps:
-    # `submodules: true` on the checkout fetches the top-level components only. A
-    # component repository also carries nested checkouts of its own dependencies so it
-    # still builds standalone, and those used to have to be initialised here too,
-    # because its projects reached them by literal relative path.
-    #
-    # They no longer do. Every component reference now goes through a root property --
-    # $(BroilerDomPath), $(BroilerGraphicsPath), $(BroilerGraphicsRoot),
-    # $(BroilerMediaRoot), $(BroilerInputRoot), and since 2026-09-09 also
-    # $(BroilerCssRoot), $(BroilerDomRoot) and $(BroilerLayoutRoot) -- which the root
-    # Directory.Build.props sets to the top-level checkout, so the nested copies are
-    # not in any solution's project closure and initialising them only costs time.
-    # Verified by emptying all of them and building all four solutions clean.
-    #
-    # The last three arrived with the Broiler.Layout extraction: Broiler.Layout is a
-    # submodule now rather than a directory here, and both it and Broiler.HTML resolve
-    # their own dependencies through roots, so those roots have to be set above them.
-    #
-    # Broiler.JS is the exception, and the reason this step still exists: DateTime,
-    # Regex and Unicode have no top-level equivalent to be redirected to.
-    #
-    # A ProjectReference to a missing project is only a restore *warning*, and the
-    # build then fails later on missing types, so if a nested checkout ever becomes
-    # load-bearing again the symptom will not name it. The `graph` job in ci.yml is
-    # what catches the opposite mistake -- a reference that escaped its property and
-    # put two assemblies of one name in the graph.
-    - name: Initialise nested submodules
-      shell: bash
-      run: |
-        git -C Broiler.JS submodule update --init Broiler.DateTime Broiler.Regex Broiler.Unicode
-
+    # This action used to initialise the nested submodules Broiler.JS carried
+    # (Broiler.DateTime, Broiler.Regex and Broiler.Unicode), which had no
+    # top-level checkout to be redirected to. Every component is a NuGet package
+    # now and there is no submodule left to initialise at any depth, so the one
+    # thing this sets up is the SDK. It stays an action rather than being inlined
+    # so that every job in ci.yml and release.yml keeps setting up the same way.
     - name: Set up .NET
       uses: actions/setup-dotnet@v6
       with:

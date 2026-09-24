@@ -200,12 +200,13 @@
     chain up to THIS file, so the unconditional values below win and every consumer resolves
     to the single ROOT checkout — one Broiler.Dom node and one Graphics node per build graph.
 
-    scripts/check-component-graph.sh fails CI when a solution's project closure still builds
-    two assemblies of the same name, which is what a reference that escaped these properties
-    looks like from the outside. It does not compare submodule SHAs: a nested checkout is
-    expected to trail the root's pin, because the collapse means its sources are compiled
-    against the root's copy and never its own, and whether they still compile is something
-    the build says out loud.
+    scripts/check-component-graph.sh used to fail CI when a solution's project closure still
+    built two assemblies of the same name, which is what a reference that escaped these
+    properties looked like from the outside. That was while the kernels were checkouts. They
+    are NuGet packages now: nothing in this repository reads $(BroilerDomPath) or
+    $(BroilerGraphicsPath), or any of the root properties below, and the script asks its
+    question of the restored package closure and knows nothing about them. They are dead and
+    unguarded until a follow-up deletes them.
   -->
   <PropertyGroup>
     <BroilerDomPath>$(MSBuildThisFileDirectory)Broiler.DOM\Broiler.Dom\Broiler.Dom.csproj</BroilerDomPath>
@@ -268,12 +269,14 @@
       'Broiler.Media.Image.Managed.PngImageCodec' ... does not have an implementation.
 
     Broiler.HtmlBridge's own Directory.Build.props defaults these two properties with a
-    Condition on their being empty, so these unconditional values win, and its nested
-    checkouts go uncompiled. .github/workflows/ci.yml checks out with `submodules: true`
-    rather than recursively, so CI never fetches them at all; a local clone that did fetch
-    them is harmless for the same reason the vendored Graphics and Dom checkouts are.
+    Condition on their being empty, so these unconditional values won, and its nested
+    checkouts went uncompiled.
 
-    scripts/check-component-graph.sh is what notices if a reference ever escapes them.
+    All of this described checkouts, and none are left: Broiler.HtmlBridge, Broiler.JS and
+    Broiler.VM arrive as NuGet packages, .github/workflows/ci.yml checks out no submodules,
+    and nothing evaluates these two properties. scripts/check-component-graph.sh does not
+    know about them either; it reads the restored package closure. Like the groups above,
+    they wait for a follow-up to delete them.
   -->
   <PropertyGroup>
     <BroilerJsRoot>$(MSBuildThisFileDirectory)Broiler.JS</BroilerJsRoot>

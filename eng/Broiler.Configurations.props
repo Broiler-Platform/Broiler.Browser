@@ -101,8 +101,10 @@
     Broiler.HtmlBridge is the second of that shape, added on 2026-09-16, and it is the one that
     matters most here because the -VM pair is ITS pair: a standalone build of that component has
     to decompose Release-VM with no parent above it, so it vendors this file AND chains to this
-    one. Both guards are what keep the two runs to one decomposition, and .github/workflows/ci.yml
-    asserts the outcome on one of its projects rather than trusting the reading.
+    one. Both guards are what kept the two runs to one decomposition while it was a checkout here,
+    and .github/workflows/ci.yml asserted the outcome on one of its projects. It is a package now
+    and arrives compiled, so its copy meets this one in no evaluation here; ci.yml asks the same
+    RELEASE-defined-once question of this repository's own projects instead.
 
     ── Why the engine selection is in a group of its own ──────────────────
 

@@ -5,12 +5,13 @@
 
 Broiler.Browser is the browser application of the [Broiler](https://github.com/Broiler-Platform/Broiler)
 managed-code browser stack for .NET. It holds the three platform heads — Windows, Linux
-and Android — the shared `Broiler.Browser.Core` chrome they have in common, and the
-`Broiler.HtmlBridge` layer that binds the DOM, the renderer and the JavaScript engine into
-one page lifecycle.
+and Android — and the shared `Broiler.Browser.Core` chrome they have in common, and embeds
+the `Broiler.HtmlBridge` control that binds the DOM, the renderer and the JavaScript engine
+into one page lifecycle.
 
-Everything below the browser — DOM, CSS, layout, graphics, media, input, UI toolkit and
-the JavaScript engine — lives in its own repository and is consumed here as a submodule.
+Everything below the browser — DOM, CSS, layout, graphics, media, input, UI toolkit, the
+HTML control and the JavaScript engines — lives in its own repository and is consumed here
+as a NuGet package from nuget.org.
 
 > **Preview status.** APIs, repository layout and persisted formats are unstable and may
 > change without notice. Substantial portions of this project were developed with AI
@@ -25,16 +26,11 @@ the JavaScript engine — lives in its own repository and is consumed here as a 
 
 ## Getting started
 
-The dependency components are submodules, so the checkout must be recursive:
+The dependency components are NuGet packages, restored from nuget.org by the first build, so a
+plain clone is the whole checkout:
 
 ```bash
-git clone --recurse-submodules https://github.com/Broiler-Platform/Broiler.Browser.git
-```
-
-If you already cloned without them:
-
-```bash
-git submodule update --init --recursive
+git clone https://github.com/Broiler-Platform/Broiler.Browser.git
 ```
 
 Build and run the Windows head:
@@ -95,16 +91,16 @@ does not drag in another platform's backends.
 
 | Solution | Entry point | Projects |
 |---|---|---|
-| `Broiler.Windows.Browser.slnx` | `src/Broiler.Browser.Windows` | 88 |
-| `Broiler.Linux.Browser.slnx` | `src/Broiler.Browser.Linux` | 87 |
-| `Broiler.Android.Browser.slnx` | `src/Broiler.Browser.Android` | 88 |
-| `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests` | 82 |
+| `Broiler.Windows.Browser.slnx` | `src/Broiler.Browser.Windows` | 2 |
+| `Broiler.Linux.Browser.slnx` | `src/Broiler.Browser.Linux` | 2 |
+| `Broiler.Android.Browser.slnx` | `src/Broiler.Browser.Android` | 3 |
+| `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests` | 2 |
 
-Seven of those projects in each — the Broiler.VM JavaScript profile and the script engine over it
-— are only *referenced* under `Debug-VM`/`Release-VM`, but the generator reads every
-`ProjectReference` regardless of its `Condition`, so they are listed and built in all four
-configurations. That is the price of one solution per head; a project-level build under `Debug` or
-`Release` is free of them.
+The components are packages, and a package is not a project a solution lists, so each solution
+holds only this repository's own projects. The Broiler.VM JavaScript profile and the script engine
+over it arrive as the `Broiler.HtmlBridge.Scripting.Vm` package, which `src/Broiler.Browser.Core`
+references only under `Debug-VM`/`Release-VM`: those two configurations change what is restored,
+not what a solution lists.
 
 The solutions are **generated, not hand-edited**. `eng/solutions.json` declares each entry
 point and the platform boundaries it must not cross; `scripts/update-solutions.ps1` walks
@@ -130,18 +126,20 @@ projects by changing the reference graph, then regenerate.
 - **Solution manifest** — `scripts/update-solutions.ps1 -Verify`, which fails if a
   checked-in `.slnx` no longer matches the reference graph. This is what catches a new
   `ProjectReference` that was never folded into a solution.
-- **Component graph** — one assembly per name across each solution's whole closure, in `Debug`
-  and again in `Debug-VM`, which is a different closure rather than the same one built twice.
-  The same job pins that the configuration mapping reaches every component and is applied exactly
-  once — a configuration the mapping misses compiles unoptimised and says nothing, and one it maps
-  twice defines `RELEASE` twice.
+- **Component graph** — one assembly per name across each solution's whole closure, its projects
+  *and* the packages NuGet restores for them, in `Debug` and again in `Debug-VM`, which restores a
+  different package closure. Also that every project declares every build type its solution offers,
+  and that the configuration mapping reaches every project, selects the VM engine under `-VM` and
+  is applied exactly once — a configuration the mapping misses compiles unoptimised and says
+  nothing, and one it maps twice defines `RELEASE` twice.
 - **Build** — the Windows head on `windows-latest`, the Linux head on `ubuntu-latest`.
 - **Tests** — the suite on both hosts, because the shared chrome does clipboard and
   file-dialog work that is easy to make accidentally platform-specific.
-- **VM profile** — the suite on Linux and the Windows head under `Release-VM`. The suite is the
-  one that carries weight: `VmScriptEngineTests` compiles only under that configuration, so this
-  is where JavaScript actually runs on the Broiler.VM profile rather than merely linking against it.
-- **Android head** — a separate job, since it pays for the `android` workload.
+- **VM profile** — the suite on Linux and the Windows head under `Release-VM`. The engine's own
+  tests left with it for Broiler.HtmlBridge; what the suite asks here is the embedder's question,
+  the browser's host code run against the VM script engine that configuration selects.
+- **Android head** — a separate job, since it pays for the `android` workload. It runs the two
+  graph checks for its own solution, which the other job cannot evaluate without the workload.
 - **Publish** — `Release-Windows` and `Release-Linux`, the runtime-identifier-pinned
   configurations. They are project-level builds by necessity: no solution declares them, so a
   solution-level build with either fails `MSB4126`.
@@ -152,7 +150,7 @@ artifacts for manual testing — `win-x64`, `linux-x64` and a **debug-signed**
 store-ready signed preview packages come from the monorepo's *Prepare Broiler Preview
 Package* workflow, which owns the signing material.
 
-The nested-submodule set the browser needs is defined once, in
+Every job checks out without submodules — there are none — and sets up the SDK through
 [`.github/actions/setup-broiler`](.github/actions/setup-broiler/action.yml).
 
 ## Repository layout
@@ -166,8 +164,6 @@ The nested-submodule set the browser needs is defined once, in
 | `src/Broiler.Browser.Core.Tests` | xUnit suite for the shared chrome |
 | `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites, per-platform clipboards. It has no project of its own; each head links the files it needs. |
 | `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
-| `Broiler.HtmlBridge` | The HTML control — see *Dependencies* below. These eight assemblies were `src/Broiler.HtmlBridge.*` here until 2026-09-16 |
-| `Broiler.Layout` | Vendored layout engine — see *Dependencies* below |
 | `eng/`, `scripts/` | Solution manifest, configuration mapping and generator |
 
 *(Corrected 2026-09-08. Two rows here described `Broiler.VM.Profile.JavaScript` and
@@ -179,12 +175,13 @@ replaces them is the row above, which is a real directory this change added.)*
 
 ## Dependencies
 
-`Broiler.VM`'s entry in [`.gitmodules`](.gitmodules) names no branch, so
-`git submodule update --remote` leaves it where the gitlink puts it while moving the others.
-
-*(This paragraph counted the submodules and the count has been wrong more than once, so it no
-longer does. Read [`.gitmodules`](.gitmodules): several of the components below are consumed as
-NuGet packages now rather than checked out, and `Broiler.HtmlBridge` was added on 2026-09-16.)*
+Every component below is a NuGet package from nuget.org, referenced from the projects under
+`src/`. The `Version` on each `PackageReference` there is a minimum, not necessarily the version a
+build gets: restore takes the lowest version nuget.org has at or above it, and several of those
+minimums name a preview nuget.org does not have, so restore resolves them upward and warns
+`NU1603` for each one. What a project actually restored is in its `obj/project.assets.json`.
+There are no submodules: the last ones — Broiler.HTML, Broiler.HtmlBridge, Broiler.JS,
+Broiler.Layout and Broiler.VM — were replaced by their packages in September 2026.
 
 | Component | Purpose |
 |---|---|
@@ -199,15 +196,12 @@ NuGet packages now rather than checked out, and `Broiler.HtmlBridge` was added o
 | `Broiler.JS` | JavaScript parser, compiler, runtime and built-ins |
 | `Broiler.VM` | Generic execution core — a host for language profiles, not a language. Owns profile selection, bounded loading, the verification boundary, the execution lifecycle, resource authority and diagnostics; owns no opcode set, value representation or language semantics |
 
-`Broiler.JS` carries `Broiler.DateTime`, `Broiler.Regex` and `Broiler.Unicode` as its own
-nested submodules.
-
 `Broiler.VM` is reached by the browser heads **only under the `Debug-VM` and `Release-VM`
-configurations**, through `Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting.Vm`. It remains a separate clean-room
+configurations**, through the `Broiler.HtmlBridge.Scripting.Vm` package. It remains a separate clean-room
 component with its own roadmap, `Broiler.JS` does not depend on it, and neither depends on the
-other. Its two language profiles — JavaScript and WebAssembly — are product projects inside that
-submodule under `Broiler.VM/src/`; the browser references the JavaScript one and none of the
-WebAssembly one, which every head's solution manifest also forbids by pattern. See
+other. Its two language profiles — JavaScript and WebAssembly — are product projects of that
+component; the browser reaches the JavaScript one and none of the WebAssembly one, which every
+head's solution manifest also forbids by pattern. See
 [docs/vm-javascript-profile.md](docs/vm-javascript-profile.md).
 
 *(Corrected 2026-09-08. This paragraph read "`Broiler.VM` is not yet used by the browser heads"
@@ -215,41 +209,13 @@ and described both profiles as living in this repository as documents with no so
 first half is what this change made false, so it is restated rather than deleted; the second half
 was already false before it — see the note under* Repository layout.*)*
 
-### Broiler.Layout is vendored, not a submodule
+### Known issues from composing checkouts
 
-`Broiler.Layout` — the graphics-independent CSS box-model and layout engine — has **no
-standalone repository**. It exists only as a directory inside the `Broiler` monorepo, and
-both `Broiler.HTML.Core` and `Broiler.HtmlBridge`'s own `Broiler.HtmlBridge.Core` need it. It is therefore
-checked in here as ordinary tracked files under `Broiler.Layout/`.
-
-Should `Broiler-Platform/Broiler.Layout` ever be published, this directory can be replaced
-by a submodule at the same path with no reference changes: `Broiler.HTML.Core` already
-reaches it as `..\..\..\Broiler.Layout\`, which resolves to the repository root either way.
-
-### Known issues
-
-Two consequences of composing independently released components are worth knowing before
-you file a bug:
-
-- **`Broiler.HTML` still uses the pre-`src/` paths.** It spells its top-level
-  `Broiler.Media` and `Broiler.Graphics` references in the flat layout those components
-  used while they were vendored inside the monorepo. Both now publish under `src/`, so the
-  references as written resolve nowhere. `Directory.Build.targets` rewrites exactly those
-  two references onto the top-level checkouts. Both blocks are marked for deletion once
-  `Broiler.HTML` follows the components into `src/` and the gitlink here is bumped.
-
-- **Some components compile more than once.** Each component repository carries nested
-  checkouts of its own dependencies so it still builds standalone, and its projects
-  reference those nested copies by literal relative path. Composed here that means
-  `Broiler.Media` is compiled three times and `Broiler.Graphics` and `Broiler.Input` twice.
-  Every nested gitlink points at the same commit as the top-level one, so the duplicates
-  are assembly-identical and the build reports no reference conflicts — but it is wasted
-  work and it violates the one-project-per-assembly-identity rule that
-  `Directory.Build.props` states. `Broiler.CSS` and `Broiler.HTML` already avoid it with a
-  `$(BroilerDomPath)` / `$(BroilerGraphicsPath)` property hook; the fix is to give
-  `Broiler.UI`, `Broiler.Graphics` and `Broiler.Media` the same hook upstream. The solution
-  generator already folds the nested paths onto the top-level ones, so the `.slnx` files
-  list each assembly once.
+This section described consequences of building the components from checkouts here —
+`Broiler.Layout` vendored as a directory, `Broiler.HTML`'s pre-`src/` reference paths, and
+components compiled more than once. All of them ended with the checkouts: `Broiler.Layout`
+arrives as a dependency of the `Broiler.HTML` and `Broiler.HtmlBridge` packages, and nothing here
+compiles a component any more.
 
 ## Provenance
 

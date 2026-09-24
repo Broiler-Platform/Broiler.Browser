@@ -44,10 +44,11 @@
     must happen last. The append below is idempotent — it checks before adding — so it needs no
     sentinel, and having none is what lets it run for the chaining projects too.
 
-    Directory.Build.targets is looked up separately from Directory.Build.props and only two exist
-    in the whole tree: this repository's and Broiler.JS's, which chains here explicitly. So this
-    reaches all 88 projects, including the four submodules whose Directory.Build.props does not
-    chain.
+    Directory.Build.targets is looked up separately from Directory.Build.props, and while the
+    components were checkouts only two existed in the whole tree: this repository's and
+    Broiler.JS's, which chained here explicitly. So this reached all 88 projects, including the
+    four submodules whose Directory.Build.props did not chain. The components are NuGet packages
+    now; what is left is this repository's six projects under src/, and this reaches all of them.
 
     ── What a regression looks like ─────────────────────────────────────
 
