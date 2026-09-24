@@ -23,11 +23,14 @@
     which IScriptEngine BrowserApp instantiates — see the #if in BrowserApp.cs and
     docs/vm-javascript-profile.md.
 
-    And it does not make the VM projects disappear from the generated solutions.
-    scripts/update-solutions.ps1 reads every ProjectReference regardless of its Condition, so all
-    four .slnx files list them and build them in all four configurations. That is deliberate: a
-    solution has to carry the union to offer the configuration in the Visual Studio dropdown at
-    all. A project-level build is the one that is genuinely VM-free under Debug and Release.
+    What it no longer does is put VM projects into the generated solutions. While this was a
+    ProjectReference to a checkout, scripts/update-solutions.ps1 read it regardless of its
+    Condition, so all four .slnx files listed the VM projects and built them in every
+    configuration. As a PackageReference it is not a project at all: the solutions list only this
+    repository's own projects, and restore honours the Condition, so a solution build under Debug
+    or Release is as VM-free as a project-level one. Debug-VM and Release-VM still reach the Visual
+    Studio dropdown through the `configurations` in eng/solutions.json and
+    eng/Broiler.ConfigurationNames.targets.
   -->
   <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
     <PackageReference Include="Broiler.HtmlBridge.Scripting.Vm" Version="0.1.0-preview.7" />

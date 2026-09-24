@@ -9,11 +9,11 @@
     "runtime-identifier-pinned names (Release-Windows, Release-Linux) are deliberately absent --",
     "they are published per project, which is why CI's publish job is a project-level build.",
     "",
-    "Debug-VM/Release-VM build the browser against the Broiler.VM JavaScript profile. Note what",
-    "they do NOT do here: the generator reads every ProjectReference regardless of its Condition,",
-    "so the Broiler.VM projects land in these solutions under all four build types even though",
-    "Broiler.Browser.Core only references them under the -VM pair. See",
-    "docs/vm-javascript-profile.md."
+    "Debug-VM/Release-VM build the browser against the Broiler.VM JavaScript profile. That",
+    "profile arrives as the Broiler.HtmlBridge.Scripting.Vm PACKAGE, conditional on the -VM pair,",
+    "and a package is not a project a solution lists -- so these solutions hold the same src/",
+    "projects under all four build types, and what the -VM pair changes is the restore, not the",
+    "solution. See docs/vm-javascript-profile.md."
   ],
   "solutions": [
     {

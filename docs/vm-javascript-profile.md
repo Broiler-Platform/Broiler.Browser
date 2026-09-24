@@ -377,10 +377,10 @@ provider over it declaring `JsCapabilities.Document`. What forwards those paths 
 | `Directory.Build.targets` | Imports it again for the ones that do not — see below |
 | `eng/Broiler.ConfigurationNames.targets` | Adds `Debug-VM`/`Release-VM` to every project's `$(Configurations)`, so an IDE can map them — see below |
 | `scripts/check-configuration-names.sh` | Asserts that outcome, because no build can |
-| `src/Broiler.Browser.Core/*.csproj` | The one conditional `ProjectReference` |
+| `src/Broiler.Browser.Core/*.csproj` | The one conditional reference — a `PackageReference` to `Broiler.HtmlBridge.Scripting.Vm` since the submodules were replaced by packages |
 | `src/Broiler.Browser.Core/BrowserApp.cs` | The one `#if BROILER_VM_JS` |
 | `eng/solutions.json` | `configurations` per solution, becoming the `.slnx` `<BuildType>` list |
-| `Broiler.HtmlBridge/src/Broiler.HtmlBridge.Scripting.Vm/` | The engine (in the Broiler.HtmlBridge submodule since 2026-09-16) |
+| `Broiler.HtmlBridge.Scripting.Vm` (package) | The engine — in the Broiler.HtmlBridge component since 2026-09-16, consumed here from nuget.org |
 
 ### Why the mapping is imported twice
 
@@ -407,9 +407,17 @@ Where each component gets the mapping from, measured rather than assumed:
 | Input, Media, UI, VM | root `Directory.Build.targets` (the second import) |
 | **Broiler.JS** | root `Directory.Build.targets`, via a chain in its own — see below |
 
-Every component answers `Optimize=true` under `Release-VM`. `ci.yml`'s graph job asserts exactly
-that, one project per family, so a component dropping out of the mapping fails there rather than
+Every component answers `Optimize=true` under `Release-VM`. `ci.yml`'s graph job asserted exactly
+that, one project per family, so a component dropping out of the mapping failed there rather than
 shipping quietly.
+
+*(Since September 2026 every component is a NuGet package and arrives compiled, so the table above
+and the two sections below record how the mapping reached the checkouts while there were any. The
+projects that remain are this repository's own, all under `src/`, all reaching the mapping through
+the root `Directory.Build.props`; `ci.yml` now asserts `Optimize=true` under `Release-VM` for each
+of the non-Android ones, that `Broiler.Browser.Core` answers `BroilerJavaScriptEngine=Vm` there and
+`BroilerJavaScriptEngine=BroilerJs` under plain `Release`, and that `RELEASE` is defined once under
+the runtime-identifier-pinned configurations.)*
 
 ### Broiler.JS needed a third route, and got one
 
@@ -478,21 +486,19 @@ props time, where a targets-side guard never gets a say. It now applies the same
 `'$(BroilerBaseConfiguration)' == ''` test to its own copy, and is asserted here like everything
 else.
 
-### Why the Broiler.VM projects are in every solution
+### Why the Broiler.VM projects are no longer in any solution
 
-`scripts/update-solutions.ps1` reads every `ProjectReference` regardless of its `Condition`, so
-the seven added projects appear in all four `.slnx` files and are built by a solution build in
-**all four** configurations — including plain `Debug` and `Release`, where nothing references
-them.
+While Broiler.VM was a submodule, `scripts/update-solutions.ps1` read every `ProjectReference`
+regardless of its `Condition`, so its seven projects appeared in all four `.slnx` files and were
+built by a solution build in **all four** configurations — including plain `Debug` and `Release`,
+where nothing referenced them.
 
-That is the deliberate cost of one solution per head. A solution can only offer a configuration in
-the Visual Studio dropdown if it declares it, and MSBuild answers `MSB4126` for a configuration a
-solution does not declare — so the solution has to carry the union. The build that is genuinely
-free of Broiler.VM is the project-level one:
-
-```bash
-dotnet build src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj -c Release
-```
+The conditional reference is a `PackageReference` now, and a package is not a project a solution
+lists: the solutions hold only this repository's projects, identical under all four build types,
+and the `-VM` pair changes what NuGet restores rather than what a solution builds. A solution build
+under `Debug` or `Release` is therefore as free of Broiler.VM as a project-level one. The
+solutions still declare `Debug-VM`/`Release-VM`, because a solution can only offer a configuration
+in the Visual Studio dropdown if it declares it, and MSBuild answers `MSB4126` for one it does not.
 
 ### Why every project has to declare the names too
 
@@ -559,11 +565,12 @@ Driven through `devenv.com`, that builds the dependency as `Configuration=Debug`
 `Optimize` false — while the head builds as `Debug-VM`. Exit 0, no error, no warning.
 
 `src/Broiler.Browser.Core` declares no `<Configurations>` of its own, so it is one of the projects
-that mapping would catch. `BROILER_VM_JS` comes only from `$(BroilerJavaScriptEngine)`, which is set
-only when `$(Configuration)` is literally `Debug-VM` or `Release-VM` — so the constant would go
-undefined, the conditional `ProjectReference` to `Broiler.HtmlBridge.Scripting.Vm` would drop out,
-and selecting `Debug-VM` in Visual Studio would stop erroring and quietly build a browser with no VM
-in it. **Declaring the names is the fix; mapping them away removes the message and the feature.**
+that mapping would catch. `BROILER_VM_JS` comes only from `$(BroilerJavaScriptEngine)`, which is
+`Vm` only when `$(Configuration)` is literally `Debug-VM` or `Release-VM` and `BroilerJs` otherwise —
+so the constant would go undefined, the conditional `PackageReference` to
+`Broiler.HtmlBridge.Scripting.Vm` would drop out, and selecting `Debug-VM` in Visual Studio would
+stop erroring and quietly build a browser with no VM in it. **Declaring the names is the fix;
+mapping them away removes the message and the feature.**
 
 ## Verifying a change to any of this
 
@@ -573,21 +580,12 @@ The mapping is observable without building anything:
 dotnet msbuild src/Broiler.Browser.Core/Broiler.Browser.Core.csproj -p:Configuration=Release-VM -getProperty:DefineConstants -getProperty:Optimize -getProperty:BroilerJavaScriptEngine
 ```
 
-`;BROILER_VM_JS;RELEASE;TRACE;RELEASE_VM`, `true`, `Vm`. The same question against a Broiler.VM project answers
-`RELEASE` and `true` through the targets-side import:
+`;BROILER_VM_JS;RELEASE;TRACE;RELEASE_VM`, `true`, `Vm`. The Broiler.VM and Broiler.JS projects
+this section also used to ask are packages now, compiled by their own repositories, and have no
+project file here to ask.
 
-```bash
-dotnet msbuild Broiler.VM/src/Broiler.VM.Profile.JavaScript/Broiler.VM.Profile.JavaScript.csproj -p:Configuration=Release-VM -getProperty:Optimize
-```
-
-And against Broiler.JS, which reaches the same import through the chain in its own
-`Directory.Build.targets` — this is the one that answered empty before that chain existed:
-
-```bash
-dotnet msbuild Broiler.JS/Broiler.JS/Broiler.JavaScript.Engine/Broiler.JavaScript.Engine.csproj -p:Configuration=Release-VM -getProperty:Optimize -getProperty:BroilerParentBuildTargets
-```
-
-And the duplicate-assembly check takes the configuration from the environment:
+And the duplicate-assembly check takes the configuration from the environment — it restores, so
+under `-VM` it reads the package closure that configuration actually gets:
 
 ```bash
 CONFIGURATION=Release-VM ./scripts/check-component-graph.sh Broiler.Linux.Browser.slnx
@@ -600,8 +598,9 @@ project in a solution whether it declares every build type that solution offers:
 ./scripts/check-configuration-names.sh Broiler.Windows.Browser.slnx
 ```
 
-A single project answers it too, and this is the form that was wrong for 87 of them:
+A single project answers it too, and this is the form that was wrong for 87 of them while the
+solutions still listed the components' projects:
 
 ```bash
-dotnet msbuild Broiler.HtmlBridge/src/Broiler.HtmlBridge.Dom/Broiler.HtmlBridge.Dom.csproj -getProperty:Configurations
+dotnet msbuild src/Broiler.Browser.Core/Broiler.Browser.Core.csproj -getProperty:Configurations
 ```
