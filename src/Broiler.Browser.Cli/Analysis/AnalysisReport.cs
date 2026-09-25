@@ -239,10 +239,10 @@ internal static class Triage
     private static readonly (string Code, FindingSeverity Severity, string Title)[] RenderingParseErrors =
     [
         ("eof-in-text", FindingSeverity.Error, "element(s) whose end tag never comes, so the rest of the document is their text"),
-        ("unexpected-end-tag", FindingSeverity.Warning, "HTML end tag(s) that match no open element"),
         ("non-void-html-element-start-tag-with-trailing-solidus", FindingSeverity.Warning, "HTML start tag(s) like <div/>, which Broiler closes at once and a browser leaves open"),
         ("eof-in-comment", FindingSeverity.Warning, "HTML comment(s) that never end, hiding everything after them"),
         ("eof-in-tag", FindingSeverity.Warning, "HTML tag(s) the document ends inside, which are dropped"),
+        ("unexpected-end-tag", FindingSeverity.Info, "HTML end tag(s) that match no open element, repaired as a browser repairs them"),
         ("end-tag-closes-open-elements", FindingSeverity.Info, "HTML end tag(s) that also close elements still open inside them"),
         ("unclosed-element", FindingSeverity.Info, "HTML element(s) still open at the end of the document"),
     ];

@@ -91,8 +91,9 @@ internal sealed record HtmlReport
 /// <b>Parse errors are the parser's own.</b> The document as fetched is parsed with
 /// <see cref="HtmlParseOptions.ReportParseErrors"/>, so each error carries the code, line and column
 /// Broiler.Dom.Html gives it and says what its tree builder did. Where that departs from a browser —
-/// an end tag that matches nothing closes every open element here, and a <c>&lt;div/&gt;</c> is closed
-/// at once — the error is a rendering difference in itself, and the message says so.
+/// a <c>&lt;div/&gt;</c> is closed at once here — the error is a rendering difference in itself, and
+/// the message says so. An end tag that matches no open element is repaired as a browser repairs it:
+/// ignored, or read as an empty <c>&lt;p&gt;</c> or a <c>&lt;br&gt;</c>.
 /// </para>
 /// </remarks>
 internal static class HtmlInspector

@@ -84,4 +84,25 @@
     <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.9" />
   </ItemGroup>
 
+  <!--
+    THE PARSER, THE CASCADE AND THE LAYOUT ENGINE THE WINDOW RUNS ARE NAMED HERE.
+
+    None of the references above names Broiler.Dom.Html, Broiler.CSS.Dom or Broiler.Layout.
+    Broiler.HTML.* and Broiler.HtmlBridge.* bring them, and those packages declare only a minimum
+    version of each. NuGet takes the lowest version that satisfies every range, so without these
+    lines the window runs those minimums. A component's fix would reach it only once a package above
+    was republished to ask for it: the window parsed with Broiler.Dom.Html 0.1.0-preview.8 while
+    preview.9 to preview.11 were already published. Broiler.Dom and Broiler.CSS follow
+    Broiler.Dom.Html and Broiler.CSS.Dom, each of which requires its own version of them.
+
+    src/Broiler.Browser.Cli names none of these versions itself. Its page analysis asks each of them
+    for a diagnostic (HtmlParseOptions.ReportParseErrors, CssSelectorMatcher.DescribeGaps,
+    LayoutDiagnostics), and what it diagnoses has to be what the window runs.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.Dom.Html" Version="0.1.0-preview.11" />
+    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.7" />
+  </ItemGroup>
+
 </Project>
