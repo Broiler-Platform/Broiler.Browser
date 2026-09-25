@@ -52,9 +52,9 @@
     guesses at (CssSelectorMatcher.DescribeGaps).
   -->
   <ItemGroup>
-    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.901" />
-    <PackageReference Include="Broiler.Dom.Html" Version="0.1.0-preview.901" />
-    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.901" />
+    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.Dom.Html" Version="0.1.0-preview.9" />
+    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.7" />
   </ItemGroup>
 
 </Project>
