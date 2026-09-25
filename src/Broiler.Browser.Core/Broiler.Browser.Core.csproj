@@ -67,8 +67,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.6" />
-    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.6" />
+    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.901" />
+    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.901" />
     <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.8" />
     <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.8" />
     <PackageReference Include="Broiler.Net" Version="0.1.0-preview.1" />

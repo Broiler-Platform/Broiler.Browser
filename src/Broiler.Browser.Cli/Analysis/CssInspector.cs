@@ -27,6 +27,14 @@ internal sealed record CssUsage(string Property, string? Value, int Count, strin
 /// <summary>One <c>@font-face</c> rule.</summary>
 internal sealed record FontFaceRule(string Family, string Source, string? Src);
 
+/// <summary>A pseudo-class or pseudo-element the style engine does not model as written, and the selectors that use it.</summary>
+/// <param name="Part">The pseudo-class or pseudo-element, with <c>()</c> for a functional one.</param>
+/// <param name="Kind"><c>guessed</c>, <c>not modeled</c>, <c>unstyled pseudo-element</c>, <c>invalid</c> or <c>interactive</c>.</param>
+/// <param name="Selectors">How many selectors in the page's style rules use it.</param>
+/// <param name="Example">The first of them.</param>
+/// <param name="FirstSource">Where its rule is: the stylesheet, the line and the column.</param>
+internal sealed record CssSelectorGapUsage(string Part, string Kind, int Selectors, string Example, string FirstSource);
+
 /// <summary>A <c>font-family</c> list the rendered text asked for, and what it resolves to.</summary>
 /// <param name="Requested">The list, as the computed style gave it.</param>
 /// <param name="TextRuns">How many text runs asked for it.</param>
@@ -57,6 +65,18 @@ internal sealed record CssReport
     public int StyleAttributes { get; init; }
     public IReadOnlyList<FontFaceRule> FontFaces { get; init; } = [];
     public IReadOnlyList<FontResolution> Fonts { get; init; } = [];
+
+    /// <summary>The selectors the style engine does not model as written, the likeliest to mislead first.</summary>
+    public IReadOnlyList<CssSelectorGapUsage> SelectorGaps { get; init; } = [];
+
+    /// <summary>
+    /// The properties Broiler's layout engine ignored while it styled the rendered boxes, with example
+    /// values; the count is of reports, one per box.
+    /// </summary>
+    public IReadOnlyList<CssUsage> NotAppliedByLayout { get; init; } = [];
+
+    /// <summary>The features Broiler's layout engine laid out as something simpler, with what it did.</summary>
+    public IReadOnlyList<CssUsage> LayoutFallbacks { get; init; } = [];
 }
 
 /// <summary>One stylesheet's size and shape, for the report's table.</summary>
@@ -84,11 +104,30 @@ internal sealed record CssSheetSummary(string Source, string? SavedAs, int Bytes
 /// their diagnostics, which leaves a diagnostic's offset pointing into a text no file holds; parsed
 /// separately, each problem gets a line and a column in the file it is in.
 /// </para>
+/// <para>
+/// <b>Selectors are judged by the matcher's own account of itself.</b> Every selector of every style
+/// rule is put to <see cref="CssSelectorMatcher.DescribeGaps"/>, which names each pseudo-class it
+/// guesses at (it then matches every element), answers "no" for, or does not know, and each
+/// pseudo-element the cascade does not style.
+/// </para>
 /// </remarks>
 internal static class CssInspector
 {
     private const int MaxProblems = 200;
     private const int MaxUsages = 50;
+    private const int MaxSelectorGaps = 200;
+
+    /// <summary>
+    /// Properties, without a vendor prefix, that change nothing in a still image: how a page answers a
+    /// pointer, a selection, scrolling or the passing of time. A longhand of one counts too.
+    /// </summary>
+    private static readonly string[] NoEffectInAStillImage =
+    [
+        "cursor", "pointer-events", "user-select", "user-modify", "user-drag", "touch-action", "caret-color", "caret",
+        "resize", "speak", "interactivity", "interpolate-size", "tap-highlight-color", "scroll-behavior",
+        "scroll-snap-type", "scroll-snap-align", "scroll-snap-stop", "scroll-padding", "scroll-margin",
+        "overscroll-behavior", "transition", "view-transition-name",
+    ];
 
     /// <summary>At-rules the CSS specifications define. Anything else is a typo or a proprietary extension.</summary>
     private static readonly HashSet<string> StandardAtRules = new(StringComparer.OrdinalIgnoreCase)
@@ -120,6 +159,7 @@ internal static class CssInspector
         var important = 0;
         var custom = 0;
         var vendorPrefixed = 0;
+        var gaps = new Dictionary<(string Part, CssSelectorGapKind Kind), (int Selectors, string Example, string Source)>();
 
         foreach (var sheet in sheets)
         {
@@ -150,6 +190,7 @@ internal static class CssInspector
                     switch (rule)
                     {
                         case CssStyleRule style:
+                            SelectorGaps(style);
                             Declarations(style.Declarations, source);
                             break;
                         case CssAtRule at:
@@ -171,6 +212,20 @@ internal static class CssInspector
 
                             Walk(at.Rules, source);
                             break;
+                    }
+                }
+            }
+
+            void SelectorGaps(CssStyleRule style)
+            {
+                foreach (var selector in style.Selectors.Selectors)
+                {
+                    foreach (var gap in CssSelectorMatcher.DescribeGaps(selector.Text))
+                    {
+                        var key = (PartName(gap.Text), gap.Kind);
+                        gaps[key] = gaps.TryGetValue(key, out var seen)
+                            ? (seen.Selectors + 1, seen.Example, seen.Source)
+                            : (1, selector.Text, $"{sheet.Source} {LineAndColumn(sheet.Text, style.Range.Start)}");
                     }
                 }
             }
@@ -253,6 +308,12 @@ internal static class CssInspector
             StyleAttributes = styleAttributes.Count,
             FontFaces = fontFaces,
             Fonts = ResolveFonts(requestedFonts, fontFaces),
+            SelectorGaps = [.. gaps
+                .OrderBy(static g => Rank(g.Key.Kind))
+                .ThenByDescending(static g => g.Value.Selectors)
+                .ThenBy(static g => g.Key.Part, StringComparer.Ordinal)
+                .Take(MaxSelectorGaps)
+                .Select(static g => new CssSelectorGapUsage(g.Key.Part, KindName(g.Key.Kind), g.Value.Selectors, g.Value.Example, g.Value.Source))],
         };
 
         void Count(string name, string value, bool isImportant, string source)
@@ -284,6 +345,50 @@ internal static class CssInspector
             }
         }
     }
+
+    /// <summary>
+    /// Whether <paramref name="property"/> can change a still image. Ignoring <c>cursor</c> or a
+    /// <c>transition</c> is invisible in a screenshot; ignoring <c>backdrop-filter</c> is not.
+    /// </summary>
+    internal static bool AffectsAStillImage(string property)
+    {
+        var name = property.ToLowerInvariant();
+        if (name.StartsWith('-') && name.IndexOf('-', 1) is > 1 and var dash)
+            name = name[(dash + 1)..];
+
+        return !NoEffectInAStillImage.Any(neutral =>
+            name == neutral || name.StartsWith(neutral + "-", StringComparison.Ordinal));
+    }
+
+    /// <summary>A selector part's name for grouping: the arguments of a functional one become <c>()</c>.</summary>
+    private static string PartName(string text)
+    {
+        var open = text.IndexOf('(', StringComparison.Ordinal);
+        return open < 0 ? text : text[..open] + "()";
+    }
+
+    /// <summary>How a kind of selector gap reads in a report.</summary>
+    internal static string KindName(CssSelectorGapKind kind) => kind switch
+    {
+        CssSelectorGapKind.Guessed => "guessed",
+        CssSelectorGapKind.NotModeled => "not modeled",
+        CssSelectorGapKind.UnstyledPseudoElement => "unstyled pseudo-element",
+        CssSelectorGapKind.Invalid => "invalid",
+        _ => "interactive",
+    };
+
+    // The order a reader needs them in: a guess changes what renders everywhere its rule reaches, a
+    // missed match and an unstyled pseudo-element change it where they are used, an invalid
+    // pseudo-class differs from a browser only in a selector list, and nothing is interactive in a
+    // screenshot for either.
+    private static int Rank(CssSelectorGapKind kind) => kind switch
+    {
+        CssSelectorGapKind.Guessed => 0,
+        CssSelectorGapKind.NotModeled => 1,
+        CssSelectorGapKind.UnstyledPseudoElement => 2,
+        CssSelectorGapKind.Invalid => 3,
+        _ => 4,
+    };
 
     /// <summary>Whether Broiler.CSS knows <paramref name="property"/>, asked through its own <c>@supports</c>.</summary>
     internal static bool IsKnownProperty(string property)
@@ -388,6 +493,24 @@ internal static class CssInspector
         return trimmed.Length >= 2 && (trimmed[0] is '"' or '\'') && trimmed[^1] == trimmed[0]
             ? trimmed[1..^1]
             : trimmed;
+    }
+
+    /// <summary><c>line:column</c> of <paramref name="offset"/> in <paramref name="text"/>, both from 1.</summary>
+    private static string LineAndColumn(string text, int offset)
+    {
+        offset = Math.Clamp(offset, 0, text.Length);
+        var line = 1;
+        var lineStart = 0;
+        for (var i = 0; i < offset; i++)
+        {
+            if (text[i] == '\n')
+            {
+                line++;
+                lineStart = i + 1;
+            }
+        }
+
+        return string.Create(CultureInfo.InvariantCulture, $"{line}:{offset - lineStart + 1}");
     }
 
     private static CssProblem Locate(StylesheetSource sheet, CssDiagnostic diagnostic, int offsetShift)

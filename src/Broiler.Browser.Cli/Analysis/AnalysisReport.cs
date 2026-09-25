@@ -235,6 +235,18 @@ internal sealed record AnalysisReport
 /// </remarks>
 internal static class Triage
 {
+    /// <summary>The parse errors whose repair changes what a page shows, and how a finding names them.</summary>
+    private static readonly (string Code, FindingSeverity Severity, string Title)[] RenderingParseErrors =
+    [
+        ("eof-in-text", FindingSeverity.Error, "element(s) whose end tag never comes, so the rest of the document is their text"),
+        ("unexpected-end-tag", FindingSeverity.Warning, "HTML end tag(s) that match no open element"),
+        ("non-void-html-element-start-tag-with-trailing-solidus", FindingSeverity.Warning, "HTML start tag(s) like <div/>, which Broiler closes at once and a browser leaves open"),
+        ("eof-in-comment", FindingSeverity.Warning, "HTML comment(s) that never end, hiding everything after them"),
+        ("eof-in-tag", FindingSeverity.Warning, "HTML tag(s) the document ends inside, which are dropped"),
+        ("end-tag-closes-open-elements", FindingSeverity.Info, "HTML end tag(s) that also close elements still open inside them"),
+        ("unclosed-element", FindingSeverity.Info, "HTML element(s) still open at the end of the document"),
+    ];
+
     public static IReadOnlyList<Finding> Rank(AnalysisReport report)
     {
         var findings = new List<Finding>();
@@ -286,10 +298,25 @@ internal static class Triage
                     "report.md#html"));
             }
 
-            if (html.ParseDiagnostics.Count > 0)
+            // The parse errors whose repair changes what renders get a finding each; the rest are
+            // counted. A missing doctype is the quirks-mode finding's, above.
+            foreach (var (code, severity, title) in RenderingParseErrors)
             {
-                findings.Add(new(FindingSeverity.Info, "HTML", $"{html.ParseDiagnostics.Count} parse diagnostic(s)",
-                    html.ParseDiagnostics[0], "report.md#html"));
+                if (html.ParseErrorsByCode.FirstOrDefault(c => c.Tag == code) is not { } counted)
+                    continue;
+
+                var first = html.ParseErrors.FirstOrDefault(e => e.Code == code);
+                findings.Add(new(severity, "HTML", $"{counted.Count} {title}",
+                    first is null ? code : $"first at {At(first)}: {first.Message}", "report.md#html"));
+            }
+
+            var otherParseErrors = html.ParseErrorsByCode
+                .Where(static c => c.Tag != "missing-doctype" && !RenderingParseErrors.Any(r => r.Code == c.Tag))
+                .ToArray();
+            if (otherParseErrors.Length > 0)
+            {
+                findings.Add(new(FindingSeverity.Info, "HTML", $"{otherParseErrors.Sum(static c => c.Count)} other HTML parse error(s)",
+                    string.Join(", ", otherParseErrors.Take(8).Select(static c => $"{c.Tag} ×{c.Count}")), "report.md#html"));
             }
 
             if (html.DuplicateIds.Count > 0)
@@ -522,6 +549,29 @@ internal static class Triage
                     string.Join(", ", css.UnknownProperties.Take(12).Select(static u => $"{u.Property} ×{u.Count}")), "report.md#css"));
             }
 
+            SelectorGapFinding(findings, css, "guessed", FindingSeverity.Warning, "pseudo-classes Broiler.CSS guesses at",
+                "each matches every element, so its declarations reach elements a browser leaves alone");
+            SelectorGapFinding(findings, css, "not modeled", FindingSeverity.Info, "pseudo-classes Broiler.CSS never matches where a browser can",
+                "their rules apply to nothing here");
+            SelectorGapFinding(findings, css, "unstyled pseudo-element", FindingSeverity.Info, "pseudo-elements Broiler does not render",
+                "their rules reach nothing");
+            SelectorGapFinding(findings, css, "invalid", FindingSeverity.Info, "pseudo-classes no browser supports",
+                "a browser drops each whole rule; Broiler drops only these selectors, so the rest of a selector list still applies");
+
+            var notDrawn = css.NotAppliedByLayout.Where(static u => CssInspector.AffectsAStillImage(u.Property)).ToArray();
+            if (notDrawn.Length > 0)
+            {
+                findings.Add(new(FindingSeverity.Warning, "Layout", $"{notDrawn.Length} CSS propert(ies) Broiler's layout does not apply",
+                    string.Join(", ", notDrawn.Take(10).Select(static u => $"{CssInspector.Describe(u)} ×{u.Count}")) +
+                    " — the style engine accepted them and the layout engine ignored them", "report.md#css"));
+            }
+
+            if (css.LayoutFallbacks.Count > 0)
+            {
+                findings.Add(new(FindingSeverity.Info, "Layout", $"Broiler's layout approximated {css.LayoutFallbacks.Count} feature(s)",
+                    string.Join(", ", css.LayoutFallbacks.Take(6).Select(static u => $"{CssInspector.Describe(u)} ×{u.Count}")), "report.md#css"));
+            }
+
             var fallbacks = css.Fonts.Where(static f => f.Unavailable.Count > 0).ToArray();
             if (fallbacks.Length > 0)
             {
@@ -558,5 +608,26 @@ internal static class Triage
         }
 
         return [.. findings.OrderBy(static f => f.Severity)];
+    }
+
+    private static string At(HtmlParseProblem error) => error.Line is { } line
+        ? string.Create(CultureInfo.InvariantCulture, $"line {line}, column {error.Column}")
+        : "an unknown position";
+
+    private static void SelectorGapFinding(
+        List<Finding> findings,
+        CssReport css,
+        string kind,
+        FindingSeverity severity,
+        string what,
+        string consequence)
+    {
+        var gaps = css.SelectorGaps.Where(g => g.Kind == kind).ToArray();
+        if (gaps.Length == 0)
+            return;
+
+        findings.Add(new(severity, "CSS", $"{gaps.Sum(static g => g.Selectors)} selector(s) use {what}",
+            string.Join(", ", gaps.Take(6).Select(static g => $"{g.Part} ×{g.Selectors} (`{AnalysisConsole.OneLine(g.Example, 60)}`, {g.FirstSource})")) +
+            $" — {consequence}", "report.md#css"));
     }
 }

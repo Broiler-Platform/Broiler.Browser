@@ -65,13 +65,20 @@ front of Broiler.JS. The analysis composes Broiler.JS directly in every configur
 
 What the findings look for:
 
-- **HTML** — quirks mode and the doctype that caused it, parse diagnostics, duplicate ids, elements
-  HTML does not define, obsolete and custom elements, `<script>` elements of a type nothing runs, and
-  stylesheets, images and frames that did not load.
+- **HTML** — quirks mode and the doctype that caused it; the parse errors of the document as
+  fetched, each with its code, line and column and what Broiler.Dom.Html's parser did about it, the
+  repairs that change what renders as findings of their own (an element whose end tag never comes, an
+  end tag that matches no open element, a `<div/>`, which Broiler closes and a browser leaves open);
+  duplicate ids, elements HTML does not define, obsolete and custom elements, `<script>` elements of
+  a type nothing runs, and stylesheets, images and frames that did not load.
 - **CSS** — parse problems located by line and column in their own sheet (`style` attributes
   included), property names Broiler.CSS does not know, values its validator rejects, declarations the
   style engine dropped while it cascaded, unknown at-rules, and each `font-family` list whose first
-  font is neither declared by `@font-face` nor installed.
+  font is neither declared by `@font-face` nor installed. Every selector is put to Broiler.CSS's own
+  account of what it models (`CssSelectorMatcher.DescribeGaps`): a pseudo-class it guesses at matches
+  every element — `button:-moz-focusring` outlines every button — and is a warning; one it never
+  matches where a browser can (`:placeholder-shown`, `:target`), a pseudo-element it does not render
+  and a pseudo-class no browser supports are listed with the first rule's place.
 - **JavaScript** — failures grouped by what failed, the platform features they name, unhandled
   promise rejections, exceptions the page caught itself, the load window not settling, a navigation
   the page asked for, long turns and idle gaps from the bridge's turn trace
@@ -80,8 +87,12 @@ What the findings look for:
 - **Layout** — Broiler.Layout's invariant violations, a runaway page height, boxes far taller than
   their content, elements reaching past the right edge of the viewport, elements with text laid out
   with no size, and elements placed off the page — each named as `tag#id.class` with its ancestors.
-- **Render and network** — the renderer's own error reports, failed requests, and phases that took
-  longer than ten seconds.
+  And the CSS the layout engine did not apply as written, as it reported it while it styled the
+  rendered page (`LayoutDiagnostics`): the properties it ignored, with example values — those a
+  screenshot would not show anyway (`cursor`, `transition`, scrolling) told apart — and the features
+  it laid out as something simpler.
+- **Render and network** — the renderer's own error reports, each saying what failed and the
+  exception, failed requests, and phases that took longer than ten seconds.
 
 Options: `--width`/`--height` set the viewport, `--timeout` the document's fetch, and
 `--follow-first-link` analyses the landing page's first link. `--verbose` prints every request,
