@@ -189,6 +189,12 @@ internal sealed class BrowserApp : IDisposable
         UpdateNavigationButtons();
         SetBusy(false);
         _session.SetFocus(_address);
+
+        // Before the first navigation, whose page may finish loading before the window's first
+        // layout: its media queries need a viewport, and every layout after replaces this estimate.
+        if (_host.ViewportSize is { Width: > 0, Height: > 0 } window)
+            _viewport.SeedPageArea(BrowserContent.PageAreaFor(window));
+
         NavigateTo(initialUrl ?? "about:blank");
     }
 
@@ -387,7 +393,52 @@ internal sealed class BrowserApp : IDisposable
         // behind a confirmation, since repeating a submission is not free.
         _history.Add(request);
         _historyIndex = _history.Count - 1;
+
+        // HTML §7.4.2.3.3, navigate to a fragment: a link into the document on screen scrolls it and
+        // loads nothing.
+        if (FragmentWithinCurrentDocument(request) is { } fragment)
+        {
+            ShowFragment(request.Url, fragment);
+            return;
+        }
+
         LoadUrl(request);
+    }
+
+    /// <summary>
+    /// The fragment of a request that only moves within the document on screen, or null for one
+    /// that has to load: a GET without a body, while nothing is loading, whose URL is the document's
+    /// but for its fragment. With <paramref name="orTop"/>, a URL with no fragment at all moves to
+    /// the top (an empty fragment), which is what going back to it in history does.
+    /// </summary>
+    private string? FragmentWithinCurrentDocument(PageRequest request, bool orTop = false)
+    {
+        if (!request.IsRepeatable || request.Body is not null || request.BinaryBody is not null
+            || _navigationCancellation is not null
+            || !Uri.TryCreate(request.Url, UriKind.Absolute, out Uri? target)
+            || !Uri.TryCreate(_viewport.BaseUrl, UriKind.Absolute, out Uri? current)
+            || !string.Equals(target.GetLeftPart(UriPartial.Query), current.GetLeftPart(UriPartial.Query), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return FragmentOf(request.Url) ?? (orTop ? string.Empty : null);
+    }
+
+    /// <summary>What follows the <c>#</c> of <paramref name="url"/>, or null when it has none.</summary>
+    private static string? FragmentOf(string url)
+    {
+        int hash = url.IndexOf('#', StringComparison.Ordinal);
+        return hash >= 0 ? url[(hash + 1)..] : null;
+    }
+
+    private void ShowFragment(string url, string fragment)
+    {
+        SetUrlText(url);
+        UpdateNavigationButtons();
+        UpdateStarButton();
+        _viewport.ScrollToFragment(fragment);
+        _host.RequestInvalidate();
     }
 
     private void GoHistory(int delta)
@@ -402,6 +453,16 @@ internal sealed class BrowserApp : IDisposable
         // Re-issued as the entry's own navigation: the initiator it was created with, if any, still
         // started it.
         PageRequest request = _history[target] with { NavigationType = PageNavigationType.BackForward };
+
+        // Back or forward between fragments of the document on screen scrolls it, as following them
+        // did.
+        if (FragmentWithinCurrentDocument(request, orTop: true) is { } fragment)
+        {
+            _historyIndex = target;
+            ShowFragment(request.Url, fragment);
+            return;
+        }
+
         if (!request.IsRepeatable)
         {
             // Re-issuing a submission can charge a card twice. Ask first, and only
@@ -893,7 +954,7 @@ internal sealed class BrowserApp : IDisposable
                 // fonts are already in hand, and the finished page reuses them instead of fetching
                 // every one again, synchronously, on the UI thread's first layout.
                 HtmlContainer container = BrowserViewport.CreateContentContainer(
-                    html, normalisedUrl, profile.Network, document, progress.LastFrame);
+                    html, normalisedUrl, profile.Network, document, progress.LastFrame, progress.Viewport);
                 return NavigationLoadResult.FromSuccess(
                     normalisedUrl,
                     container,
@@ -1198,6 +1259,12 @@ internal sealed class BrowserApp : IDisposable
         public HtmlContainer? LastFrame { get; private set; }
 
         /// <summary>
+        /// The window's page area, which a container parsed on the load worker resolves its media
+        /// queries against (<see cref="BrowserViewport.PageAreaSize"/>).
+        /// </summary>
+        public SizeF? Viewport => app._viewport.PageAreaSize;
+
+        /// <summary>
         /// Offers the document reached after one batch of the load window. Called on the load
         /// worker; returns without serialising when the previous frame has not been painted yet or
         /// when frames have used up their share of the settle.
@@ -1240,7 +1307,7 @@ internal sealed class BrowserApp : IDisposable
 
                 _lastPublishedHtml = html;
                 container = BrowserViewport.CreateContentContainer(
-                    PrepareForBrowsing(html), url, app._profile.Network, document, LastFrame);
+                    PrepareForBrowsing(html), url, app._profile.Network, document, LastFrame, Viewport);
                 LastFrame = container;
             }
             catch
@@ -1303,6 +1370,7 @@ internal sealed class BrowserApp : IDisposable
         // request that produced the document was still a POST — a submission answered with a redirect
         // to a GET leaves a GET, and one answered in place is still the submission, which revisiting
         // asks before repeating.
+        string startedAt = CurrentHistoryUrl();
         if (result.HistoryEntry is { } loaded
             && _historyIndex >= 0
             && _historyIndex < _history.Count)
@@ -1312,6 +1380,11 @@ internal sealed class BrowserApp : IDisposable
 
         SetUrlText(result.NormalisedUrl);
         _viewport.ReplacePage(result.TakeContainer(), result.TakeSession(), result.NormalisedUrl);
+
+        // HTML §7.4.6.4: a page navigated to with a fragment opens scrolled to it. The request the
+        // navigation started with carries the fragment when the loaded URL lost it on the way.
+        if ((FragmentOf(result.NormalisedUrl) ?? FragmentOf(startedAt)) is { } fragment)
+            _viewport.ScrollToFragment(fragment);
 
         if (_viewport.HasPendingWork)
         {
@@ -1644,6 +1717,20 @@ internal sealed class BrowserApp : IDisposable
         private const double ToolbarHeight = 42;
         private const double FavoritesBarHeight = 30;
         private const double StatusBarHeight = 24;
+
+        /// <summary>Below this width the window drops its favorites bar and the buttons it can spare.</summary>
+        private const double CompactWidth = 600;
+
+        /// <summary>
+        /// The page area a window of size <paramref name="window"/> leaves between its toolbars and its
+        /// status bar, as <see cref="ArrangeCore"/> gives it.
+        /// </summary>
+        internal static SizeF PageAreaFor(BSize window)
+        {
+            double favoritesHeight = window.Width < CompactWidth ? 0 : FavoritesBarHeight;
+            return new((float)window.Width, (float)Math.Max(0, window.Height - ToolbarHeight - favoritesHeight - StatusBarHeight));
+        }
+
         private const double Margin = 8;
         private const double ControlHeight = 28;
         private const double NavButtonWidth = 38;
@@ -1766,7 +1853,7 @@ internal sealed class BrowserApp : IDisposable
 
         protected override void ArrangeCore(BRect finalRect)
         {
-            bool compact = finalRect.Width < 600;
+            bool compact = finalRect.Width < CompactWidth;
             _isCompact = compact;
             _forwardButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
             _refreshButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
@@ -1883,7 +1970,36 @@ internal sealed class BrowserApp : IDisposable
         private float _viewportZoom = 1f;
         private BSize _lastLayoutSize;
 
+        /// <summary>The page area's size as its last layout saw it; see <see cref="PageAreaSize"/>.</summary>
+        private PageArea? _pageArea;
+
+        /// <summary>
+        /// The fragment of the URL the page was navigated to, until the element it names has been
+        /// scrolled to, or the user scrolls first.
+        /// </summary>
+        private string? _pendingFragment;
+
         private const double TouchPanThreshold = 6;
+
+        private sealed record PageArea(float Width, float Height);
+
+        /// <summary>
+        /// The size of the page area in CSS pixels as its last layout saw it, or null before the first
+        /// one. Read off the UI thread, by the load worker that parses the next page.
+        /// </summary>
+        /// <remarks>
+        /// A container resolves media queries while it parses its document, and the viewport it
+        /// resolves them against is its <c>MaxSize</c>, or its 99999px default page size when that is
+        /// unset. The window set <c>MaxSize</c> only at its first layout, after the parse, so every page
+        /// was styled for a 99999px screen and then laid out in the window: every <c>min-width</c>
+        /// query matched and no <c>max-width</c> one did. MediaWiki's skin laid its widest-screen grid,
+        /// sidebar columns and all, into a 1000px window.
+        /// </remarks>
+        internal SizeF? PageAreaSize => Volatile.Read(ref _pageArea) is { } area ? new SizeF(area.Width, area.Height) : null;
+
+        /// <summary>Records an estimate of the page area until the first layout measures it.</summary>
+        internal void SeedPageArea(SizeF size) =>
+            Interlocked.CompareExchange(ref _pageArea, new PageArea(size.Width, size.Height), null);
 
         public BrowserViewport(Func<IBroilerRenderer?> getRenderer)
         {
@@ -1952,6 +2068,7 @@ internal sealed class BrowserApp : IDisposable
             _lastAppliedHtml = null;
             BaseUrl = baseUrl ?? string.Empty;
             _scrollY = 0;
+            _pendingFragment = null;
             _viewportZoom = 1f;
             MarkLayoutDirty();
         }
@@ -2047,7 +2164,8 @@ internal sealed class BrowserApp : IDisposable
             string baseUrl,
             IBrowserRequestTransport? network = null,
             DocumentRequestContext? document = null,
-            HtmlContainer? sameDocument = null)
+            HtmlContainer? sameDocument = null,
+            SizeF? viewport = null)
         {
             HtmlContainer container = new()
             {
@@ -2057,6 +2175,12 @@ internal sealed class BrowserApp : IDisposable
                 RequestTransport = network,
                 DocumentContext = document,
             };
+
+            // Before the parse, which resolves the document's media queries against it
+            // (PageAreaSize says why). Layout sets it again at whatever size the window has then.
+            if (viewport is { Width: > 0, Height: > 0 } size)
+                container.MaxSize = size;
+
             if (sameDocument is not null)
                 container.ShareSubresourceCacheWith(sameDocument);
             container.SetHtmlWithStyleSet(html, baseUrl: baseUrl);
@@ -2177,8 +2301,13 @@ internal sealed class BrowserApp : IDisposable
                 _contentHeight = _container.ActualSize.Height * _viewportZoom;
                 _layoutDirty = false;
                 _renderDirty = true;
+                if (viewportSize != _lastLayoutSize)
+                    Volatile.Write(ref _pageArea, new PageArea(viewportWidth, viewportHeight));
                 _lastLayoutSize = viewportSize;
             }
+
+            if (_pendingFragment is { } fragment)
+                TryScrollToFragment(fragment);
 
             ClampScroll(viewportHeight);
             if (_renderDirty || _renderList is null)
@@ -2377,8 +2506,51 @@ internal sealed class BrowserApp : IDisposable
 
         private void ScrollBy(float delta) => SetScroll(_scrollY + delta);
 
+        /// <summary>
+        /// Scrolls to what <paramref name="fragment"/> indicates, as soon as the page has a layout to
+        /// find it in: HTML §7.4.6.4, "scroll to the fragment".
+        /// </summary>
+        /// <remarks>
+        /// Nothing scrolled to a fragment. A link to <c>#top</c> reloaded the page at the top, and a
+        /// page loaded with a fragment opened at the top too: Acid2's "Take The Acid2 Test" link, which
+        /// is <c>href="#top"</c>, left the test's face far below the window.
+        /// </remarks>
+        public void ScrollToFragment(string fragment)
+        {
+            _pendingFragment = fragment;
+            _renderDirty = true;
+            Invalidate(UiInvalidationKind.Render);
+        }
+
+        /// <summary>
+        /// Scrolls to the element whose id is the decoded fragment, or to the top for an empty
+        /// fragment or <c>top</c> that names no element. An element that is not there yet is looked
+        /// for again at the next layout, until the user scrolls.
+        /// </summary>
+        private void TryScrollToFragment(string fragment)
+        {
+            string decoded = Uri.UnescapeDataString(fragment);
+            if (decoded.Length > 0 && _container.GetElementRectangle(decoded) is { } target)
+            {
+                _scrollY = target.Y * _viewportZoom;
+            }
+            else if (decoded.Length == 0 || decoded.Equals("top", StringComparison.OrdinalIgnoreCase))
+            {
+                _scrollY = 0;
+            }
+            else
+            {
+                return;
+            }
+
+            _pendingFragment = null;
+            _renderDirty = true;
+        }
+
         private void SetScroll(float value)
         {
+            // The user's scroll wins over a fragment still waiting for its element.
+            _pendingFragment = null;
             _scrollY = value;
             _renderDirty = true;
             Invalidate(UiInvalidationKind.Render);
