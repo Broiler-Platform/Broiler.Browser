@@ -50,7 +50,8 @@ public sealed class PageAnalysisTests : IDisposable
         string url,
         TimeSpan? watchdog = null,
         Action<int>? exit = null,
-        string? directory = null)
+        string? directory = null,
+        bool window = true)
     {
         directory ??= _pages.Output("analysis-" + Guid.NewGuid().ToString("N")[..8]);
         var console = new StringWriter();
@@ -62,6 +63,7 @@ public sealed class PageAnalysisTests : IDisposable
                 Width = 800,
                 Height = 600,
                 Watchdog = watchdog,
+                RenderInWindow = window,
             },
             console,
             exit).RunAsync();
@@ -154,6 +156,57 @@ public sealed class PageAnalysisTests : IDisposable
 
         var only = Assert.Single(collapsed);
         Assert.Contains("collapsed-marker", only, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The page is shown in the browser window as well, and a plain page looks the same there as in
+    /// the analysis's own render: the window image is written and no finding compares the two.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public async Task The_Page_Is_Shown_In_The_Browser_Window_Too()
+    {
+        var (_, directory, report, _) = await AnalyzeAsync(_pages.Write(
+            "plain.html", "<!DOCTYPE html><html><body><h1>Plain</h1><p>A paragraph of ordinary text.</p></body></html>"));
+
+        Assert.True(File.Exists(Path.Combine(directory, WindowProbe.ImageName)));
+        var window = report.GetProperty("window");
+        Assert.True(window.GetProperty("settled").GetBoolean());
+        var difference = window.GetProperty("differenceRatio").GetDouble();
+        Assert.True(difference < Triage.WindowDifferenceThreshold, $"{difference:P1} of the page area differs.");
+        Assert.DoesNotContain(
+            report.GetProperty("findings").EnumerateArray(),
+            static f => f.GetProperty("title").GetString()!.Contains("browser window", StringComparison.Ordinal));
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task No_Window_Leaves_The_Window_Out()
+    {
+        var (_, directory, report, _) = await AnalyzeAsync(
+            _pages.Write("plain.html", "<!DOCTYPE html><html><body><p>text</p></body></html>"), window: false);
+
+        Assert.False(File.Exists(Path.Combine(directory, WindowProbe.ImageName)));
+        Assert.Equal(JsonValueKind.Null, report.GetProperty("window").ValueKind);
+        var phase = Assert.Single(report.GetProperty("phases").EnumerateArray(), static p => p.GetProperty("name").GetString() == "window");
+        Assert.Contains("--no-window", phase.GetRawText(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The window scrolls to a URL's fragment and the analysis's render shows the top of the page, so
+    /// the window's image is written and not compared, and the report says why.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public async Task A_Url_With_A_Fragment_Is_Shown_In_The_Window_But_Not_Compared()
+    {
+        var (_, directory, report, _) = await AnalyzeAsync(_pages.Write(
+            "long.html",
+            "<!DOCTYPE html><html><body><div style=\"height: 3000px\">top</div><p id=\"target\">target</p></body></html>") + "#target");
+
+        Assert.True(File.Exists(Path.Combine(directory, WindowProbe.ImageName)));
+        var window = report.GetProperty("window");
+        Assert.Equal(JsonValueKind.Null, window.GetProperty("differenceRatio").ValueKind);
+        Assert.Contains("#target", window.GetProperty("notCompared").GetString(), StringComparison.Ordinal);
+        var phase = Assert.Single(report.GetProperty("phases").EnumerateArray(), static p => p.GetProperty("name").GetString() == "window");
+        Assert.Contains("not compared", phase.GetProperty("detail").GetString(), StringComparison.Ordinal);
     }
 
     /// <summary>

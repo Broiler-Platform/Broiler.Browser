@@ -207,6 +207,7 @@ internal sealed class PageAnalyzer
         public RenderResult? Render;
         public RenderResult? RenderWithoutScripts;
         public double? ScriptVisualEffect;
+        public WindowReport? Window;
         public LayoutReport? Layout;
         public HtmlReport? Html;
         public CssReport? Css;
@@ -243,7 +244,7 @@ internal sealed class PageAnalyzer
         state.Page = page;
         if (page is null)
         {
-            foreach (var phase in (string[])["scripts", "settle", "render", "render-without-scripts", "layout", "html", "css"])
+            foreach (var phase in (string[])["scripts", "settle", "render", "render-without-scripts", "layout", "html", "css", "window"])
                 _phases.Skip(phase, "the document could not be loaded");
             return;
         }
@@ -358,6 +359,39 @@ internal sealed class PageAnalyzer
         state.Scripting = state.Scripting is { } scripting
             ? scripting with { NavigationNotFollowed = Describe(scripted?.TakePendingNavigation()) }
             : null;
+
+        // Last, and on its own navigation: the window loads and runs the page again, so it comes
+        // after everything that reads this run's state, and a window that hangs costs only itself.
+        if (!_options.RenderInWindow)
+        {
+            _phases.Skip("window", "--no-window");
+            return;
+        }
+
+        state.Window = _phases.Run(
+            "window",
+            () =>
+            {
+                var opened = _options.FollowFirstLink ? page.FinalUrl : _options.Url;
+                var shown = WindowProbe.Render(
+                    opened,
+                    _options.Width,
+                    _options.Height,
+                    output,
+                    TimeSpan.FromSeconds(Math.Max(60, 4 * _options.TimeoutSeconds)));
+                using var shownPage = shown.Page;
+                var analysis = state.Render?.Viewport;
+                var notCompared = WindowProbe.WhyNotCompared(opened, page.FinalUrl, analysis is not null);
+                double? difference = notCompared is null && analysis is not null
+                    ? Math.Round(WindowProbe.Difference(analysis, shownPage), 4)
+                    : null;
+                return new WindowReport(shown.Image, difference, shown.Settled, shown.Status, shown.DurationMs, notCompared);
+            },
+            static w => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{(w.Settled ? "done" : "not done (" + w.Status + ")")} after {w.DurationMs / 1000:0.#} s, {(w.DifferenceRatio is { } d ? d.ToString("P1", CultureInfo.InvariantCulture) + " of the page area differs from the analysis's render" : "not compared: " + w.NotCompared)}"));
+        if (state.Window is { } shownInWindow)
+            AddFile(shownInWindow.Image, "the page area of the browser window itself, which loaded and ran the page again");
     }
 
     // ── Phases ──────────────────────────────────────────────────────────────────────────────────
@@ -555,6 +589,7 @@ internal sealed class PageAnalyzer
             Render = state.Render is { } render ? RenderSummary.From(render) : null,
             RenderWithoutScripts = state.RenderWithoutScripts is { } bare ? RenderSummary.From(bare) : null,
             ScriptVisualEffect = state.ScriptVisualEffect,
+            Window = state.Window,
             Layout = state.Layout,
             Html = state.Html,
             Css = state.Css,

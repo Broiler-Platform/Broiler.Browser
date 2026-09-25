@@ -231,6 +231,16 @@ internal sealed class BrowserApp : IDisposable
         return frame;
     }
 
+    /// <summary>
+    /// The window size whose page area is <paramref name="pageWidth"/>×<paramref name="pageHeight"/>:
+    /// what to open a window at to show a page at a given viewport, as <c>--analyze</c> does.
+    /// </summary>
+    internal static BSize WindowSizeFor(double pageWidth, double pageHeight) =>
+        BrowserContent.WindowSizeFor(pageWidth, pageHeight);
+
+    /// <summary>Where the window draws the page, in window coordinates.</summary>
+    internal BRect PageArea => _viewport.Bounds;
+
     public void Dispatch(UiInputEvent input)
     {
         if (HandleGlobalShortcut(input))
@@ -1730,6 +1740,10 @@ internal sealed class BrowserApp : IDisposable
             double favoritesHeight = window.Width < CompactWidth ? 0 : FavoritesBarHeight;
             return new((float)window.Width, (float)Math.Max(0, window.Height - ToolbarHeight - favoritesHeight - StatusBarHeight));
         }
+
+        /// <summary>The inverse of <see cref="PageAreaFor"/>: the window that leaves this page area.</summary>
+        internal static BSize WindowSizeFor(double pageWidth, double pageHeight) =>
+            new(pageWidth, pageHeight + ToolbarHeight + (pageWidth < CompactWidth ? 0 : FavoritesBarHeight) + StatusBarHeight);
 
         private const double Margin = 8;
         private const double ControlHeight = 28;
