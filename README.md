@@ -126,7 +126,9 @@ pwsh scripts/update-solutions.ps1 -Verify
 ```
 
 A hand-edit to a `.slnx` is silently reverted by the next generator run. Add or remove
-projects by changing the reference graph, then regenerate.
+projects by changing the reference graph, then regenerate. How a solution is laid out belongs to
+the manifest too: `"folders": false` lists its projects at the root instead of under the
+"Entry points" and "Dependencies" folders, which is how `Broiler.Windows.Browser.slnx` is laid out.
 
 ## Continuous integration
 
