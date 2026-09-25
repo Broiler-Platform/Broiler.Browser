@@ -203,10 +203,14 @@ internal static class LayoutInspector
             }
 
             // The outermost collapsed element only: everything inside a zero-size box is zero-size
-            // with it, and would otherwise bury the one element that collapsed.
+            // with it, and would otherwise bury the one element that collapsed. An svg's content is
+            // left out: the SVG renderer draws it from its own attributes, not from boxes, and the
+            // layout gives each element in it a zero-size box, whether it is drawn, like a <text>, or
+            // is never drawn, like an icon's <title> or <desc>.
             if ((border.Width <= 0 || border.Height <= 0)
                 && OwnText(element) is { Length: > 0 } text
-                && !InsideCollapsed(element, geometry))
+                && !InsideCollapsed(element, geometry)
+                && !InsideSvg(element))
             {
                 collapsed.Add(Finding(element, border,
                     $"laid out {Size(border)} but holds text: \"{AnalysisConsole.OneLine(text, 60)}\""));
@@ -426,6 +430,17 @@ internal static class LayoutInspector
         for (var current = element.ParentElement; current is not null; current = current.ParentElement)
         {
             if (NeverBoxed.Contains(current.LocalName))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool InsideSvg(BDom.DomElement element)
+    {
+        for (var current = element.ParentElement; current is not null; current = current.ParentElement)
+        {
+            if (string.Equals(current.LocalName, "svg", StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 

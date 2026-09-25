@@ -132,6 +132,31 @@ public sealed class PageAnalysisTests : IDisposable
     }
 
     /// <summary>
+    /// An svg's content is drawn by the SVG renderer, not laid out in boxes: an icon's title and
+    /// description, which are never drawn, and an svg's text, which is, are not text laid out with no
+    /// size. A div laid out with no height still is.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public async Task An_Svgs_Content_Is_Not_Text_Laid_Out_With_No_Size()
+    {
+        var (_, _, report, _) = await AnalyzeAsync(_pages.Write("svg.html", """
+            <!DOCTYPE html>
+            <html><head><title>Icons</title></head><body>
+            <p>Save <svg width="16" height="16"><title>Save icon</title><desc>A disk</desc><rect width="16" height="16"/></svg></p>
+            <p>Chart <svg width="120" height="30"><text x="0" y="20">Drawn text</text></svg></p>
+            <div style="height: 0; overflow: hidden">collapsed-marker</div>
+            </body></html>
+            """));
+
+        var collapsed = report.GetProperty("layout").GetProperty("collapsedWithText").EnumerateArray()
+            .Select(static c => c.GetProperty("element").GetString() + ": " + c.GetProperty("detail").GetString())
+            .ToArray();
+
+        var only = Assert.Single(collapsed);
+        Assert.Contains("collapsed-marker", only, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A script's geometry question is answered from a real layout, and the recorder that times those
     /// layouts hands back the same answer the bridge would have had without it.
     /// </summary>

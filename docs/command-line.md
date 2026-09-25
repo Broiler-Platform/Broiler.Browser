@@ -67,8 +67,9 @@ What the findings look for:
 
 - **HTML** — quirks mode and the doctype that caused it; the parse errors of the document as
   fetched, each with its code, line and column and what Broiler.Dom.Html's parser did about it, the
-  repairs that change what renders as findings of their own (an element whose end tag never comes, an
-  end tag that matches no open element, a `<div/>`, which Broiler closes and a browser leaves open);
+  repairs that change what renders as findings of their own (an element whose end tag never comes, a
+  `<div/>`, which Broiler closes and a browser leaves open, and, as information, an end tag that
+  matches no open element, which Broiler repairs as a browser does);
   duplicate ids, elements HTML does not define, obsolete and custom elements, `<script>` elements of
   a type nothing runs, and stylesheets, images and frames that did not load.
 - **CSS** — parse problems located by line and column in their own sheet (`style` attributes

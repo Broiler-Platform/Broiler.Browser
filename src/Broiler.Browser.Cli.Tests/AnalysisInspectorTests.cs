@@ -227,21 +227,24 @@ public sealed class AnalysisInspectorTests
 
     /// <summary>
     /// The document as fetched is parsed with its parse errors, each located by line and column and
-    /// saying what Broiler's parser did — here, where it departs from a browser.
+    /// saying what Broiler's parser did: the two end tags that match no open element are repaired as a
+    /// browser repairs them, and the <c>&lt;section/&gt;</c> is where it departs from one.
     /// </summary>
     [Fact(Timeout = 600000)]
     public void A_Parse_Error_Is_Located_And_Says_What_The_Parser_Did()
     {
-        const string Html = "<!DOCTYPE html>\n<html><body>\n<div><span>x</p>y</span></div>\n<section/>z\n</body></html>";
+        const string Html = "<!DOCTYPE html>\n<html><body>\n<div><span>x</p>y</span></span></div>\n<section/>z\n</body></html>";
 
         var report = HtmlInspector.Inspect(Html, afterScripts: null, network: [], "https://example.test/");
 
         Assert.Equal(report.ParseErrors.Count, report.ParseErrorCount);
         Assert.Equal(
-            ["unexpected-end-tag@3:13", "unexpected-end-tag@3:18", "unexpected-end-tag@3:25", "non-void-html-element-start-tag-with-trailing-solidus@4:1"],
+            ["unexpected-end-tag@3:13", "unexpected-end-tag@3:25", "non-void-html-element-start-tag-with-trailing-solidus@4:1"],
             report.ParseErrors.Select(static e => $"{e.Code}@{e.Line}:{e.Column}"));
-        Assert.Contains("closes all 2 elements", report.ParseErrors[0].Message, StringComparison.Ordinal);
-        Assert.Equal(new TagCount("unexpected-end-tag", 3), report.ParseErrorsByCode[0]);
+        Assert.Contains("stands for an empty one, as in a browser", report.ParseErrors[0].Message, StringComparison.Ordinal);
+        Assert.Contains("matches no open element and is ignored", report.ParseErrors[1].Message, StringComparison.Ordinal);
+        Assert.Contains("where this parser closes it at once", report.ParseErrors[2].Message, StringComparison.Ordinal);
+        Assert.Equal(new TagCount("unexpected-end-tag", 2), report.ParseErrorsByCode[0]);
     }
 
     [Fact(Timeout = 600000)]
@@ -266,6 +269,30 @@ public sealed class AnalysisInspectorTests
         Assert.Equal(FindingSeverity.Error, swallowed.Severity);
         Assert.Contains("line 7, column 1", swallowed.Detail, StringComparison.Ordinal);
         Assert.Contains(findings, static f => f.Title == "2 other HTML parse error(s)" && f.Detail == "duplicate-attribute ×2");
+    }
+
+    /// <summary>
+    /// An end tag that matches no open element is repaired as a browser repairs it, so it is
+    /// information. A <c>&lt;div/&gt;</c>, which Broiler closes and a browser leaves open, is still a warning.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Stray_End_Tag_Is_Information_And_A_Self_Closed_Div_A_Warning()
+    {
+        var report = new AnalysisReport
+        {
+            Url = "https://example.test/",
+            StartedAt = System.DateTime.UtcNow,
+            Environment = AnalysisEnvironment.Capture(),
+            Html = HtmlInspector.Inspect("<!DOCTYPE html>\n<div>x</span></div>\n<div/>y\n", afterScripts: null, network: [], "https://example.test/"),
+        };
+
+        var findings = Triage.Rank(report);
+
+        var stray = Assert.Single(findings, static f => f.Title.Contains("end tag(s) that match no open element", StringComparison.Ordinal));
+        Assert.Equal(FindingSeverity.Info, stray.Severity);
+        Assert.Contains("line 2, column 7: </span> matches no open element and is ignored", stray.Detail, StringComparison.Ordinal);
+        var selfClosed = Assert.Single(findings, static f => f.Title.Contains("like <div/>", StringComparison.Ordinal));
+        Assert.Equal(FindingSeverity.Warning, selfClosed.Severity);
     }
 
     [Fact(Timeout = 600000)]
