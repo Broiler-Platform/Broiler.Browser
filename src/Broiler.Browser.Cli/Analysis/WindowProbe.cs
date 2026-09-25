@@ -98,36 +98,100 @@ internal static class WindowProbe
         return new WindowRender(ImageName, page, settled, app.Status, Math.Round(clock.Elapsed.TotalMilliseconds, 1));
     }
 
+    /// <summary>The side, in pixels, of the squares <see cref="Difference"/> compares.</summary>
+    internal const int BlockSize = 16;
+
     /// <summary>
-    /// The share of pixels that differ between the analysis's render and the window's page area, over
-    /// the part of the two they both cover, with <see cref="RenderProbe.DifferenceRatio"/>'s tolerance
-    /// for anti-aliasing. The two are different bitmap types — the renderer's and the window's — so
-    /// they are compared pixel by pixel rather than converted.
+    /// How far apart two squares' average colours may be, in any channel, before
+    /// <see cref="Difference"/> counts the square as different.
     /// </summary>
-    public static double Difference(Broiler.HTML.Image.BBitmap analysis, BBitmap window, int tolerance = 8)
+    internal const int BlockTolerance = 48;
+
+    /// <summary>
+    /// The share of the page area where the window shows something other than the analysis's render.
+    /// The part both images cover is cut into <see cref="BlockSize"/>-pixel squares, and a square
+    /// differs when its average colour does by more than <see cref="BlockTolerance"/> in any channel.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Squares rather than pixels, because the two images are painted by different code: the window
+    /// rasterises its display list, the analysis paints its own container, and text lands a few pixels
+    /// apart. Pixel by pixel, every glyph edge counted. 7-zip.org, laid out the same in both, differed
+    /// in 8.9% of its pixels, nearly as many as html5test.com's 10.4%, whose results change from one
+    /// load to the next. A shift of a few pixels hardly moves a square's average, and 7-zip.org
+    /// differs in no square.
+    /// Content in one image and not the other moves it a lot: Acid1, whose body filled the window to
+    /// the bottom, differed in 22.2% of them.
+    /// </para>
+    /// <para>
+    /// The two are different bitmap types, the renderer's and the window's, so they are read pixel by
+    /// pixel rather than converted.
+    /// </para>
+    /// </remarks>
+    public static double Difference(Broiler.HTML.Image.BBitmap analysis, BBitmap window)
     {
         var width = Math.Min(analysis.Width, window.Width);
         var height = Math.Min(analysis.Height, window.Height);
         if (width <= 0 || height <= 0)
             return 1.0;
 
+        long squares = 0;
         long differing = 0;
-        for (var y = 0; y < height; y++)
+        for (var top = 0; top < height; top += BlockSize)
         {
-            for (var x = 0; x < width; x++)
+            var bottom = Math.Min(top + BlockSize, height);
+            for (var left = 0; left < width; left += BlockSize)
             {
-                var p = analysis.GetPixel(x, y);
-                var q = window.GetPixel(x, y);
-                if (Math.Abs(p.R - q.R) > tolerance || Math.Abs(p.G - q.G) > tolerance
-                    || Math.Abs(p.B - q.B) > tolerance || Math.Abs(p.A - q.A) > tolerance)
+                var right = Math.Min(left + BlockSize, width);
+
+                // The averages differ by more than the tolerance exactly when the summed differences
+                // exceed it times the pixel count.
+                long r = 0, g = 0, b = 0, a = 0;
+                for (var y = top; y < bottom; y++)
                 {
-                    differing++;
+                    for (var x = left; x < right; x++)
+                    {
+                        var p = analysis.GetPixel(x, y);
+                        var q = window.GetPixel(x, y);
+                        r += p.R - q.R;
+                        g += p.G - q.G;
+                        b += p.B - q.B;
+                        a += p.A - q.A;
+                    }
                 }
+
+                var limit = (long)BlockTolerance * (right - left) * (bottom - top);
+                squares++;
+                if (Math.Abs(r) > limit || Math.Abs(g) > limit || Math.Abs(b) > limit || Math.Abs(a) > limit)
+                    differing++;
             }
         }
 
-        return (double)differing / ((long)width * height);
+        return (double)differing / squares;
     }
+
+    /// <summary>
+    /// Why the window's image cannot be compared with the analysis's render of the same page, or null
+    /// when it can.
+    /// </summary>
+    /// <param name="opened">The URL the window opened.</param>
+    /// <param name="loaded">The URL the analysis's own load ended at, after redirects.</param>
+    /// <param name="analysisRendered">Whether the analysis's render produced an image.</param>
+    /// <remarks>
+    /// The window scrolls to a URL's fragment, as a browser does, and the analysis's render shows the
+    /// top of the page, so for such a URL the two show different parts of the page. Acid2's
+    /// <c>#top</c> is the whole of its test.
+    /// </remarks>
+    public static string? WhyNotCompared(string opened, string? loaded, bool analysisRendered)
+    {
+        if ((FragmentOf(opened) ?? FragmentOf(loaded)) is { } fragment)
+            return $"the window scrolled to the URL's fragment, #{fragment}, and the analysis's render shows the top of the page";
+
+        return analysisRendered ? null : "the analysis's own render failed";
+    }
+
+    private static string? FragmentOf(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Fragment.Length > 1 ? uri.Fragment[1..] : null;
 
     private static BBitmap Crop(BBitmap source, BRect area)
     {

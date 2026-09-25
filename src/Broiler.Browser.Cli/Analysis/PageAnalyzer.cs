@@ -372,21 +372,24 @@ internal sealed class PageAnalyzer
             "window",
             () =>
             {
+                var opened = _options.FollowFirstLink ? page.FinalUrl : _options.Url;
                 var shown = WindowProbe.Render(
-                    _options.FollowFirstLink ? page.FinalUrl : _options.Url,
+                    opened,
                     _options.Width,
                     _options.Height,
                     output,
                     TimeSpan.FromSeconds(Math.Max(60, 4 * _options.TimeoutSeconds)));
                 using var shownPage = shown.Page;
-                double? difference = state.Render?.Viewport is { } analysis
+                var analysis = state.Render?.Viewport;
+                var notCompared = WindowProbe.WhyNotCompared(opened, page.FinalUrl, analysis is not null);
+                double? difference = notCompared is null && analysis is not null
                     ? Math.Round(WindowProbe.Difference(analysis, shownPage), 4)
                     : null;
-                return new WindowReport(shown.Image, difference, shown.Settled, shown.Status, shown.DurationMs);
+                return new WindowReport(shown.Image, difference, shown.Settled, shown.Status, shown.DurationMs, notCompared);
             },
             static w => string.Create(
                 CultureInfo.InvariantCulture,
-                $"{(w.Settled ? "done" : "not done (" + w.Status + ")")} after {w.DurationMs / 1000:0.#} s{(w.DifferenceRatio is { } d ? ", " + d.ToString("P1", CultureInfo.InvariantCulture) + " of the page area differs from the analysis's render" : string.Empty)}"));
+                $"{(w.Settled ? "done" : "not done (" + w.Status + ")")} after {w.DurationMs / 1000:0.#} s, {(w.DifferenceRatio is { } d ? d.ToString("P1", CultureInfo.InvariantCulture) + " of the page area differs from the analysis's render" : "not compared: " + w.NotCompared)}"));
         if (state.Window is { } shownInWindow)
             AddFile(shownInWindow.Image, "the page area of the browser window itself, which loaded and ran the page again");
     }

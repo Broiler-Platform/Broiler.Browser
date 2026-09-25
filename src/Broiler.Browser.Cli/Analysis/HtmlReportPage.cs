@@ -81,7 +81,9 @@ internal static class HtmlReportPage
         if (report.ScriptVisualEffect is { } effect)
             html.Append("<p class=\"meta\">The scripts changed ").Append(E(effect.ToString("P2", CultureInfo.InvariantCulture))).AppendLine(" of the viewport's pixels.</p>");
         if (report.Window?.DifferenceRatio is { } difference)
-            html.Append("<p class=\"meta\">The browser window, which loaded and ran the page again, differs from the render after scripts in ").Append(E(difference.ToString("P2", CultureInfo.InvariantCulture))).AppendLine(" of the page area's pixels.</p>");
+            html.Append("<p class=\"meta\">The browser window, which loaded and ran the page again, differs from the render after scripts in ").Append(E(difference.ToString("P2", CultureInfo.InvariantCulture))).AppendLine(" of the page area.</p>");
+        else if (report.Window?.NotCompared is { } notCompared)
+            html.Append("<p class=\"meta\">The browser window was not compared with the render after scripts: ").Append(E(notCompared)).AppendLine(".</p>");
     }
 
     private static void Findings(StringBuilder html, AnalysisReport report)

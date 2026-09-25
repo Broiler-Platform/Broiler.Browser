@@ -98,8 +98,10 @@ What the findings look for:
   browser window shows it: when 5 % or more of the window's page area differs from the analysis's
   own render, that is a finding of its own. The window parses a page on its load worker and lays it
   out on its UI thread, which the analysis's render does not, so this is the one place a bug in the
-  window's own path shows. The two runs load the page separately, so a page that changes from one
-  load to the next differs for that reason as well.
+  window's own path shows. The two are compared in 16-pixel squares, by their average colour, since
+  they paint text a few pixels apart; and not at all for a URL with a fragment, which the window
+  scrolls to and the analysis's render does not. The two runs load the page separately, so a page
+  that changes from one load to the next differs for that reason as well.
 
 Options: `--width`/`--height` set the viewport, `--timeout` the document's fetch, and
 `--follow-first-link` analyses the landing page's first link. `--no-window` leaves the browser

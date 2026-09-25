@@ -191,6 +191,25 @@ public sealed class PageAnalysisTests : IDisposable
     }
 
     /// <summary>
+    /// The window scrolls to a URL's fragment and the analysis's render shows the top of the page, so
+    /// the window's image is written and not compared, and the report says why.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public async Task A_Url_With_A_Fragment_Is_Shown_In_The_Window_But_Not_Compared()
+    {
+        var (_, directory, report, _) = await AnalyzeAsync(_pages.Write(
+            "long.html",
+            "<!DOCTYPE html><html><body><div style=\"height: 3000px\">top</div><p id=\"target\">target</p></body></html>") + "#target");
+
+        Assert.True(File.Exists(Path.Combine(directory, WindowProbe.ImageName)));
+        var window = report.GetProperty("window");
+        Assert.Equal(JsonValueKind.Null, window.GetProperty("differenceRatio").ValueKind);
+        Assert.Contains("#target", window.GetProperty("notCompared").GetString(), StringComparison.Ordinal);
+        var phase = Assert.Single(report.GetProperty("phases").EnumerateArray(), static p => p.GetProperty("name").GetString() == "window");
+        Assert.Contains("not compared", phase.GetProperty("detail").GetString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A script's geometry question is answered from a real layout, and the recorder that times those
     /// layouts hands back the same answer the bridge would have had without it.
     /// </summary>

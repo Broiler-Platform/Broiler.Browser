@@ -194,13 +194,15 @@ internal sealed record AnalysisFile(string Path, string Description);
 /// <summary>What the browser window itself showed of the page (<see cref="WindowProbe"/>).</summary>
 /// <param name="Image">The window's page area, <c>screenshot-window.png</c>.</param>
 /// <param name="DifferenceRatio">
-/// The share of those pixels that differ from the analysis's own render, <c>screenshot.png</c>, or
-/// null when that render failed.
+/// The share of the page area where it differs from the analysis's own render, <c>screenshot.png</c>
+/// (<see cref="WindowProbe.Difference"/>), or null when the two were not compared.
 /// </param>
 /// <param name="Settled">Whether the window finished loading the page before its time ran out.</param>
 /// <param name="Status">The window's status text when the image was taken.</param>
 /// <param name="DurationMs">How long the window took to load, run and paint the page.</param>
-internal sealed record WindowReport(string Image, double? DifferenceRatio, bool Settled, string Status, double DurationMs);
+/// <param name="NotCompared">Why the two were not compared, when they were not.</param>
+internal sealed record WindowReport(
+    string Image, double? DifferenceRatio, bool Settled, string Status, double DurationMs, string? NotCompared = null);
 
 /// <summary>Everything one analysis found, as <c>report.json</c> records it.</summary>
 internal sealed record AnalysisReport

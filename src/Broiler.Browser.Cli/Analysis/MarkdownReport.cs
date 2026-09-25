@@ -216,7 +216,7 @@ internal static class MarkdownReport
         if (report.Window is { } window)
         {
             Row(md, "In the browser window", string.Create(CultureInfo.InvariantCulture,
-                $"{window.Image}, {(window.DifferenceRatio is { } d ? d.ToString("P2", CultureInfo.InvariantCulture) + " of the page area differs" : "not compared")}; " +
+                $"{window.Image}, {(window.DifferenceRatio is { } d ? d.ToString("P2", CultureInfo.InvariantCulture) + " of the page area differs" : "not compared: " + window.NotCompared)}; " +
                 $"{(window.Settled ? "done" : "not done: " + window.Status)} after {Ms(window.DurationMs)}"));
         }
         md.AppendLine();
