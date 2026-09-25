@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Broiler.Cli.Analysis;
 using Broiler.HtmlBridge.Core.Diagnostics;
 using Broiler.HtmlBridge.Logging;
 
@@ -26,6 +27,18 @@ internal sealed record DiagnosticOptions
 
     /// <summary>Whether anything at all was requested.</summary>
     public bool IsActive => Directory is not null || LogPath is not null;
+
+    /// <summary>
+    /// Names what the run is doing when an exception is recorded, for the exception log. A capture
+    /// has one phase; <c>--analyze</c> passes its phase clock.
+    /// </summary>
+    public Func<string>? Phase { get; init; }
+
+    /// <summary>
+    /// Whether the bundle writes its own <c>summary.md</c>. <c>--analyze</c> writes a report that
+    /// covers it and turns this off.
+    /// </summary>
+    public bool WriteSummary { get; init; } = true;
 }
 
 /// <summary>
@@ -57,6 +70,14 @@ internal sealed record DiagnosticOptions
 /// <see cref="ResourceTrace"/> swallows what a handler throws, so a full disk or an unwritable path
 /// degrades the bundle and nothing else. Diagnostics observe a run; they do not participate in it.
 /// </para>
+/// <para>
+/// <b>A bundle also keeps every exception and every message.</b> <c>exceptions.log</c> records each
+/// exception raised in the process while the bundle is open, first-chance ones included — the
+/// stylesheet value that did not parse, the image that did not decode, the layout pass that fell
+/// back, each caught and recovered from and invisible in the output otherwise (see
+/// <see cref="ExceptionRecorder"/>). <c>messages.log</c> is every entry the pipeline logged, at every
+/// level and in every category, where the JavaScript log keeps only the failures.
+/// </para>
 /// </remarks>
 internal sealed class DiagnosticSession : IDisposable
 {
@@ -84,6 +105,8 @@ internal sealed class DiagnosticSession : IDisposable
     private Action<ResourceTraceEntry>? _resourceHandler;
     private StreamWriter? _log;
     private StreamWriter? _consoleLog;
+    private StreamWriter? _messages;
+    private ExceptionRecorder? _exceptions;
     private string? _resourceDirectory;
     private int _droppedEntries;
     private int _errorCount;
@@ -98,6 +121,23 @@ internal sealed class DiagnosticSession : IDisposable
 
     /// <summary>Resources archived so far.</summary>
     public int ResourceCount { get { lock (_sync) return _resources.Count; } }
+
+    /// <summary>The bundle's exception log, or null when only a JavaScript log was requested.</summary>
+    public ExceptionRecorder? Exceptions => _exceptions;
+
+    /// <summary>The log entries kept so far, in the order they were logged.</summary>
+    public IReadOnlyList<RenderLogEntry> Entries()
+    {
+        lock (_sync)
+            return [.. _entries];
+    }
+
+    /// <summary>The archive's manifest so far, as <c>resources/index.json</c> will record it.</summary>
+    public IReadOnlyList<ResourceRecord> Resources()
+    {
+        lock (_sync)
+            return [.. _resources];
+    }
 
     /// <summary>
     /// Creates the bundle and starts recording, or returns null when <paramref name="options"/> asked
@@ -122,7 +162,17 @@ internal sealed class DiagnosticSession : IDisposable
             _resourceDirectory = Path.Combine(directory, "resources");
             System.IO.Directory.CreateDirectory(_resourceDirectory);
 
+            // First, so that an exception raised while the rest of the bundle opens is on its record.
+            _exceptions = ExceptionRecorder.Start(
+                Path.Combine(directory, "exceptions.log"),
+                Path.Combine(directory, "exceptions.json"),
+                _options.Phase ?? (static () => "capture"));
+
             _consoleLog = OpenWriter(Path.Combine(directory, "console.log"));
+            _messages = OpenWriter(Path.Combine(directory, "messages.log"));
+            _messages.WriteLine(
+                $"# Every message the pipeline logged, every level and category — started {DateTime.UtcNow:o}");
+            _messages.Flush();
             _resourceHandler = OnResource;
             ResourceTrace.Recorded += _resourceHandler;
         }
@@ -169,6 +219,21 @@ internal sealed class DiagnosticSession : IDisposable
                     _entries.Add(entry);
                 else
                     _droppedEntries++;
+
+                if (_messages is { } messages)
+                {
+                    messages.WriteLine(
+                        $"{entry.Timestamp:o} {entry.Level,-7} [{entry.Category}/{entry.Context}] {entry.Message}");
+                    if (entry.Exception is { } logged)
+                    {
+                        // Read without running page code: this log records every level, and a
+                        // debug entry is no reason to call a page's getter (see ExceptionText).
+                        foreach (var line in ExceptionText.Describe(logged).Split('\n'))
+                            messages.WriteLine("    " + line.TrimEnd('\r'));
+                    }
+
+                    messages.Flush();
+                }
 
                 if (isConsole && _consoleLog is { } console)
                 {
@@ -218,17 +283,8 @@ internal sealed class DiagnosticSession : IDisposable
 
                 if (entry.Content is { } content && _resourceDirectory is { } directory)
                 {
-                    var hash = ContentHash(content);
-                    if (_fileNamesByContentHash.TryGetValue(hash, out var existing))
-                    {
-                        savedAs = existing;
-                    }
-                    else
-                    {
-                        savedAs = UniqueFileName(ordinal, entry);
-                        File.WriteAllText(Path.Combine(directory, savedAs), content);
-                        _fileNamesByContentHash[hash] = savedAs;
-                    }
+                    var bytes = Encoding.UTF8.GetBytes(content);
+                    savedAs = Store(directory, ordinal, bytes, entry.Url, entry.Label, entry.Kind.ToString(), entry.ContentType);
                 }
 
                 _resources.Add(new ResourceRecord(
@@ -243,7 +299,8 @@ internal sealed class DiagnosticSession : IDisposable
                     Method: entry.Method,
                     ElapsedMs: Math.Round(entry.ElapsedMs, 2),
                     Error: entry.Error,
-                    Timestamp: entry.Timestamp));
+                    Timestamp: entry.Timestamp,
+                    RecordedBy: ResourceRecord.Engine));
             }
         }
         catch (IOException)
@@ -254,6 +311,78 @@ internal sealed class DiagnosticSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// Archives a response body the network recorder kept — an image, a font, anything the engine's
+    /// own trace does not see because it is not text or not the engine's to fetch — beside the
+    /// resources the engine recorded, and returns the file it is in. Identical bytes share a file with
+    /// whatever was archived first, so a script fetched over the network and traced by the engine is
+    /// still one file. Returns null when the bundle keeps no resources.
+    /// </summary>
+    public string? ArchiveBytes(
+        string url,
+        string kind,
+        byte[] content,
+        string? contentType,
+        int? statusCode,
+        string? method,
+        double elapsedMs)
+    {
+        try
+        {
+            lock (_sync)
+            {
+                if (_resourceDirectory is not { } directory)
+                    return null;
+
+                var ordinal = _resources.Count;
+                var savedAs = Store(directory, ordinal, content, url, label: null, kind, contentType);
+                _resources.Add(new ResourceRecord(
+                    Ordinal: ordinal,
+                    Url: url,
+                    Kind: kind,
+                    Label: null,
+                    SavedAs: savedAs,
+                    Bytes: content.Length,
+                    StatusCode: statusCode,
+                    ContentType: contentType,
+                    Method: string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase) ? null : method,
+                    ElapsedMs: Math.Round(elapsedMs, 2),
+                    Error: null,
+                    Timestamp: DateTime.UtcNow,
+                    RecordedBy: ResourceRecord.Network));
+                return savedAs;
+            }
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Writes <paramref name="bytes"/> once per distinct content, and returns its file name.</summary>
+    private string Store(
+        string directory,
+        int ordinal,
+        byte[] bytes,
+        string url,
+        string? label,
+        string kind,
+        string? contentType)
+    {
+        var hash = Convert.ToHexString(SHA256.HashData(bytes));
+        if (_fileNamesByContentHash.TryGetValue(hash, out var existing))
+            return existing;
+
+        var savedAs = UniqueFileName(ordinal, url, label, kind, contentType);
+        File.WriteAllBytes(Path.Combine(directory, savedAs), bytes);
+        _fileNamesByContentHash[hash] = savedAs;
+        return savedAs;
+    }
+
     // ── Naming ──────────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -261,23 +390,24 @@ internal sealed class DiagnosticSession : IDisposable
     /// ordinal supplies the ordering and the uniqueness; the readable stem is a convenience, and is
     /// truncated because a URL can be far longer than a filesystem allows.
     /// </summary>
-    private string UniqueFileName(int ordinal, ResourceTraceEntry entry)
+    private string UniqueFileName(int ordinal, string url, string? label, string kind, string? contentType)
     {
-        var stem = Sanitize(entry.Label ?? StemFromUrl(entry.Url));
+        var stem = Sanitize(label ?? StemFromUrl(url));
         if (stem.Length > 60)
             stem = stem[..60];
         if (stem.Length == 0)
-            stem = entry.Kind.ToString().ToLowerInvariant();
+            stem = kind.ToLowerInvariant();
 
+        var extension = ExtensionFor(url, label, kind, contentType);
         var name = string.Create(
             CultureInfo.InvariantCulture,
-            $"{ordinal:D4}-{stem}{ExtensionFor(entry)}");
+            $"{ordinal:D4}-{stem}{extension}");
 
         // Ordinals are unique by construction, so this only fires if a host ever records two entries
         // under one ordinal; keeping it means a collision can never silently overwrite evidence.
         var attempt = 1;
         while (!_usedFileNames.Add(name))
-            name = string.Create(CultureInfo.InvariantCulture, $"{ordinal:D4}-{stem}-{attempt++}{ExtensionFor(entry)}");
+            name = string.Create(CultureInfo.InvariantCulture, $"{ordinal:D4}-{stem}-{attempt++}{extension}");
 
         return name;
     }
@@ -291,6 +421,10 @@ internal sealed class DiagnosticSession : IDisposable
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return url;
+
+        // A data: URL has no path worth naming a file after, only its payload.
+        if (uri.Scheme == "data")
+            return "data-url";
 
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var leaf = segments.Length == 0
@@ -307,35 +441,60 @@ internal sealed class DiagnosticSession : IDisposable
 
     /// <summary>
     /// The extension the archived file gets: the URL's own when it has a plausible one, otherwise the
-    /// one implied by the content type or the kind. It exists so an editor opens the file with the
-    /// right syntax — nothing reads it back.
+    /// one implied by the content type or the kind. It exists so an editor or an image viewer opens
+    /// the file as what it is — nothing reads it back.
     /// </summary>
-    private static string ExtensionFor(ResourceTraceEntry entry)
+    private static string ExtensionFor(string url, string? label, string kind, string? contentType)
     {
         // A labelled entry's URL is synthetic — the page plus "#inline-7" — so its extension
         // describes the page, not the script. Only an entry that was really fetched from that URL
         // may take its extension from it.
-        if (entry.Label is null && Uri.TryCreate(entry.Url, UriKind.Absolute, out var uri))
+        if (label is null && Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme != "data")
         {
             var extension = Path.GetExtension(uri.AbsolutePath);
             if (extension.Length is > 1 and <= 6 && extension.All(c => char.IsLetterOrDigit(c) || c == '.'))
                 return extension;
         }
 
-        if (entry.ContentType is { } contentType)
-        {
-            if (contentType.Contains("javascript", StringComparison.OrdinalIgnoreCase)) return ".js";
-            if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase)) return ".json";
-            if (contentType.Contains("css", StringComparison.OrdinalIgnoreCase)) return ".css";
-            if (contentType.Contains("html", StringComparison.OrdinalIgnoreCase)) return ".html";
-        }
+        if (contentType is not null && ExtensionForContentType(contentType) is { } fromType)
+            return fromType;
 
-        return entry.Kind switch
+        return kind switch
         {
-            ResourceTraceKind.Script or ResourceTraceKind.ExecutedScript => ".js",
-            ResourceTraceKind.Stylesheet => ".css",
-            ResourceTraceKind.Document or ResourceTraceKind.SubDocument => ".html",
+            nameof(ResourceTraceKind.Script) or nameof(ResourceTraceKind.ExecutedScript) => ".js",
+            nameof(ResourceTraceKind.Stylesheet) => ".css",
+            nameof(ResourceTraceKind.Document) or nameof(ResourceTraceKind.SubDocument) => ".html",
+            "Image" => ".img",
+            "Font" => ".font",
             _ => ".txt",
+        };
+    }
+
+    private static string? ExtensionForContentType(string contentType)
+    {
+        var mediaType = contentType.Split(';', 2)[0].Trim().ToLowerInvariant();
+        return mediaType switch
+        {
+            "image/png" => ".png",
+            "image/jpeg" or "image/jpg" or "image/pjpeg" => ".jpg",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            "image/avif" => ".avif",
+            "image/svg+xml" => ".svg",
+            "image/x-icon" or "image/vnd.microsoft.icon" => ".ico",
+            "image/bmp" => ".bmp",
+            "font/woff2" or "application/font-woff2" => ".woff2",
+            "font/woff" or "application/font-woff" or "application/x-font-woff" => ".woff",
+            "font/ttf" or "application/x-font-ttf" or "font/sfnt" => ".ttf",
+            "font/otf" or "application/x-font-otf" or "font/opentype" => ".otf",
+            "application/vnd.ms-fontobject" => ".eot",
+            "application/xml" or "text/xml" => ".xml",
+            "text/plain" => ".txt",
+            _ when mediaType.Contains("javascript", StringComparison.Ordinal) || mediaType.EndsWith("ecmascript", StringComparison.Ordinal) => ".js",
+            _ when mediaType.Contains("json", StringComparison.Ordinal) => ".json",
+            _ when mediaType.Contains("css", StringComparison.Ordinal) => ".css",
+            _ when mediaType.Contains("html", StringComparison.Ordinal) => ".html",
+            _ => null,
         };
     }
 
@@ -347,9 +506,6 @@ internal sealed class DiagnosticSession : IDisposable
 
         return builder.ToString().Trim('-');
     }
-
-    private static string ContentHash(string content) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
 
     // ── Reporting ───────────────────────────────────────────────────────────────────────────────
 
@@ -374,6 +530,9 @@ internal sealed class DiagnosticSession : IDisposable
         // Discards anything still collected, so a later run in this process cannot inherit it.
         UnhandledRejections.Track(false);
 
+        // Before the reports, so that exceptions.json is complete by the time diagnostics.json counts it.
+        _exceptions?.Dispose();
+
         try
         {
             WriteReports();
@@ -395,6 +554,8 @@ internal sealed class DiagnosticSession : IDisposable
             _log = null;
             _consoleLog?.Dispose();
             _consoleLog = null;
+            _messages?.Dispose();
+            _messages = null;
         }
     }
 
@@ -443,6 +604,7 @@ internal sealed class DiagnosticSession : IDisposable
                         distinctFailures = groups.Count,
                         resources = resources.Length,
                         failedResources = resources.Count(static r => r.Error is not null),
+                        exceptions = _exceptions?.Total ?? 0,
                     },
                     distinctErrors = groups.Select(static g => new { g.Count, g.Example, context = g.FirstContext }),
                     missingApis = missing,
@@ -458,14 +620,20 @@ internal sealed class DiagnosticSession : IDisposable
                 },
                 jsonOptions));
 
-        File.WriteAllText(Path.Combine(directory, "summary.md"), BuildSummary(groups, missing, resources, dropped));
+        if (_options.WriteSummary)
+        {
+            File.WriteAllText(
+                Path.Combine(directory, "summary.md"),
+                BuildSummary(groups, missing, resources, dropped, _exceptions?.Signatures() ?? []));
+        }
     }
 
     private static string BuildSummary(
         IReadOnlyList<JsErrorGroup> groups,
         IReadOnlyList<MissingApi> missing,
         IReadOnlyList<ResourceRecord> resources,
-        int dropped)
+        int dropped,
+        IReadOnlyList<ExceptionSignature> exceptions)
     {
         var summary = new StringBuilder();
         summary.AppendLine("# Broiler capture diagnostics").AppendLine();
@@ -477,6 +645,7 @@ internal sealed class DiagnosticSession : IDisposable
         summary.Append("| Distinct failures | ").Append(groups.Count).AppendLine(" |");
         summary.Append("| Resources recorded | ").Append(resources.Count).AppendLine(" |");
         summary.Append("| Resources that failed | ").Append(resources.Count(static r => r.Error is not null)).AppendLine(" |");
+        summary.Append("| Exceptions (first-chance included) | ").Append(exceptions.Sum(static e => e.Count)).AppendLine(" |");
         if (dropped > 0)
             summary.Append("| Log entries dropped (retention cap) | ").Append(dropped).AppendLine(" |");
         summary.AppendLine();
@@ -555,6 +724,26 @@ internal sealed class DiagnosticSession : IDisposable
             summary.AppendLine();
         }
 
+        if (exceptions.Count > 0)
+        {
+            summary.AppendLine("## Exceptions, most frequent first").AppendLine();
+            summary.AppendLine("First-chance ones included — most were caught by the code that raised them, and are");
+            summary.AppendLine("listed because a caught exception is how a fallback hides. `exceptions.log` has each");
+            summary.AppendLine("one with its stack.").AppendLine();
+            summary.AppendLine("| Count | Kind | Type | Thrown in | Message |");
+            summary.AppendLine("| --- | --- | --- | --- | --- |");
+            foreach (var exception in exceptions.Take(25))
+            {
+                summary.Append("| ").Append(exception.Count)
+                    .Append(" | ").Append(exception.Kind)
+                    .Append(" | `").Append(exception.Type)
+                    .Append("` | `").Append(Escape(exception.Site))
+                    .Append("` | ").Append(Escape(AnalysisConsole.OneLine(exception.FirstMessage, 200))).AppendLine(" |");
+            }
+
+            summary.AppendLine();
+        }
+
         return summary.ToString();
     }
 
@@ -568,24 +757,40 @@ internal sealed class DiagnosticSession : IDisposable
         lock (_sync)
         {
             var where = _options.Directory ?? _options.LogPath;
+            var exceptions = _exceptions is { } recorder
+                ? string.Create(CultureInfo.InvariantCulture, $", {recorder.Total} exception(s)")
+                : string.Empty;
             return string.Create(
                 CultureInfo.InvariantCulture,
-                $"Diagnostics: {_errorCount} JavaScript failure(s), {_resources.Count} resource(s) → {where}");
+                $"Diagnostics: {_errorCount} JavaScript failure(s), {_resources.Count} resource(s){exceptions} → {where}");
         }
     }
+}
 
-    /// <summary>One archived resource, as it appears in <c>resources/index.json</c>.</summary>
-    private sealed record ResourceRecord(
-        int Ordinal,
-        string Url,
-        string Kind,
-        string? Label,
-        string? SavedAs,
-        int Bytes,
-        int? StatusCode,
-        string? ContentType,
-        string? Method,
-        double ElapsedMs,
-        string? Error,
-        DateTime Timestamp);
+/// <summary>One archived resource, as it appears in <c>resources/index.json</c>.</summary>
+/// <param name="RecordedBy">
+/// <see cref="Engine"/> for what the engine traced — a page, a script as fetched or as run, a
+/// stylesheet, a fetch response, a sub-document — or <see cref="Network"/> for a body the network
+/// recorder kept, which is how images and fonts get into the archive.
+/// </param>
+internal sealed record ResourceRecord(
+    int Ordinal,
+    string Url,
+    string Kind,
+    string? Label,
+    string? SavedAs,
+    int Bytes,
+    int? StatusCode,
+    string? ContentType,
+    string? Method,
+    double ElapsedMs,
+    string? Error,
+    DateTime Timestamp,
+    string RecordedBy)
+{
+    /// <summary>Recorded through the engine's resource trace.</summary>
+    public const string Engine = "engine";
+
+    /// <summary>Recorded by <c>--analyze</c>'s network recorder.</summary>
+    public const string Network = "network";
 }

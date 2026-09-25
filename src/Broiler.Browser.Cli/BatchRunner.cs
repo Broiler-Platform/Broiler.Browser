@@ -70,7 +70,8 @@ internal static class BatchRunner
     }
 
     /// <summary>
-    /// Derives <c>&lt;outputDir&gt;/&lt;input name&gt;.&lt;extension&gt;</c> for each input.
+    /// Derives <c>&lt;outputDir&gt;/&lt;input name&gt;.&lt;extension&gt;</c> for each input, or
+    /// <c>&lt;outputDir&gt;/&lt;input name&gt;</c> — a directory name — for an empty extension.
     /// Two inputs from different directories can share a file name, so a collision appends
     /// <c>-2</c>, <c>-3</c>, … in input order — deterministic, and never silently overwriting
     /// one item's result with another's.
@@ -80,7 +81,7 @@ internal static class BatchRunner
         string outputDir,
         string extension)
     {
-        var normalizedExtension = extension.StartsWith('.') ? extension : "." + extension;
+        var normalizedExtension = extension.Length == 0 || extension.StartsWith('.') ? extension : "." + extension;
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var items = new List<BatchItem>(inputs.Count);
 

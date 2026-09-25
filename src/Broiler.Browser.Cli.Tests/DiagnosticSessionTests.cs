@@ -264,6 +264,89 @@ public sealed class DiagnosticSessionTests
         }
     }
 
+    [Fact(Timeout = 600000)]
+    public void A_Bundle_Keeps_Every_Exception_Including_Caught_Ones()
+    {
+        var directory = NewDirectory();
+        try
+        {
+            using (DiagnosticSession.Start(Program.ResolveDiagnosticOptions(directory, null)))
+            {
+                try
+                {
+                    throw new FormatException("bundle-exception-marker");
+                }
+                catch (FormatException)
+                {
+                    // Caught on purpose: a caught exception is the one no other log would show.
+                }
+
+                Assert.Contains("bundle-exception-marker", ReadShared(Path.Combine(directory, "exceptions.log")), StringComparison.Ordinal);
+            }
+
+            Assert.True(File.Exists(Path.Combine(directory, "exceptions.json")));
+            Assert.Contains("Exceptions (first-chance included)", File.ReadAllText(Path.Combine(directory, "summary.md")), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Delete(directory);
+        }
+    }
+
+    [Fact(Timeout = 600000)]
+    public void A_Bundle_Keeps_Every_Message_At_Every_Level()
+    {
+        var directory = NewDirectory();
+        try
+        {
+            using (DiagnosticSession.Start(Program.ResolveDiagnosticOptions(directory, null)))
+            {
+                RenderLogger.LogDebug(LogCategory.HtmlRenderer, "DiagnosticSessionTests", "debug-message-marker");
+            }
+
+            var messages = File.ReadAllText(Path.Combine(directory, "messages.log"));
+            Assert.Contains("debug-message-marker", messages, StringComparison.Ordinal);
+            Assert.Contains("[HtmlRenderer/DiagnosticSessionTests]", messages, StringComparison.Ordinal);
+
+            // A debug entry is no failure, and the JavaScript log stays about failures.
+            Assert.DoesNotContain("debug-message-marker", File.ReadAllText(Path.Combine(directory, "javascript-errors.log")), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Delete(directory);
+        }
+    }
+
+    [Fact(Timeout = 600000)]
+    public void A_Binary_Body_Is_Archived_And_Identical_Text_Shares_Its_File()
+    {
+        var directory = NewDirectory();
+        try
+        {
+            byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3];
+            const string Script = "var sharedMarker = 1;";
+            using (var session = DiagnosticSession.Start(Program.ResolveDiagnosticOptions(directory, null)))
+            {
+                Assert.NotNull(session);
+                var image = session.ArchiveBytes("https://example.test/logo", "Image", png, "image/png", 200, "GET", 12);
+                Assert.NotNull(image);
+                Assert.EndsWith(".png", image, StringComparison.Ordinal);
+                Assert.Equal(png, File.ReadAllBytes(Path.Combine(directory, "resources", image)));
+
+                var fetched = session.ArchiveBytes("https://example.test/app.js", "Script", System.Text.Encoding.UTF8.GetBytes(Script), "text/javascript", 200, "GET", 3);
+                ResourceTrace.RecordBody(ResourceTraceKind.ExecutedScript, "https://example.test/page#inline-0", Script, "inline-0");
+
+                var rows = session.Resources();
+                Assert.Equal(fetched, rows.Single(static r => r.Label == "inline-0").SavedAs);
+                Assert.Equal(ResourceRecord.Network, rows.Single(static r => r.Url == "https://example.test/logo").RecordedBy);
+            }
+        }
+        finally
+        {
+            Delete(directory);
+        }
+    }
+
     private static JsonElement[] Manifest(string directory) =>
         [.. JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "resources", "index.json")))
             .RootElement.EnumerateArray()];

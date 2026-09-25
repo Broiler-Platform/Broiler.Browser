@@ -65,4 +65,48 @@ public sealed class ProgramTests
 
         Assert.Equal(0, exitCode);
     }
+
+    [Fact(Timeout = 600000)]
+    public async Task An_Analysis_Without_An_Output_Directory_Is_Refused()
+    {
+        var (exitCode, error) = await RunAsync("--analyze", "https://example.test/");
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("--output-dir", error);
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task An_Analysis_Is_Not_Combined_With_A_Capture()
+    {
+        var (exitCode, error) = await RunAsync("--analyze", "https://example.test/", "--url", "https://example.test/", "--output-dir", "out");
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("cannot be combined", error);
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task A_Negative_Analysis_Timeout_Is_Refused()
+    {
+        var (exitCode, error) = await RunAsync("--analyze", "https://example.test/", "--output-dir", "out", "--analysis-timeout", "-1");
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("--analysis-timeout", error);
+    }
+
+    [Fact(Timeout = 600000)]
+    public void A_File_Path_Becomes_Its_Url_And_Keeps_Its_Fragment()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "broiler-resolve-" + Guid.NewGuid().ToString("N") + ".html");
+        File.WriteAllText(path, "<p>x</p>");
+        try
+        {
+            Assert.True(Program.TryResolvePageUrl(path + "#top", out var url));
+            Assert.Equal(new Uri(path).AbsoluteUri + "#top", url);
+            Assert.False(Program.TryResolvePageUrl("ftp://example.test/x", out _));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

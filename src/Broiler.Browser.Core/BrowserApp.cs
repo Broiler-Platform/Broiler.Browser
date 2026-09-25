@@ -743,12 +743,34 @@ internal sealed class BrowserApp : IDisposable
     internal static DomBridgeSessionOptions BridgeOptions(
         BrowserProfile profile,
         Func<Uri, DocumentRequestContext> documents) =>
+        BridgeOptions(profile.Network, profile.DocumentCookies, documents);
+
+    /// <summary>
+    /// As <see cref="BridgeOptions(BrowserProfile, Func{Uri, DocumentRequestContext})"/>, over a
+    /// <paramref name="network"/> that stands in for the profile's own — the command line's
+    /// <c>--analyze</c> passes the profile's session wrapped in a recorder, so that the bridge's loads
+    /// and its layout view's are recorded with everything else the page sent.
+    /// </summary>
+    /// <param name="network">The transport the bridge and its layout view load on.</param>
+    /// <param name="cookies">The <c>document.cookie</c> view of the profile's store.</param>
+    /// <param name="documents">The request context of the document at a URL.</param>
+    /// <param name="wrapLayoutView">
+    /// Wraps each layout view the bridge makes — <c>--analyze</c> times the layouts a script's geometry
+    /// questions cause — or null for the view as it is.
+    /// </param>
+    internal static DomBridgeSessionOptions BridgeOptions(
+        IBrowserRequestTransport network,
+        IDocumentCookieAccess cookies,
+        Func<Uri, DocumentRequestContext> documents,
+        Func<Broiler.Layout.ILayoutView, Broiler.Layout.ILayoutView>? wrapLayoutView = null) =>
         new()
         {
-            Network = profile.Network,
-            Cookies = profile.DocumentCookies,
+            Network = network,
+            Cookies = cookies,
             DocumentContextFactory = documents,
-            LayoutViewFactory = () => new HeadlessLayoutView(profile.Network, documents),
+            LayoutViewFactory = wrapLayoutView is null
+                ? () => new HeadlessLayoutView(network, documents)
+                : () => wrapLayoutView(new HeadlessLayoutView(network, documents)),
         };
 
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(
