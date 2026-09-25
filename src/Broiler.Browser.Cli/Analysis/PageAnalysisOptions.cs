@@ -27,6 +27,9 @@ internal sealed record PageAnalysisOptions
     /// <summary>The watchdog's default limit, in seconds.</summary>
     public const int DefaultWatchdogSeconds = 300;
 
+    /// <summary>The longest watchdog the command line accepts: 30 days, well inside a timer's range.</summary>
+    public const int MaxWatchdogSeconds = 30 * 24 * 60 * 60;
+
     /// <summary>
     /// How long the whole analysis may take before the watchdog writes what there is and ends the
     /// process, or null for no limit.

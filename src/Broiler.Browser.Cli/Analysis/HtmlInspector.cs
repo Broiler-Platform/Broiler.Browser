@@ -1,3 +1,4 @@
+using System.Globalization;
 using Broiler.Dom.Html;
 using Broiler.Layout;
 using BDom = Broiler.Dom;
@@ -119,7 +120,7 @@ internal static class HtmlInspector
 
         var fetchedElements = LayoutInspector.Descendants(fetched).ToArray();
         var finalElements = afterScripts is null ? fetchedElements : LayoutInspector.Descendants(afterScripts).ToArray();
-        var baseUri = Uri.TryCreate(documentUrl, UriKind.Absolute, out var parsedBase) ? parsedBase : null;
+        var baseUri = BaseUrl(documentUrl, FirstElement(fetchedElements, "base")?.GetAttribute("href"));
 
         var head = FirstElement(fetchedElements, "html");
         var doctype = fetched.ChildNodes.OfType<BDom.DomDocumentType>().FirstOrDefault();
@@ -169,7 +170,9 @@ internal static class HtmlInspector
             Images = [.. finalElements
                 .Where(static e => IsTag(e, "img"))
                 .Take(200)
-                .Select(e => Resource(e, e.GetAttribute("src") ?? e.GetAttribute("srcset"), network, baseUri))],
+                .Select(e => e.GetAttribute("src") is { Length: > 0 } src
+                    ? Resource(e, src, network, baseUri)
+                    : Resource(e, FirstCandidate(e.GetAttribute("srcset")), network, baseUri))],
             Frames = [.. finalElements
                 .Where(static e => e.LocalName.ToLowerInvariant() is "iframe" or "frame" or "object" or "embed")
                 .Select(e => Resource(e, e.GetAttribute("src") ?? e.GetAttribute("data"), network, baseUri))],
@@ -245,11 +248,51 @@ internal static class HtmlInspector
         if (string.IsNullOrWhiteSpace(reference))
             return new ResourceElement(LayoutInspector.Describe(element), "(none)", "no URL");
 
-        // A srcset names several candidates; the first is enough to say whether any was fetched.
-        var first = reference.Split(',')[0].Trim().Split(' ')[0];
-        var url = Resolve(first, baseUri);
+        var url = Resolve(reference, baseUri);
         return new ResourceElement(LayoutInspector.Describe(element), url, LoadOutcome(url, network));
     }
+
+    /// <summary>
+    /// A <c>srcset</c>'s first candidate URL, which is enough to say whether any was fetched. Only a
+    /// srcset is split: in a <c>src</c> or an <c>href</c>, a comma or a space is part of the URL —
+    /// <c>css?family=Open+Sans:400,700</c>, a CDN's <c>c_fill,w_300</c>.
+    /// </summary>
+    internal static string? FirstCandidate(string? srcset)
+    {
+        if (string.IsNullOrWhiteSpace(srcset))
+            return null;
+
+        var trimmed = srcset.TrimStart();
+        var end = trimmed.IndexOfAny([' ', '\t', '\n', '\r', '\f']);
+        var url = end < 0 ? trimmed : trimmed[..end];
+        // A URL followed directly by the comma that ends its candidate: HTML's srcset parsing drops it.
+        return url.TrimEnd(',');
+    }
+
+    /// <summary>
+    /// The document's base URL: its first <c>&lt;base href&gt;</c> resolved against its own URL, as
+    /// HTML §2.4.1 has it, or its own URL without one.
+    /// </summary>
+    internal static Uri? BaseUrl(string documentUrl, string? baseHref)
+    {
+        if (!Uri.TryCreate(documentUrl, UriKind.Absolute, out var document))
+            return null;
+
+        return string.IsNullOrWhiteSpace(baseHref) ? document
+            : Uri.TryCreate(Resolve(baseHref, document), UriKind.Absolute, out var declared) ? declared
+            : document;
+    }
+
+    /// <summary>
+    /// Whether a load outcome is one where the resource did not arrive: not found, failed, an HTTP
+    /// error, never asked for, or no answer. Inline <c>data:</c> URLs and local files that exist did.
+    /// </summary>
+    internal static bool DidNotLoad(string? load) =>
+        load is { } outcome
+        && (outcome.Contains("NOT FOUND", StringComparison.Ordinal)
+            || outcome.StartsWith("failed", StringComparison.Ordinal)
+            || outcome.Contains("HTTP error", StringComparison.Ordinal)
+            || outcome is "not requested" or "no response");
 
     /// <summary>What became of the request for <paramref name="url"/>, from the network log.</summary>
     internal static string LoadOutcome(string url, IReadOnlyList<NetworkEntry> network)
@@ -274,7 +317,7 @@ internal static class HtmlInspector
             return $"failed: {error}";
 
         return entry.Status is { } status
-            ? $"{status}{(entry.Status >= 400 ? " (HTTP error)" : string.Empty)}, {entry.BodyBytes:N0} bytes"
+            ? string.Create(CultureInfo.InvariantCulture, $"{status}{(entry.Status >= 400 ? " (HTTP error)" : string.Empty)}, {entry.BodyBytes:N0} bytes")
             : "no response";
     }
 

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Broiler.Cli.Analysis;
 using Broiler.JavaScript.Runtime;
@@ -121,6 +122,90 @@ public sealed class ExceptionRecorderTests : IDisposable
 
         Assert.Contains("System.InvalidOperationException: first-inner", text, StringComparison.Ordinal);
         Assert.Contains("System.FormatException: nested-inner", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// .NET raises a first-chance notification for every throw of an exception object, <c>throw;</c>
+    /// included, so one failure rethrown on its way out used to be counted once per frame it crossed.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Rethrown_Exception_Is_Recorded_Once_And_Its_Rethrows_Counted()
+    {
+        using (var recorder = ExceptionRecorder.Start(LogPath, JsonPath, static () => "rethrow-phase"))
+        {
+            try
+            {
+                try
+                {
+                    throw new InvalidOperationException("rethrow-marker");
+                }
+                catch (InvalidOperationException)
+                {
+                    throw;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Caught on purpose, after one rethrow.
+            }
+
+            Assert.Equal(1, Assert.Single(recorder.Signatures(), static s => s.FirstMessage == "rethrow-marker").Count);
+            Assert.True(recorder.Rethrows >= 1);
+        }
+
+        using var json = JsonDocument.Parse(File.ReadAllText(JsonPath));
+        Assert.True(json.RootElement.GetProperty("rethrows").GetInt64() >= 1);
+    }
+
+    /// <summary>
+    /// A script engine throws "Maximum call stack size exceeded" when the stack is nearly gone, and the
+    /// handler runs on top of that throw; taking a stack with file information there could overflow it.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void An_Exception_Thrown_With_The_Stack_Nearly_Exhausted_Is_Counted_And_Not_Recorded()
+    {
+        using var recorder = ExceptionRecorder.Start(LogPath, JsonPath, static () => "deep-phase");
+
+        var thread = new Thread(static () => ThrowAtTheBottomOfTheStack(0), maxStackSize: 1024 * 1024);
+        thread.Start();
+        thread.Join();
+
+        Assert.True(recorder.WithoutStackRoom >= 1);
+        Assert.DoesNotContain(recorder.Signatures(), static s => s.FirstMessage == "deep-marker");
+    }
+
+    /// <summary>
+    /// <see cref="AggregateException.Message"/> appends each inner exception's own message, and a
+    /// JavaScript exception's renders the page's thrown value; the aggregate's is put together from
+    /// the inner exceptions' safe messages instead.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void An_Aggregates_Message_Is_Put_Together_From_Its_Inner_Exceptions_Safe_Messages()
+    {
+        using var context = new Broiler.JavaScript.Engine.JSContext();
+        var aggregate = new AggregateException(new JSException("js-inner-marker"), new FormatException("format-marker"));
+
+        Assert.Equal(
+            "2 error(s) occurred: JSException: js-inner-marker | FormatException: format-marker",
+            ExceptionText.SafeMessage(aggregate));
+    }
+
+    // Recurses until the runtime says the stack is nearly gone, and throws there. The addition after
+    // the call keeps it from becoming a loop.
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static int ThrowAtTheBottomOfTheStack(int depth)
+    {
+        if (RuntimeHelpers.TryEnsureSufficientExecutionStack())
+            return ThrowAtTheBottomOfTheStack(depth + 1) + 1;
+
+        try
+        {
+            throw new InvalidOperationException("deep-marker");
+        }
+        catch (InvalidOperationException)
+        {
+            return depth;
+        }
     }
 
     private static void ThrowAndCatch(Exception exception)

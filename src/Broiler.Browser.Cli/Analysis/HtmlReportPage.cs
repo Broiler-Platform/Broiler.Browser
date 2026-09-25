@@ -157,7 +157,7 @@ internal static class HtmlReportPage
         {
             Open(html, "HTML", markup.QuirksMode);
             html.Append("<p>").Append(E($"Doctype: {markup.Doctype ?? "none"} ({(markup.QuirksMode ? "quirks mode" : "standards mode")}). " +
-                $"Elements: {markup.ElementsAsFetched:N0} as fetched, {markup.ElementsAfterScripts:N0} after scripts. " +
+                string.Create(CultureInfo.InvariantCulture, $"Elements: {markup.ElementsAsFetched:N0} as fetched, {markup.ElementsAfterScripts:N0} after scripts. ") +
                 $"Charset: {markup.DeclaredCharset ?? "not declared"}. Title: {markup.Title ?? "none"}.")).AppendLine("</p>");
             Table(html, ["Parse diagnostic"], markup.ParseDiagnostics.Take(50).Select(static d => new[] { d }));
             Table(html, ["Duplicate id", "Elements"], markup.DuplicateIds.Select(static d => new[] { d.Tag, d.Count.ToString(CultureInfo.InvariantCulture) }));

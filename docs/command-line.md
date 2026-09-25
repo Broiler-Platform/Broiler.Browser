@@ -85,17 +85,23 @@ What the findings look for:
 
 Options: `--width`/`--height` set the viewport, `--timeout` the document's fetch, and
 `--follow-first-link` analyses the landing page's first link. `--verbose` prints every request,
-script failure, console message, geometry layout and exception as it happens. `--analysis-timeout
-<SECS>` bounds the whole run (default 300, `0` for none): when it runs out, the watchdog writes what
-there is and the process exits with code 3, because nothing below the command line bounds a script
-that loops or a layout that does not end. `--sample-stacks` takes the process's stacks with
+script failure and console message as it happens, each geometry question that laid the page out
+(those that took 10 ms or more), and the first 300 exceptions (all of them are in `exceptions.log`).
+`--analysis-timeout <SECS>` bounds the whole run (default 300, `0` for none, at most 30 days): when
+it runs out, the watchdog writes what there is and the process exits with code 3, because nothing
+below the command line bounds a script that loops or a layout that does not end. An exception counts
+once however often it is rethrown on its way out, and one thrown with the stack nearly exhausted is
+counted without being recorded, so that recording it cannot overflow the stack. Reusing an output
+directory clears the files an earlier analysis wrote there first; nothing else in it is touched. `--sample-stacks` takes the process's stacks with
 `dotnet-stack` (`dotnet tool install -g dotnet-stack`) every few seconds while a phase runs longer
 than five, and ranks the Broiler methods the busy threads were in. `--analyze` repeated analyses each
 page in its own child process, one after another, into `<DIR>/<page name>`: the exception log
 listens to the whole process, and concurrent analyses would also measure each other.
 
 The exit code is 0 when the analysis ran to the end, whatever the page did; 1 when the arguments
-were wrong or the document could not be fetched; 3 when the watchdog ended it.
+were wrong, the document could not be fetched or the run failed around its phases; 3 when the
+watchdog ended it. For several pages it is the worst of theirs: 1 if any failed, else 3 if the
+watchdog ended any.
 
 ## How a page runs
 

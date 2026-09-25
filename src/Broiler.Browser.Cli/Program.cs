@@ -97,9 +97,12 @@ public class Program
                     sampleStacks = true;
                     break;
                 case "--analysis-timeout" when i + 1 < args.Length:
-                    if (!int.TryParse(args[++i], out analysisTimeoutSeconds) || analysisTimeoutSeconds < 0)
+                    // The watchdog is a timer, and a timer's due time ends at about 49 days.
+                    if (!int.TryParse(args[++i], NumberStyles.None, CultureInfo.InvariantCulture, out analysisTimeoutSeconds)
+                        || analysisTimeoutSeconds > Analysis.PageAnalysisOptions.MaxWatchdogSeconds)
                     {
-                        Console.Error.WriteLine("Error: '--analysis-timeout' must be a whole number of seconds; 0 turns the watchdog off.");
+                        Console.Error.WriteLine(
+                            $"Error: '--analysis-timeout' must be a whole number of seconds up to {Analysis.PageAnalysisOptions.MaxWatchdogSeconds} (30 days); 0 turns the watchdog off.");
                         return 1;
                     }
                     break;
@@ -610,18 +613,28 @@ public class Program
 
         if (pages.Count == 1)
         {
-            return await new Analysis.PageAnalyzer(new Analysis.PageAnalysisOptions
+            // A phase that fails is part of the report; what fails around the phases — an output
+            // directory that cannot be created, a teardown that throws — is a run that failed.
+            try
             {
-                Url = pages[0],
-                OutputDirectory = outputDir,
-                Width = width,
-                Height = height,
-                TimeoutSeconds = timeoutSeconds,
-                FollowFirstLink = followFirstLink,
-                Verbose = verbose,
-                SampleStacks = sampleStacks,
-                Watchdog = analysisTimeoutSeconds == 0 ? null : TimeSpan.FromSeconds(analysisTimeoutSeconds),
-            }).RunAsync();
+                return await new Analysis.PageAnalyzer(new Analysis.PageAnalysisOptions
+                {
+                    Url = pages[0],
+                    OutputDirectory = outputDir,
+                    Width = width,
+                    Height = height,
+                    TimeoutSeconds = timeoutSeconds,
+                    FollowFirstLink = followFirstLink,
+                    Verbose = verbose,
+                    SampleStacks = sampleStacks,
+                    Watchdog = analysisTimeoutSeconds == 0 ? null : TimeSpan.FromSeconds(analysisTimeoutSeconds),
+                }).RunAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: the analysis could not run: {ex.GetType().FullName}: {Analysis.ExceptionText.SafeMessage(ex)}");
+                return Analysis.PageAnalyzer.Failed;
+            }
         }
 
         // Each page gets the directory its name derives to, collisions numbered, exactly as a batch
@@ -632,7 +645,7 @@ public class Program
 
         // One at a time: an analysis already loads, runs and renders its page twice, and its timings
         // are part of what it reports — concurrent analyses would measure each other.
-        return BatchRunner.RunInChildProcesses(items, degreeOfParallelism: 1, (item, _) =>
+        var batch = BatchRunner.RunInChildProcesses(items, degreeOfParallelism: 1, (item, _) =>
         {
             var arguments = new List<string>
             {
@@ -650,7 +663,22 @@ public class Program
             if (sampleStacks)
                 arguments.Add("--sample-stacks");
             return arguments;
-        }).ExitCode;
+        });
+
+        return CombinedAnalysisExitCode(batch.Outcomes.Select(static o => o.ExitCode));
+    }
+
+    /// <summary>
+    /// The exit code of several analyses: a page that failed outranks one the watchdog stopped, which
+    /// outranks one that completed. A child that ended any other way — it crashed — failed.
+    /// </summary>
+    internal static int CombinedAnalysisExitCode(IEnumerable<int> exitCodes)
+    {
+        var codes = exitCodes.ToArray();
+        if (codes.Any(static c => c is not (Analysis.PageAnalyzer.Completed or Analysis.PageAnalyzer.WatchdogExit)))
+            return Analysis.PageAnalyzer.Failed;
+
+        return codes.Contains(Analysis.PageAnalyzer.WatchdogExit) ? Analysis.PageAnalyzer.WatchdogExit : Analysis.PageAnalyzer.Completed;
     }
 
     /// <summary>

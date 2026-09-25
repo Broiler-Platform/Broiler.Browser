@@ -174,11 +174,19 @@ internal sealed record RenderSummary
 }
 
 /// <summary>The exception log, summarised.</summary>
+/// <param name="Total">Every exception recorded, each counted once however often it was rethrown.</param>
+/// <param name="ByKind">The total by kind: first-chance, unhandled, unobserved task.</param>
+/// <param name="ByComponent">The total by the component that threw.</param>
+/// <param name="Top">The most frequent signatures.</param>
+/// <param name="Rethrows">The notifications that were a recorded exception thrown again, not counted in the total.</param>
+/// <param name="WithoutStackRoom">The exceptions that arrived with too little stack left to record: a stack overflow was near.</param>
 internal sealed record ExceptionSummary(
     long Total,
     IReadOnlyDictionary<string, int> ByKind,
     IReadOnlyDictionary<string, int> ByComponent,
-    IReadOnlyList<ExceptionSignature> Top);
+    IReadOnlyList<ExceptionSignature> Top,
+    long Rethrows = 0,
+    long WithoutStackRoom = 0);
 
 /// <summary>A file the analysis wrote, and what is in it.</summary>
 internal sealed record AnalysisFile(string Path, string Description);
@@ -292,6 +300,22 @@ internal static class Triage
                     "report.md#html"));
             }
 
+            if (html.ObsoleteElements.Count > 0)
+            {
+                findings.Add(new(FindingSeverity.Info, "HTML", $"{html.ObsoleteElements.Sum(static e => e.Count)} element(s) HTML lists as obsolete",
+                    string.Join(", ", html.ObsoleteElements.Take(8).Select(static e => $"<{e.Tag}> ×{e.Count}")) +
+                    " — browsers still render most of them, but not all alike, and not all the same way Broiler does",
+                    "report.md#html"));
+            }
+
+            if (html.CustomElements.Count > 0)
+            {
+                findings.Add(new(FindingSeverity.Info, "HTML", $"{html.CustomElements.Sum(static e => e.Count)} custom element(s)",
+                    string.Join(", ", html.CustomElements.Take(8).Select(static e => $"<{e.Tag}> ×{e.Count}")) +
+                    " — until a script defines them they are unstyled inline elements, and they stay so if that script failed",
+                    "report.md#html"));
+            }
+
             if (html.UnknownElements.Count > 0)
             {
                 findings.Add(new(FindingSeverity.Info, "HTML", $"{html.UnknownElements.Sum(static e => e.Count)} element(s) with tags HTML does not define",
@@ -355,6 +379,12 @@ internal static class Triage
                 findings.Add(new(FindingSeverity.Info, "JavaScript", $"{scripting.JavaScriptExceptions} exception(s) were thrown inside JavaScript",
                     "including those the page caught itself — a caught exception in feature detection is how a page quietly takes its fallback path",
                     "exceptions.log"));
+            }
+
+            if (scripting.LongTurns.Count > 0)
+            {
+                findings.Add(new(FindingSeverity.Info, "JavaScript", $"{scripting.LongTurns.Count} long turn(s) or idle gap(s) in the script bridge's turn trace",
+                    $"first: {AnalysisConsole.OneLine(scripting.LongTurns[0], 200)}", "report.md#javascript"));
             }
 
             if (scripting.SettleExhausted)
@@ -506,6 +536,13 @@ internal static class Triage
                 findings.Add(new(FindingSeverity.Info, "CSS", $"{css.UnknownAtRules.Count} at-rule(s) CSS does not define",
                     string.Join(", ", css.UnknownAtRules.Select(static a => "@" + a)), "report.md#css"));
             }
+        }
+
+        if (report.Exceptions is { WithoutStackRoom: > 0 } starved)
+        {
+            findings.Add(new(FindingSeverity.Warning, "JavaScript", $"{starved.WithoutStackRoom} exception(s) were thrown with the stack nearly exhausted",
+                "a script recursed until the stack ran out (\"Maximum call stack size exceeded\" in javascript-errors.log); they are counted, not recorded",
+                "exceptions.json"));
         }
 
         if (report.Exceptions is { Total: > 0 } exceptions)

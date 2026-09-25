@@ -173,7 +173,7 @@ internal static class MarkdownReport
             {
                 md.Append("| ").Append(failure.Destination)
                     .Append(" | ").Append(failure.Status?.ToString(CultureInfo.InvariantCulture) ?? "—")
-                    .Append(" | `").Append(Escape(failure.Url))
+                    .Append(" | `").Append(Code(failure.Url))
                     .Append("` | ").Append(Escape(failure.Error ?? failure.BodyError ?? failure.StatusText ?? string.Empty)).AppendLine(" |");
             }
 
@@ -190,7 +190,7 @@ internal static class MarkdownReport
                 md.Append("| ").Append(Ms(slow.HeadersMs))
                     .Append(" | ").Append(slow.CompleteMs is { } complete ? Ms(complete) : "—")
                     .Append(" | ").Append(slow.Destination)
-                    .Append(" | `").Append(Escape(slow.Url)).AppendLine("` |");
+                    .Append(" | `").Append(Code(slow.Url)).AppendLine("` |");
             }
 
             md.AppendLine();
@@ -267,7 +267,7 @@ internal static class MarkdownReport
         md.AppendLine("| --- | --- | --- | --- |");
         foreach (var finding in findings)
         {
-            md.Append("| `").Append(Escape(finding.Element))
+            md.Append("| `").Append(Code(finding.Element))
                 .Append("` | ").Append(Escape(finding.Path))
                 .Append(" | ").Append(finding.Box)
                 .Append(" | ").Append(Escape(finding.Detail)).AppendLine(" |");
@@ -292,8 +292,8 @@ internal static class MarkdownReport
         Row(md, "Viewport meta", html.Viewport ?? "none");
         Row(md, "Base URL", html.BaseHref ?? "none");
         Row(md, "Refresh", html.MetaRefresh ?? "none");
-        Row(md, "Elements", $"{html.ElementsAsFetched:N0} as fetched → {html.ElementsAfterScripts:N0} after scripts");
-        Row(md, "Body text", $"{html.TextLengthAsFetched:N0} → {html.TextLengthAfterScripts:N0} characters");
+        Row(md, "Elements", string.Create(CultureInfo.InvariantCulture, $"{html.ElementsAsFetched:N0} as fetched → {html.ElementsAfterScripts:N0} after scripts"));
+        Row(md, "Body text", string.Create(CultureInfo.InvariantCulture, $"{html.TextLengthAsFetched:N0} → {html.TextLengthAfterScripts:N0} characters"));
         Row(md, "Deepest nesting", html.MaxDepth.ToString(CultureInfo.InvariantCulture));
         Row(md, "Styling", $"{html.InlineStyleElements} <style> element(s), {html.StyleAttributes} style attribute(s), {html.Stylesheets.Count} linked stylesheet(s)");
         Row(md, "Forms", $"{html.Forms} form(s), {html.FormControls} control(s)");
@@ -315,7 +315,7 @@ internal static class MarkdownReport
             {
                 md.Append("| ").Append(script.Index)
                     .Append(" | ").Append(Escape(script.Kind))
-                    .Append(" | `").Append(Escape(script.Source))
+                    .Append(" | `").Append(Code(script.Source))
                     .Append("` | ").Append(script.Attributes)
                     .Append(" | ").Append(Escape(script.Load ?? string.Empty)).AppendLine(" |");
             }
@@ -325,7 +325,7 @@ internal static class MarkdownReport
 
         Resources(md, "Linked stylesheets", html.Stylesheets);
         Resources(md, "Frames and embedded objects", html.Frames);
-        Resources(md, "Images", html.Images.Where(static i => i.Load is not { } load || !load.StartsWith("2", StringComparison.Ordinal)).ToArray(), "Images that did not load");
+        Resources(md, "Images", html.Images.Where(static i => HtmlInspector.DidNotLoad(i.Load)).ToArray(), "Images that did not load");
     }
 
     private static void Css(StringBuilder md, AnalysisReport report)
@@ -343,7 +343,7 @@ internal static class MarkdownReport
         md.AppendLine("| --- | --- | --- | --- | --- | --- |");
         foreach (var sheet in css.Sheets)
         {
-            md.Append("| `").Append(Escape(sheet.Source))
+            md.Append("| `").Append(Code(sheet.Source))
                 .Append("` | ").Append(sheet.Bytes.ToString("N0", CultureInfo.InvariantCulture))
                 .Append(" | ").Append(sheet.Rules)
                 .Append(" | ").Append(sheet.Declarations)
@@ -361,11 +361,11 @@ internal static class MarkdownReport
             md.AppendLine("| --- | --- | --- | --- | --- |");
             foreach (var problem in css.ParseProblems.Take(100))
             {
-                md.Append("| `").Append(Escape(problem.Source))
+                md.Append("| `").Append(Code(problem.Source))
                     .Append("` | ").Append(problem.Line).Append(':').Append(problem.Column)
                     .Append(" | ").Append(problem.Code)
                     .Append(" | ").Append(Escape(problem.Message))
-                    .Append(" | `").Append(Escape(problem.Excerpt)).AppendLine("` |");
+                    .Append(" | `").Append(Code(problem.Excerpt)).AppendLine("` |");
             }
 
             md.AppendLine();
@@ -391,7 +391,7 @@ internal static class MarkdownReport
         md.AppendLine("### Fonts").AppendLine();
         if (css.FontFaces.Count > 0)
         {
-            md.AppendLine("Declared with `@font-face`: " + string.Join(", ", css.FontFaces.Select(static f => $"`{Escape(f.Family)}`").Distinct()) + ".").AppendLine();
+            md.AppendLine("Declared with `@font-face`: " + string.Join(", ", css.FontFaces.Select(static f => $"`{Code(f.Family)}`").Distinct()) + ".").AppendLine();
         }
 
         if (css.Fonts.Count > 0)
@@ -400,7 +400,7 @@ internal static class MarkdownReport
             md.AppendLine("| --- | --- | --- | --- | --- |");
             foreach (var font in css.Fonts.Take(40))
             {
-                md.Append("| `").Append(Escape(font.Requested))
+                md.Append("| `").Append(Code(font.Requested))
                     .Append("` | ").Append(font.TextRuns)
                     .Append(" | ").Append(Escape(font.ResolvedFamily ?? "a fallback"))
                     .Append(" | ").Append(font.Resolution)
@@ -428,7 +428,7 @@ internal static class MarkdownReport
             md.Append("| ").Append(signature.Count)
                 .Append(" | ").Append(signature.Kind)
                 .Append(" | `").Append(signature.Type)
-                .Append("` | `").Append(Escape(signature.Site))
+                .Append("` | `").Append(Code(signature.Site))
                 .Append("` | ").Append(string.Join(", ", signature.Phases))
                 .Append(" | ").Append(Escape(AnalysisConsole.OneLine(signature.FirstMessage, 200))).AppendLine(" |");
         }
@@ -445,7 +445,7 @@ internal static class MarkdownReport
             md.AppendLine("| Samples | Frame | Phases |");
             md.AppendLine("| --- | --- | --- |");
             foreach (var hotSpot in report.HotSpots)
-                md.Append("| ").Append(hotSpot.Samples).Append(" | `").Append(Escape(hotSpot.Frame)).Append("` | ").Append(string.Join(", ", hotSpot.Phases)).AppendLine(" |");
+                md.Append("| ").Append(hotSpot.Samples).Append(" | `").Append(Code(hotSpot.Frame)).Append("` | ").Append(string.Join(", ", hotSpot.Phases)).AppendLine(" |");
             md.AppendLine();
         }
 
@@ -504,7 +504,7 @@ internal static class MarkdownReport
             return;
 
         md.Append("### ").AppendLine(title).AppendLine();
-        md.AppendLine(string.Join(", ", tags.Select(t => $"`{prefix}{Escape(t.Tag)}{(prefix == "<" ? ">" : string.Empty)}` ×{t.Count}"))).AppendLine();
+        md.AppendLine(string.Join(", ", tags.Select(t => $"`{prefix}{Code(t.Tag)}{(prefix == "<" ? ">" : string.Empty)}` ×{t.Count}"))).AppendLine();
     }
 
     private static void Resources(StringBuilder md, string title, IReadOnlyList<ResourceElement> resources, string? heading = null)
@@ -517,8 +517,8 @@ internal static class MarkdownReport
         md.AppendLine("| --- | --- | --- |");
         foreach (var resource in resources.Take(60))
         {
-            md.Append("| `").Append(Escape(resource.Element))
-                .Append("` | `").Append(Escape(resource.Url))
+            md.Append("| `").Append(Code(resource.Element))
+                .Append("` | `").Append(Code(resource.Url))
                 .Append("` | ").Append(Escape(resource.Load ?? string.Empty)).AppendLine(" |");
         }
 
@@ -538,7 +538,7 @@ internal static class MarkdownReport
         md.AppendLine("| --- | --- | --- |");
         foreach (var usage in usages)
         {
-            md.Append("| `").Append(Escape(CssInspector.Describe(usage)))
+            md.Append("| `").Append(Code(CssInspector.Describe(usage)))
                 .Append("` | ").Append(usage.Count)
                 .Append(" | ").Append(Escape(usage.FirstSource)).AppendLine(" |");
         }
@@ -561,6 +561,23 @@ internal static class MarkdownReport
     };
 
     /// <summary>Keeps page-supplied text from breaking a table cell or a code span.</summary>
+    /// <summary>
+    /// Text for a table cell outside a code span. The page wrote much of it — a title, a URL, a
+    /// message quoting its markup — and a Markdown viewer renders raw HTML there, so markup is written
+    /// as entities: a title of <c>&lt;img src=…&gt;</c> must read as that text, not load a picture.
+    /// </summary>
     private static string Escape(string value) =>
+        Code(value)
+            .Replace("&", "&amp;", StringComparison.Ordinal)
+            .Replace("<", "&lt;", StringComparison.Ordinal)
+            .Replace(">", "&gt;", StringComparison.Ordinal)
+            .Replace("[", "\\[", StringComparison.Ordinal)
+            .Replace("]", "\\]", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Text inside a code span, where Markdown renders nothing, so only what would end the span or
+    /// the table cell is replaced.
+    /// </summary>
+    private static string Code(string value) =>
         value.ReplaceLineEndings(" ").Replace("|", "\\|", StringComparison.Ordinal).Replace("`", "'", StringComparison.Ordinal);
 }

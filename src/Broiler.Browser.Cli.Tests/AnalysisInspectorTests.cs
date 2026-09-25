@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Globalization;
 using Broiler.Cli.Analysis;
 using Broiler.Layout.IR;
 
@@ -128,6 +129,65 @@ public sealed class AnalysisInspectorTests
         Assert.Equal(["classic", "not run (type=\"text/x-template\")", "module"], report.Scripts.Select(static s => s.Kind));
     }
 
+    /// <summary>
+    /// Only a srcset lists candidates: in a <c>src</c> or an <c>href</c>, commas and spaces belong to
+    /// the URL. And references resolve against the document's base URL, <c>&lt;base href&gt;</c> first.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Reference_Is_Resolved_Whole_Against_The_Base_Url()
+    {
+        const string Html =
+            "<!DOCTYPE html><html><head>" +
+            "<base href='https://cdn.example.test/assets/'>" +
+            "<link rel='stylesheet' href='https://fonts.example.test/css?family=Open+Sans:400,700'>" +
+            "</head><body>" +
+            "<img src='photos/c_fill,w_300/x.jpg'>" +
+            "<img srcset='small.jpg 1x, large.jpg 2x'>" +
+            "</body></html>";
+
+        var report = HtmlInspector.Inspect(Html, afterScripts: null, network: [], "file:///C:/pages/page.html");
+
+        Assert.Equal("https://fonts.example.test/css?family=Open+Sans:400,700", Assert.Single(report.Stylesheets).Url);
+        Assert.Equal(
+            ["https://cdn.example.test/assets/photos/c_fill,w_300/x.jpg", "https://cdn.example.test/assets/small.jpg"],
+            report.Images.Select(static i => i.Url));
+        Assert.All(report.Images, static i => Assert.Equal("not requested", i.Load));
+    }
+
+    [Theory(Timeout = 600000)]
+    [InlineData("inline data: URL", false)]
+    [InlineData("local file", false)]
+    [InlineData("200, 1,024 bytes", false)]
+    [InlineData("local file NOT FOUND", true)]
+    [InlineData("not requested", true)]
+    [InlineData("no response", true)]
+    [InlineData("failed: NameResolutionError", true)]
+    [InlineData("404 (HTTP error), 0 bytes", true)]
+    public void An_Image_Did_Not_Load_Only_When_It_Did_Not_Arrive(string load, bool didNotLoad) =>
+        Assert.Equal(didNotLoad, HtmlInspector.DidNotLoad(load));
+
+    [Fact(Timeout = 600000)]
+    public void The_Markdown_Report_Writes_The_Pages_Markup_As_Text_And_Its_Numbers_Invariantly()
+    {
+        var culture = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            var markdown = MarkdownReport.Write(EmptyReport() with
+            {
+                Html = new HtmlReport { Title = "<img src=https://tracker.example.test/p.gif>", ElementsAsFetched = 12_345 },
+            });
+
+            Assert.Contains("&lt;img src=https://tracker.example.test/p.gif&gt;", markdown, StringComparison.Ordinal);
+            Assert.DoesNotContain("<img", markdown, StringComparison.Ordinal);
+            Assert.Contains("12,345 as fetched", markdown, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = culture;
+        }
+    }
+
     [Fact(Timeout = 600000)]
     public void A_Standards_Mode_Document_Is_Not_Reported_As_Quirks()
     {
@@ -192,6 +252,27 @@ public sealed class AnalysisInspectorTests
             static f => f.Title.Contains("same with and without", StringComparison.Ordinal));
         Assert.DoesNotContain(Triage.Rank(EmptyReport() with { Scripting = failing, ScriptVisualEffect = 0.0008 }),
             static f => f.Title.Contains("same with and without", StringComparison.Ordinal));
+    }
+
+    [Theory(Timeout = 600000)]
+    [InlineData(0.0, 0.0)]
+    [InlineData(0.00001, 0.0001)]
+    [InlineData(0.25, 0.25)]
+    public void A_Pixel_Change_Never_Rounds_To_No_Change(double ratio, double reported) =>
+        Assert.Equal(reported, PageAnalyzer.ScriptEffect(ratio));
+
+    [Fact(Timeout = 600000)]
+    public void Obsolete_And_Custom_Elements_And_Long_Turns_Are_Findings()
+    {
+        var findings = Triage.Rank(EmptyReport() with
+        {
+            Html = new HtmlReport { ObsoleteElements = [new TagCount("center", 2)], CustomElements = [new TagCount("my-widget", 3)] },
+            Scripting = new ScriptingSummary { LongTurns = ["turn 1250 ms in timer"] },
+        });
+
+        Assert.Contains(findings, static f => f.Title.Contains("obsolete", StringComparison.Ordinal) && f.Detail.Contains("<center> ×2", StringComparison.Ordinal));
+        Assert.Contains(findings, static f => f.Title == "3 custom element(s)");
+        Assert.Contains(findings, static f => f.Title.Contains("long turn", StringComparison.Ordinal) && f.Detail.Contains("1250 ms", StringComparison.Ordinal));
     }
 
     [Fact(Timeout = 600000)]

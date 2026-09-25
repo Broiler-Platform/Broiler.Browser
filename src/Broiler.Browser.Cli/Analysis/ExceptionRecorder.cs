@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.Json;
@@ -90,6 +91,20 @@ internal sealed record ExceptionSignature(
 /// work — reading a PDB for a stack's line numbers throws and catches internally — so it can never
 /// recurse into itself.
 /// </para>
+/// <para>
+/// <b>Nor overflow the stack it runs on.</b> A script engine throws "Maximum call stack size
+/// exceeded" exactly when the stack is nearly gone, and the handler runs on top of that throw; taking
+/// a stack with file information there would turn a recoverable script error into a process that
+/// dies without a report. With less stack left than
+/// <see cref="RuntimeHelpers.TryEnsureSufficientExecutionStack"/> asks for, a notification is only
+/// counted.
+/// </para>
+/// <para>
+/// <b>An exception counts once.</b> .NET raises a first-chance notification for every throw of an
+/// exception object — each <c>throw;</c> that rethrows it and each <c>await</c> that hands it on —
+/// so a single failure passing through a few frames arrived as several. The first notification for
+/// an object is recorded; later ones are counted as rethrows.
+/// </para>
 /// </remarks>
 internal sealed class ExceptionRecorder : IDisposable
 {
@@ -108,11 +123,19 @@ internal sealed class ExceptionRecorder : IDisposable
     [ThreadStatic]
     private static RecentException? t_last;
 
+    private static readonly object Seen = new();
+
     private readonly Lock _sync = new();
     private readonly Func<string> _phase;
     private readonly string _jsonPath;
     private readonly Dictionary<string, MutableSignature> _signatures = new(StringComparer.Ordinal);
     private readonly List<MutableSignature> _order = [];
+
+    // The exception objects already recorded, so a rethrow of one is not recorded again. Weak: the
+    // exceptions a page throws and drops must not live as long as the run.
+    private readonly ConditionalWeakTable<Exception, object> _recorded = [];
+    private long _rethrows;
+    private long _withoutStackRoom;
     private StreamWriter? _log;
     private long _sequence;
     private int _written;
@@ -162,6 +185,12 @@ internal sealed class ExceptionRecorder : IDisposable
         }
     }
 
+    /// <summary>How many first-chance notifications were a recorded exception thrown again.</summary>
+    public long Rethrows => Interlocked.Read(ref _rethrows);
+
+    /// <summary>How many exceptions arrived with too little stack left to record them.</summary>
+    public long WithoutStackRoom => Interlocked.Read(ref _withoutStackRoom);
+
     /// <summary>
     /// Starts recording into <paramref name="logPath"/>, with the summary to follow in
     /// <paramref name="jsonPath"/>. <paramref name="phase"/> names what the analysis is doing, and is
@@ -187,8 +216,26 @@ internal sealed class ExceptionRecorder : IDisposable
         }
     }
 
-    private void OnFirstChance(object? sender, FirstChanceExceptionEventArgs e) =>
+    private void OnFirstChance(object? sender, FirstChanceExceptionEventArgs e)
+    {
+        // Before anything that needs the stack — the rethrow check included.
+        if (!RuntimeHelpers.TryEnsureSufficientExecutionStack())
+        {
+            Interlocked.Increment(ref _withoutStackRoom);
+            return;
+        }
+
+        if (t_inHandler)
+            return;
+
+        if (!_recorded.TryAdd(e.Exception, Seen))
+        {
+            Interlocked.Increment(ref _rethrows);
+            return;
+        }
+
         Record(e.Exception, "first-chance");
+    }
 
     private void OnUnhandled(object sender, UnhandledExceptionEventArgs e)
     {
@@ -203,6 +250,12 @@ internal sealed class ExceptionRecorder : IDisposable
     {
         if (t_inHandler)
             return;
+
+        if (!RuntimeHelpers.TryEnsureSufficientExecutionStack())
+        {
+            Interlocked.Increment(ref _withoutStackRoom);
+            return;
+        }
 
         t_inHandler = true;
         try
@@ -497,6 +550,10 @@ internal sealed class ExceptionRecorder : IDisposable
             {
                 log.WriteLine();
                 log.WriteLine($"# {total} exception(s) in {signatures.Count} signature(s), most frequent first:");
+                if (Rethrows > 0)
+                    log.WriteLine($"# (and {Rethrows} rethrow(s) of exceptions already recorded, not counted again)");
+                if (WithoutStackRoom > 0)
+                    log.WriteLine($"# ({WithoutStackRoom} exception(s) arrived with too little stack left to record them: a stack overflow was near)");
                 foreach (var signature in signatures.Take(50))
                 {
                     log.WriteLine(
@@ -513,6 +570,8 @@ internal sealed class ExceptionRecorder : IDisposable
             {
                 generatedAt = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
                 total,
+                rethrows = Rethrows,
+                withoutStackRoom = WithoutStackRoom,
                 stacksPerSignature = StacksPerSignature,
                 byKind = signatures
                     .GroupBy(static s => s.Kind)

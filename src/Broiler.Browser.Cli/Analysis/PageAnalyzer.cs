@@ -58,6 +58,10 @@ internal sealed class PageAnalyzer
     /// <summary>Exit code: the watchdog ended the analysis.</summary>
     public const int WatchdogExit = 3;
 
+    // Who writes the reports: the run when it gets to them, or the watchdog when it fires first.
+    private const int RunReports = 1;
+    private const int WatchdogReports = 2;
+
     /// <summary>How many first-chance exceptions the console prints before it only counts them.</summary>
     private const int MaxConsoleExceptions = 300;
 
@@ -81,6 +85,10 @@ internal sealed class PageAnalyzer
     private readonly RunState _state = new();
     private int _consoleExceptions;
 
+    // 0 until the run or the watchdog claims the reports; the other then stands aside.
+    private int _reporter;
+    private readonly ManualResetEventSlim _watchdogDone = new();
+
     /// <param name="options">What to analyse, and how.</param>
     /// <param name="output">Where the console lines go; standard output when null.</param>
     /// <param name="exit">
@@ -100,6 +108,7 @@ internal sealed class PageAnalyzer
     {
         var output = Path.GetFullPath(_options.OutputDirectory);
         Directory.CreateDirectory(output);
+        RemovePreviousAnalysis(output);
         var previousTurnTrace = EnableJavaScriptTurnTrace();
         _console.Line($"analyzing {_options.Url}");
         _console.Line($"output    {output}");
@@ -158,6 +167,16 @@ internal sealed class PageAnalyzer
             // The trace read the variable when it started; leaving it set would hand it to every
             // process this one starts later.
             Environment.SetEnvironmentVariable(TurnTraceVariable, previousTurnTrace);
+        }
+
+        // The watchdog may have fired while the phases were ending, and be writing the reports now.
+        // Two writers would share every file and the exit would cut one of them off mid-write, so
+        // the first to claim the reports writes them. Having lost, this thread writes nothing and
+        // waits for the watchdog to end the process — or, under a test's stand-in exit, to finish.
+        if (Interlocked.CompareExchange(ref _reporter, RunReports, 0) != 0)
+        {
+            _watchdogDone.Wait();
+            return WatchdogExit;
         }
 
         if (sampler is not null)
@@ -247,7 +266,7 @@ internal sealed class PageAnalyzer
                     : scripted.HasPendingWork ? "settled; timers remain queued beyond the load window" : "settled");
 
             state.Scripting = Scripting(page, scripted, profiler, bundle, layouts);
-            afterScripts = _phases.Run("serialize", scripted.Serialize, static h => $"{Encoding.UTF8.GetByteCount(h):N0} bytes after scripts");
+            afterScripts = _phases.Run("serialize", scripted.Serialize, static h => string.Create(CultureInfo.InvariantCulture, $"{Encoding.UTF8.GetByteCount(h):N0} bytes after scripts"));
         }
 
         afterScripts ??= page.Content.Html;
@@ -302,7 +321,7 @@ internal sealed class PageAnalyzer
         {
             AddFile(bare.ViewportImage, "the viewport rendered from the document as fetched, before any script ran");
             if (state.Render?.Viewport is { } withScripts && bare.Viewport is { } withoutScripts)
-                state.ScriptVisualEffect = Math.Round(RenderProbe.DifferenceRatio(withScripts, withoutScripts), 4);
+                state.ScriptVisualEffect = ScriptEffect(RenderProbe.DifferenceRatio(withScripts, withoutScripts));
         }
 
         // The document the scripts left, parsed back from its serialization. The session can hand out
@@ -312,12 +331,12 @@ internal sealed class PageAnalyzer
         state.Layout = _phases.Run(
             "layout",
             () => Layout(output, state.Render),
-            static l => $"{l.Boxes:N0} boxes, {l.HorizontalOverflow.Count} overflowing, {l.CollapsedWithText.Count} collapsed with text");
+            static l => string.Create(CultureInfo.InvariantCulture, $"{l.Boxes:N0} boxes, {l.HorizontalOverflow.Count} overflowing, {l.CollapsedWithText.Count} collapsed with text"));
 
         state.Html = _phases.Run(
             "html",
             () => HtmlInspector.Inspect(page.Content.Html, afterScriptsDocument, network.Snapshot(), page.FinalUrl),
-            static h => $"{h.ElementsAsFetched:N0} elements as fetched, {h.ElementsAfterScripts:N0} after scripts{(h.QuirksMode ? ", QUIRKS MODE" : string.Empty)}");
+            static h => string.Create(CultureInfo.InvariantCulture, $"{h.ElementsAsFetched:N0} elements as fetched, {h.ElementsAfterScripts:N0} after scripts{(h.QuirksMode ? ", QUIRKS MODE" : string.Empty)}"));
 
         state.Css = _phases.Run(
             "css",
@@ -535,7 +554,9 @@ internal sealed class PageAnalyzer
                 exceptions.GroupBy(static e => e.Component)
                     .OrderByDescending(static g => g.Sum(static e => e.Count))
                     .ToDictionary(static g => g.Key, static g => g.Sum(static e => e.Count)),
-                [.. exceptions.Take(40)]),
+                [.. exceptions.Take(40)],
+                bundle.Exceptions?.Rethrows ?? 0,
+                bundle.Exceptions?.WithoutStackRoom ?? 0),
             Files = Files(),
         };
 
@@ -612,6 +633,10 @@ internal sealed class PageAnalyzer
     /// </summary>
     private void FireWatchdog(string output, DiagnosticSession bundle, NetworkRecorder network, TimeSpan limit)
     {
+        // The run got to its reports first; it writes them and ends on its own.
+        if (Interlocked.CompareExchange(ref _reporter, WatchdogReports, 0) != 0)
+            return;
+
         var message = string.Create(
             CultureInfo.InvariantCulture,
             $"stopped by the watchdog after {limit.TotalSeconds:0} s, in the {_phases.Current} phase");
@@ -647,6 +672,10 @@ internal sealed class PageAnalyzer
         finally
         {
             _exit(WatchdogExit);
+
+            // Reached only when the exit is a test's stand-in: the run, which lost the reports to
+            // this thread, may go on.
+            _watchdogDone.Set();
         }
     }
 
@@ -716,6 +745,87 @@ internal sealed class PageAnalyzer
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The share of pixels the scripts changed, rounded for the report — but never to zero when a
+    /// pixel changed: "no pixel changed" is a finding, and forty changed pixels of a viewport round
+    /// to 0.0000.
+    /// </summary>
+    internal static double ScriptEffect(double ratio) =>
+        ratio == 0 ? 0 : Math.Max(Math.Round(ratio, 4), 0.0001);
+
+    /// <summary>Every file an analysis writes into its directory, apart from those in <c>resources/</c>.</summary>
+    private static readonly string[] AnalysisFiles =
+    [
+        "report.html", "report.md", "report.json", "screenshot.png", "screenshot-full.png",
+        "screenshot-without-scripts.png", "screenshot-boxes.png", "document-as-fetched.html",
+        "document-after-scripts.html", "document-as-rendered.html", "exceptions.log", "exceptions.json",
+        "javascript-errors.log", "console.log", "messages.log", "diagnostics.json", "network.json",
+        "network.har", "watchdog.md", "slow-phase-stacks.txt", "summary.md",
+        "layout/fragment-tree.txt", "layout/fragments.json", "layout/computed-styles.json",
+        "layout/display-list.json", "layout/invariant-violations.txt",
+    ];
+
+    /// <summary>
+    /// Clears what an earlier analysis left in <paramref name="output"/>, so that no file of that run —
+    /// a <c>watchdog.md</c> it ended with, a resource it fetched — sits beside this run's as if this
+    /// run had written it.
+    /// </summary>
+    /// <remarks>
+    /// Only a directory that holds an analysis (its <c>report.json</c> or <c>watchdog.md</c>) is
+    /// touched, and only the files an analysis writes: the fixed names, and the resources its own
+    /// <c>resources/index.json</c> lists. Anything else a reader put there stays.
+    /// </remarks>
+    private void RemovePreviousAnalysis(string output)
+    {
+        if (!File.Exists(Path.Combine(output, "report.json")) && !File.Exists(Path.Combine(output, "watchdog.md")))
+            return;
+
+        var resources = Path.Combine(output, "resources");
+        var index = Path.Combine(resources, "index.json");
+        var names = new List<string>(AnalysisFiles);
+        try
+        {
+            if (File.Exists(index))
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(index));
+                foreach (var entry in json.RootElement.EnumerateArray())
+                {
+                    if (entry.TryGetProperty("SavedAs", out var saved) && saved.GetString() is { Length: > 0 } file
+                        && Path.GetFileName(file) == file)
+                    {
+                        names.Add("resources/" + file);
+                    }
+                }
+
+                names.Add("resources/index.json");
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            _console.Line($"could not read the earlier run's resources/index.json: {ex.Message}");
+        }
+
+        var removed = 0;
+        foreach (var name in names)
+        {
+            var path = Path.Combine(output, name);
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                    removed++;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _console.Line($"could not remove the earlier run's {name}: {ex.Message}");
+            }
+        }
+
+        _console.Line($"cleared   {removed} file(s) of an earlier analysis in this directory");
+    }
 
     private void WriteText(string output, string name, string content, string description)
     {

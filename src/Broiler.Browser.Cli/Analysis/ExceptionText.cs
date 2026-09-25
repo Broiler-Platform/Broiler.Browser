@@ -52,6 +52,11 @@ internal static class ExceptionText
             if (exception is JSException javaScript)
                 return JavaScriptMessage(javaScript);
 
+            // AggregateException.Message appends each inner exception's Message, and a wrapped
+            // JSException's renders the page's thrown value; so it is put together here instead.
+            if (exception is AggregateException aggregate)
+                return AggregateMessage(aggregate);
+
             return exception.Message;
         }
         catch (Exception)
@@ -70,6 +75,18 @@ internal static class ExceptionText
         var builder = new StringBuilder();
         Append(builder, exception, depth: 0);
         return builder.ToString().TrimEnd();
+    }
+
+    private static string AggregateMessage(AggregateException aggregate)
+    {
+        var inner = aggregate.InnerExceptions;
+        if (inner.Count == 0)
+            return "One or more errors occurred.";
+
+        var shown = string.Join(" | ", inner.Take(5).Select(static e => $"{e.GetType().Name}: {SafeMessage(e)}"));
+        return inner.Count > 5
+            ? $"{inner.Count} errors occurred: {shown} | …"
+            : $"{inner.Count} error(s) occurred: {shown}";
     }
 
     /// <summary>Whether <paramref name="type"/> is, or derives from, the engine's JavaScript exception.</summary>

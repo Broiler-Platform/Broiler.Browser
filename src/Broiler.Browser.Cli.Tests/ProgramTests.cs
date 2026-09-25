@@ -109,4 +109,13 @@ public sealed class ProgramTests
             File.Delete(path);
         }
     }
+
+    /// <summary>Several analyses exit with the worst of their codes: failed, then stopped, then completed.</summary>
+    [Theory(Timeout = 600000)]
+    [InlineData(new[] { 0, 0 }, 0)]
+    [InlineData(new[] { 0, 3 }, 3)]
+    [InlineData(new[] { 3, 1, 0 }, 1)]
+    [InlineData(new[] { 0, -532462766 }, 1)]
+    public void Several_Analyses_Exit_With_The_Worst_Of_Their_Codes(int[] exitCodes, int combined) =>
+        Assert.Equal(combined, Program.CombinedAnalysisExitCode(exitCodes));
 }

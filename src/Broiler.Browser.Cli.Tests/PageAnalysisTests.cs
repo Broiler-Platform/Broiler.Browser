@@ -45,9 +45,10 @@ public sealed class PageAnalysisTests : IDisposable
     private async Task<(int ExitCode, string Directory, JsonElement Report, string Console)> AnalyzeAsync(
         string url,
         TimeSpan? watchdog = null,
-        Action<int>? exit = null)
+        Action<int>? exit = null,
+        string? directory = null)
     {
-        var directory = _pages.Output("analysis-" + Guid.NewGuid().ToString("N")[..8]);
+        directory ??= _pages.Output("analysis-" + Guid.NewGuid().ToString("N")[..8]);
         var console = new StringWriter();
         var exitCode = await new PageAnalyzer(
             new PageAnalysisOptions
@@ -170,6 +171,31 @@ public sealed class PageAnalysisTests : IDisposable
     }
 
     /// <summary>
+    /// A directory reused for a new analysis loses what the earlier one wrote — its watchdog.md, the
+    /// resources its index listed — and keeps what someone else put there.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public async Task A_Reused_Directory_Loses_The_Earlier_Analysis_And_Keeps_Everything_Else()
+    {
+        var directory = _pages.Output("reused-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(Path.Combine(directory, "resources"));
+        File.WriteAllText(Path.Combine(directory, "report.json"), "{}");
+        File.WriteAllText(Path.Combine(directory, "watchdog.md"), "# stale");
+        File.WriteAllText(Path.Combine(directory, "notes.txt"), "mine");
+        File.WriteAllText(Path.Combine(directory, "resources", "0042-stale-script.js"), "stale");
+        File.WriteAllText(Path.Combine(directory, "resources", "mine.txt"), "mine");
+        File.WriteAllText(Path.Combine(directory, "resources", "index.json"), "[{\"SavedAs\":\"0042-stale-script.js\"}]");
+
+        var (exitCode, _, _, _) = await AnalyzeAsync(_pages.Write("plain.html", "<!DOCTYPE html><p>plain</p>"), directory: directory);
+
+        Assert.Equal(PageAnalyzer.Completed, exitCode);
+        Assert.False(File.Exists(Path.Combine(directory, "watchdog.md")));
+        Assert.False(File.Exists(Path.Combine(directory, "resources", "0042-stale-script.js")));
+        Assert.True(File.Exists(Path.Combine(directory, "notes.txt")));
+        Assert.True(File.Exists(Path.Combine(directory, "resources", "mine.txt")));
+    }
+
+    /// <summary>
     /// A page that keeps the analysis busy past its limit still leaves its evidence: the watchdog writes
     /// what it knows and ends the process — here, a test's stand-in for the exit.
     /// </summary>
@@ -183,7 +209,7 @@ public sealed class PageAnalysisTests : IDisposable
             """);
         var exitCodes = new List<int>();
 
-        var (_, directory, _, console) = await AnalyzeAsync(url, TimeSpan.FromMilliseconds(1500), code =>
+        var (exitCode, directory, report, console) = await AnalyzeAsync(url, TimeSpan.FromMilliseconds(1500), code =>
         {
             lock (exitCodes)
                 exitCodes.Add(code);
@@ -191,6 +217,12 @@ public sealed class PageAnalysisTests : IDisposable
 
         Assert.Equal([PageAnalyzer.WatchdogExit], exitCodes);
         Assert.Contains("WATCHDOG", console, StringComparison.Ordinal);
+
+        // The run went on once the busy script ended, found the reports claimed and wrote nothing:
+        // the report on disk is the watchdog's, not a completed one written over it.
+        Assert.Equal(PageAnalyzer.WatchdogExit, exitCode);
+        Assert.False(report.GetProperty("completed").GetBoolean());
+        Assert.StartsWith("stopped by the watchdog", report.GetProperty("watchdogFired").GetString(), StringComparison.Ordinal);
 
         // Which phase it stops in depends on how fast the machine loads the page; that it names one does not.
         var watchdog = await File.ReadAllTextAsync(Path.Combine(directory, "watchdog.md"));
