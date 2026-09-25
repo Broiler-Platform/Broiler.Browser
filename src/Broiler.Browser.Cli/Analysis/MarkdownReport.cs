@@ -300,7 +300,7 @@ internal static class MarkdownReport
         Row(md, "Media and graphics", html.MediaAndGraphics.Count == 0 ? "none" : string.Join(", ", html.MediaAndGraphics.Select(static m => $"{m.Tag} ×{m.Count}")));
         md.AppendLine();
 
-        List(md, "Parse diagnostics", html.ParseDiagnostics);
+        ParseErrors(md, html);
         Tags(md, "Duplicate ids", html.DuplicateIds, "#");
         Tags(md, "Elements HTML does not define", html.UnknownElements, "<");
         Tags(md, "Obsolete elements", html.ObsoleteElements, "<");
@@ -378,6 +378,13 @@ internal static class MarkdownReport
         Usages(md, "Property names the CSS engine does not know", css.UnknownProperties,
             "asked of Broiler.CSS's own @supports evaluation; a known name can still be one Broiler's layout does not draw");
         Usages(md, "Vendor-prefixed properties", css.VendorPrefixedProperties, null);
+        SelectorGaps(md, css.SelectorGaps);
+        Usages(md, "Declarations Broiler's layout does not apply", [.. css.NotAppliedByLayout.Where(static u => CssInspector.AffectsAStillImage(u.Property))],
+            "reported by Broiler.Layout, once per box, while it styled the rendered page; the values are examples");
+        Usages(md, "Declarations Broiler's layout does not apply, which a still image would not show", [.. css.NotAppliedByLayout.Where(static u => !CssInspector.AffectsAStillImage(u.Property))],
+            "pointer, selection, scrolling and transition properties change nothing in a screenshot");
+        Usages(md, "Features Broiler's layout approximated", css.LayoutFallbacks,
+            "reported by Broiler.Layout where it laid out something simpler than the CSS asked for");
 
         if (css.AtRules.Count > 0)
         {
@@ -520,6 +527,52 @@ internal static class MarkdownReport
             md.Append("| `").Append(Code(resource.Element))
                 .Append("` | `").Append(Code(resource.Url))
                 .Append("` | ").Append(Escape(resource.Load ?? string.Empty)).AppendLine(" |");
+        }
+
+        md.AppendLine();
+    }
+
+    private static void ParseErrors(StringBuilder md, HtmlReport html)
+    {
+        if (html.ParseErrorCount == 0)
+            return;
+
+        md.AppendLine("### Parse errors, as fetched").AppendLine();
+        md.Append(html.ParseErrorCount).Append(" parse error(s): ")
+            .Append(string.Join(", ", html.ParseErrorsByCode.Select(static c => $"`{c.Tag}` ×{c.Count}")))
+            .AppendLine(".").AppendLine();
+        md.AppendLine("| Line:col | Code | What the parser did |");
+        md.AppendLine("| --- | --- | --- |");
+        foreach (var error in html.ParseErrors.Take(100))
+        {
+            md.Append("| ").Append(error.Line?.ToString(CultureInfo.InvariantCulture) ?? "?")
+                .Append(':').Append(error.Column?.ToString(CultureInfo.InvariantCulture) ?? "?")
+                .Append(" | ").Append(Escape(error.Code ?? string.Empty))
+                .Append(" | ").Append(Escape(error.Message)).AppendLine(" |");
+        }
+
+        md.AppendLine();
+    }
+
+    private static void SelectorGaps(StringBuilder md, IReadOnlyList<CssSelectorGapUsage> gaps)
+    {
+        if (gaps.Count == 0)
+            return;
+
+        md.AppendLine("### Selectors the style engine does not model as written").AppendLine();
+        md.AppendLine("_Asked of Broiler.CSS for every selector of every style rule. A guessed pseudo-class matches every element, " +
+            "so its declarations reach elements a browser leaves alone; a not-modeled one never matches here where a browser can; " +
+            "an unstyled pseudo-element's rule reaches nothing; an invalid pseudo-class makes a browser drop the whole rule, " +
+            "where Broiler drops only its selector._").AppendLine();
+        md.AppendLine("| Kind | Part | Selectors | Example | First in |");
+        md.AppendLine("| --- | --- | --- | --- | --- |");
+        foreach (var gap in gaps.Take(100))
+        {
+            md.Append("| ").Append(gap.Kind)
+                .Append(" | `").Append(Code(gap.Part))
+                .Append("` | ").Append(gap.Selectors)
+                .Append(" | `").Append(Code(AnalysisConsole.OneLine(gap.Example, 80)))
+                .Append("` | ").Append(Escape(gap.FirstSource)).AppendLine(" |");
         }
 
         md.AppendLine();

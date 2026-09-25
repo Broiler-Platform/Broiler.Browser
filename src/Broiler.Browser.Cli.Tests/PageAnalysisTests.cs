@@ -21,11 +21,15 @@ public sealed class PageAnalysisTests : IDisposable
           body { font-family: 'Definitely Missing Font', serif; }
           #wide { width: 3000px; height: 10px; }
           .broken { colr: red; }
+          button:-moz-focusring { outline: 1px dotted; }
+          .glass { backdrop-filter: blur(4px); }
         </style>
         </head>
         <body>
         <p id="twice">one</p><p id="twice">two</p>
-        <div id="wide"></div>
+        <div id="wide"></div></span>
+        <div class="glass"><button>Go</button></div>
+        <img src="data:image/png;base64,bm90IGFuIGltYWdl" alt="not an image">
         <p id="out"></p>
         <script src="app.js"></script>
         <script>
@@ -121,6 +125,10 @@ public sealed class PageAnalysisTests : IDisposable
         Assert.Contains(titles, static t => t.Contains("CSS parse problem", StringComparison.Ordinal));
         Assert.Contains(titles, static t => t.Contains("colr", StringComparison.Ordinal));
         Assert.Contains(titles, static t => t.Contains("Definitely Missing Font", StringComparison.Ordinal));
+        Assert.Contains(titles, static t => t.Contains("end tag(s) that match no open element", StringComparison.Ordinal) && t.Contains("</span>", StringComparison.Ordinal));
+        Assert.Contains(titles, static t => t.Contains("guesses at", StringComparison.Ordinal) && t.Contains(":-moz-focusring", StringComparison.Ordinal));
+        Assert.Contains(titles, static t => t.Contains("layout does not apply", StringComparison.Ordinal) && t.Contains("backdrop-filter", StringComparison.Ordinal));
+        Assert.Contains(titles, static t => t.Contains("renderer reported", StringComparison.Ordinal) && t.Contains("Failed extract image from inline data", StringComparison.Ordinal));
     }
 
     /// <summary>

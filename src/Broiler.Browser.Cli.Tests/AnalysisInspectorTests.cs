@@ -64,6 +64,43 @@ public sealed class AnalysisInspectorTests
         Assert.True(problem.Column > 10, $"column {problem.Column} should point at the empty value, not at the wrapper the attribute was parsed in");
     }
 
+    /// <summary>
+    /// normalize.css's focus ring: a vendor-prefixed pseudo-class, which Broiler.CSS guesses matches
+    /// every element, so every button gets the outline. Each kind is reported with the first rule's place.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Selector_The_Engine_Does_Not_Model_Is_Named_With_Its_Place()
+    {
+        const string Css = "p { color: red; }\n" +
+            "button:-moz-focusring,\n[type=\"button\"]:-moz-focusring { outline: 1px dotted; }\n" +
+            "@media screen { input::placeholder { color: gray; } }\n" +
+            "a:hover, p:bogus { color: blue; }\n";
+
+        var report = CssInspector.Inspect(
+            [new StylesheetSource("site.css", Css, SavedAs: null)],
+            styleAttributes: [],
+            rejectedDuringCascade: [],
+            requestedFonts: new Dictionary<string, int>());
+
+        Assert.Equal(
+            ["guessed :-moz-focusring ×2 site.css 2:1", "unstyled pseudo-element ::placeholder ×1 site.css 4:17",
+             "invalid :bogus ×1 site.css 5:1", "interactive :hover ×1 site.css 5:1"],
+            report.SelectorGaps.Select(static g => $"{g.Kind} {g.Part} ×{g.Selectors} {g.FirstSource}"));
+        Assert.Equal("button:-moz-focusring", report.SelectorGaps[0].Example);
+    }
+
+    [Theory(Timeout = 600000)]
+    [InlineData("cursor", false)]
+    [InlineData("-webkit-user-select", false)]
+    [InlineData("transition-duration", false)]
+    [InlineData("scroll-padding-top", false)]
+    [InlineData("backdrop-filter", true)]
+    [InlineData("accent-color", true)]
+    [InlineData("-webkit-box-reflect", true)]
+    [InlineData("scrollbar-color", true)]
+    public void A_Property_That_Changes_Nothing_In_A_Still_Image_Is_Told_Apart(string property, bool affects) =>
+        Assert.Equal(affects, CssInspector.AffectsAStillImage(property));
+
     [Fact(Timeout = 600000)]
     public void An_Unknown_At_Rule_Is_Reported()
     {
@@ -186,6 +223,49 @@ public sealed class AnalysisInspectorTests
         {
             CultureInfo.CurrentCulture = culture;
         }
+    }
+
+    /// <summary>
+    /// The document as fetched is parsed with its parse errors, each located by line and column and
+    /// saying what Broiler's parser did — here, where it departs from a browser.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Parse_Error_Is_Located_And_Says_What_The_Parser_Did()
+    {
+        const string Html = "<!DOCTYPE html>\n<html><body>\n<div><span>x</p>y</span></div>\n<section/>z\n</body></html>";
+
+        var report = HtmlInspector.Inspect(Html, afterScripts: null, network: [], "https://example.test/");
+
+        Assert.Equal(report.ParseErrors.Count, report.ParseErrorCount);
+        Assert.Equal(
+            ["unexpected-end-tag@3:13", "unexpected-end-tag@3:18", "unexpected-end-tag@3:25", "non-void-html-element-start-tag-with-trailing-solidus@4:1"],
+            report.ParseErrors.Select(static e => $"{e.Code}@{e.Line}:{e.Column}"));
+        Assert.Contains("closes all 2 elements", report.ParseErrors[0].Message, StringComparison.Ordinal);
+        Assert.Equal(new TagCount("unexpected-end-tag", 3), report.ParseErrorsByCode[0]);
+    }
+
+    [Fact(Timeout = 600000)]
+    public void The_Parse_Errors_That_Change_What_Renders_Are_Findings()
+    {
+        var report = new AnalysisReport
+        {
+            Url = "https://example.test/",
+            StartedAt = System.DateTime.UtcNow,
+            Environment = AnalysisEnvironment.Capture(),
+            Html = new HtmlReport
+            {
+                ParseErrorCount = 3,
+                ParseErrorsByCode = [new TagCount("eof-in-text", 1), new TagCount("duplicate-attribute", 2)],
+                ParseErrors = [new HtmlParseProblem("eof-in-text", 7, 1, "<script> has no </script>")],
+            },
+        };
+
+        var findings = Triage.Rank(report);
+
+        var swallowed = Assert.Single(findings, static f => f.Title.Contains("end tag never comes", StringComparison.Ordinal));
+        Assert.Equal(FindingSeverity.Error, swallowed.Severity);
+        Assert.Contains("line 7, column 1", swallowed.Detail, StringComparison.Ordinal);
+        Assert.Contains(findings, static f => f.Title == "2 other HTML parse error(s)" && f.Detail == "duplicate-attribute ×2");
     }
 
     [Fact(Timeout = 600000)]

@@ -43,4 +43,18 @@
     <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    Three components are referenced directly although Broiler.Browser.Core brings them anyway: the page analysis
+    asks each for a diagnostic the window never needs, so this project names the version whose API it
+    uses rather than inheriting whatever version Core's dependencies settle on. Broiler.Dom.Html
+    reports parse errors (HtmlParseOptions.ReportParseErrors), Broiler.Layout reports the CSS it does
+    not apply as written (LayoutDiagnostics), and Broiler.CSS.Dom says which selectors the cascade
+    guesses at (CssSelectorMatcher.DescribeGaps).
+  -->
+  <ItemGroup>
+    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.8" />
+    <PackageReference Include="Broiler.Dom.Html" Version="0.1.0-preview.9" />
+    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.7" />
+  </ItemGroup>
+
 </Project>

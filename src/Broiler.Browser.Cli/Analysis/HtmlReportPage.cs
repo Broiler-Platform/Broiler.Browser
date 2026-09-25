@@ -155,11 +155,13 @@ internal static class HtmlReportPage
 
         if (report.Html is { } markup)
         {
-            Open(html, "HTML", markup.QuirksMode);
+            Open(html, "HTML", markup.QuirksMode || markup.ParseErrorsByCode.Any(static c =>
+                c.Tag is "eof-in-text" or "unexpected-end-tag" or "non-void-html-element-start-tag-with-trailing-solidus"));
             html.Append("<p>").Append(E($"Doctype: {markup.Doctype ?? "none"} ({(markup.QuirksMode ? "quirks mode" : "standards mode")}). " +
                 string.Create(CultureInfo.InvariantCulture, $"Elements: {markup.ElementsAsFetched:N0} as fetched, {markup.ElementsAfterScripts:N0} after scripts. ") +
                 $"Charset: {markup.DeclaredCharset ?? "not declared"}. Title: {markup.Title ?? "none"}.")).AppendLine("</p>");
-            Table(html, ["Parse diagnostic"], markup.ParseDiagnostics.Take(50).Select(static d => new[] { d }));
+            Table(html, ["Line:col", "Parse error", "What the parser did"], markup.ParseErrors.Take(50).Select(static e =>
+                new[] { $"{e.Line}:{e.Column}", e.Code ?? string.Empty, e.Message }));
             Table(html, ["Duplicate id", "Elements"], markup.DuplicateIds.Select(static d => new[] { d.Tag, d.Count.ToString(CultureInfo.InvariantCulture) }));
             Table(html, ["Unknown element", "Count"], markup.UnknownElements.Select(static d => new[] { d.Tag, d.Count.ToString(CultureInfo.InvariantCulture) }));
             Table(html, ["#", "Script", "Source", "Load"], markup.Scripts.Take(100).Select(static s =>
@@ -169,12 +171,20 @@ internal static class HtmlReportPage
 
         if (report.Css is { } css)
         {
-            Open(html, "CSS", css.ParseProblems.Count + css.RejectedDuringCascade.Count > 0);
+            Open(html, "CSS", css.ParseProblems.Count + css.RejectedDuringCascade.Count > 0
+                || css.SelectorGaps.Any(static g => g.Kind == "guessed")
+                || css.NotAppliedByLayout.Any(static u => CssInspector.AffectsAStillImage(u.Property)));
             Table(html, ["Source", "Line:col", "Code", "Message", "Text"], css.ParseProblems.Take(100).Select(static p =>
                 new[] { p.Source, $"{p.Line}:{p.Column}", p.Code, p.Message, p.Excerpt }));
             Table(html, ["Dropped while cascading", "Count"], css.RejectedDuringCascade.Select(static u => new[] { CssInspector.Describe(u), u.Count.ToString(CultureInfo.InvariantCulture) }));
             Table(html, ["Value not accepted", "Count", "First in"], css.RejectedValues.Select(static u => new[] { CssInspector.Describe(u), u.Count.ToString(CultureInfo.InvariantCulture), u.FirstSource }));
             Table(html, ["Unknown property", "Count", "First in"], css.UnknownProperties.Select(static u => new[] { u.Property, u.Count.ToString(CultureInfo.InvariantCulture), u.FirstSource }));
+            Table(html, ["Selector part", "Kind", "Selectors", "Example", "First in"], css.SelectorGaps.Take(100).Select(static g =>
+                new[] { g.Part, g.Kind, g.Selectors.ToString(CultureInfo.InvariantCulture), g.Example, g.FirstSource }));
+            Table(html, ["Not applied by Broiler's layout", "Reports", "Visible in a screenshot"], css.NotAppliedByLayout.Select(static u =>
+                new[] { CssInspector.Describe(u), u.Count.ToString(CultureInfo.InvariantCulture), CssInspector.AffectsAStillImage(u.Property) ? "yes" : "no" }));
+            Table(html, ["Approximated by Broiler's layout", "Reports"], css.LayoutFallbacks.Select(static u =>
+                new[] { CssInspector.Describe(u), u.Count.ToString(CultureInfo.InvariantCulture) }));
             Table(html, ["Font list", "Runs", "Set in", "Unavailable"], css.Fonts.Take(40).Select(static f =>
                 new[] { f.Requested, f.TextRuns.ToString(CultureInfo.InvariantCulture), f.ResolvedFamily ?? "a fallback", string.Join(", ", f.Unavailable) }));
             Close(html);

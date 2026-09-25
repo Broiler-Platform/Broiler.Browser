@@ -272,24 +272,31 @@ internal sealed class PageAnalyzer
         afterScripts ??= page.Content.Html;
         WriteText(output, "document-after-scripts.html", afterScripts, "the document as its scripts left it");
 
+        // Listened to during the one render the report describes; see LayoutGapRecorder.
+        var layoutGaps = new LayoutGapRecorder();
+
         var rendered = HtmlPostProcessor.ProcessForBrowsing(afterScripts);
         WriteText(output, "document-as-rendered.html", rendered, "what the renderer was given: scripts, noscript and iframe fallback removed");
 
         state.Render = _phases.Run(
             "render",
-            () => RenderProbe.Render(
-                rendered,
-                page.FinalUrl,
-                browser.Network,
-                page.Document,
-                _options.Width,
-                _options.Height,
-                output,
-                "screenshot",
-                fullPage: true,
-                outlineBoxes: true,
-                elementGeometry: true,
-                _options.MaxFullPageHeight),
+            () =>
+            {
+                using var listening = layoutGaps.Listen();
+                return RenderProbe.Render(
+                    rendered,
+                    page.FinalUrl,
+                    browser.Network,
+                    page.Document,
+                    _options.Width,
+                    _options.Height,
+                    output,
+                    "screenshot",
+                    fullPage: true,
+                    outlineBoxes: true,
+                    elementGeometry: true,
+                    _options.MaxFullPageHeight);
+            },
             static r => string.Create(
                 CultureInfo.InvariantCulture,
                 $"content {r.ContentSize.Width:0}×{r.ContentSize.Height:0}, {r.Errors.Count} render error(s), " +
@@ -340,7 +347,11 @@ internal sealed class PageAnalyzer
 
         state.Css = _phases.Run(
             "css",
-            () => Css(output, bundle, network, afterScriptsDocument ?? HtmlInspector.Parse(page.Content.Html), rejected, state.Layout),
+            () => Css(output, bundle, network, afterScriptsDocument ?? HtmlInspector.Parse(page.Content.Html), rejected, state.Layout) with
+            {
+                NotAppliedByLayout = layoutGaps.NotModeled,
+                LayoutFallbacks = layoutGaps.Fallbacks,
+            },
             static c => $"{c.Sheets.Count} stylesheet source(s), {c.ParseProblems.Count} parse problem(s), {c.UnknownProperties.Count} unknown propert(ies)");
 
         // Held until the pending navigation has been read, which disposing the session would lose.

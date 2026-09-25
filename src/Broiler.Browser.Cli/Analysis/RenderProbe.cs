@@ -312,10 +312,17 @@ internal static class RenderProbe
 
     private static string Describe(HtmlRenderErrorEventArgs e)
     {
-        // Broiler.HTML hands the event its type and nothing else: the message and the exception its
-        // reporters pass are dropped inside the container. When the report follows an exception —
+        if (e.Message is not null || e.Exception is not null)
+        {
+            var message = e.Message ?? "the renderer gives no message";
+            return e.Exception is { } exception
+                ? $"{message}: {exception.GetType().FullName}: {ExceptionText.SafeMessage(exception)}"
+                : message;
+        }
+
+        // A reporter that passed its type and nothing else. When the report follows an exception —
         // most do, from a catch block — that exception was recorded on this thread a moment ago,
-        // which is the best lead there is until the event carries its own message.
+        // which is the best lead there is.
         if (ExceptionRecorder.LastOnCurrentThread is { } last && last.Age <= CauseWindow)
         {
             return string.Create(

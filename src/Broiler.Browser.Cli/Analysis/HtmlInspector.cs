@@ -19,6 +19,16 @@ internal sealed record ResourceElement(string Element, string Url, string? Load)
 /// <summary>A tag, and how many elements carry it.</summary>
 internal sealed record TagCount(string Tag, int Count);
 
+/// <summary>A parse error in the document as fetched, where it is, and what the parser did about it.</summary>
+/// <param name="Code">
+/// The error's code: the HTML Standard's for the tokenizer's errors (<c>eof-in-tag</c>), Broiler.Dom.Html's
+/// for tree construction's (<c>unexpected-end-tag</c>), none for a diagnostic that is not a parse error.
+/// </param>
+/// <param name="Line">Its line in the document, from 1.</param>
+/// <param name="Column">Its column on that line, from 1.</param>
+/// <param name="Message">What the markup did, and where Broiler's parser departs from a browser's, what each does.</param>
+internal sealed record HtmlParseProblem(string? Code, int? Line, int? Column, string Message);
+
 /// <summary>What the page's markup says about itself.</summary>
 internal sealed record HtmlReport
 {
@@ -30,7 +40,14 @@ internal sealed record HtmlReport
     public string? Viewport { get; init; }
     public string? BaseHref { get; init; }
     public string? MetaRefresh { get; init; }
-    public IReadOnlyList<string> ParseDiagnostics { get; init; } = [];
+    /// <summary>How many parse errors the document as fetched has.</summary>
+    public int ParseErrorCount { get; init; }
+
+    /// <summary>The parse errors by code, most frequent first.</summary>
+    public IReadOnlyList<TagCount> ParseErrorsByCode { get; init; } = [];
+
+    /// <summary>The first parse errors, in document order.</summary>
+    public IReadOnlyList<HtmlParseProblem> ParseErrors { get; init; } = [];
     public int ElementsAsFetched { get; init; }
     public int ElementsAfterScripts { get; init; }
     public int TextLengthAsFetched { get; init; }
@@ -70,10 +87,18 @@ internal sealed record HtmlReport
 /// are the ones the page's scripts started from. The difference to the document they left is what
 /// the scripts built — a page whose scripts failed early shows almost none.
 /// </para>
+/// <para>
+/// <b>Parse errors are the parser's own.</b> The document as fetched is parsed with
+/// <see cref="HtmlParseOptions.ReportParseErrors"/>, so each error carries the code, line and column
+/// Broiler.Dom.Html gives it and says what its tree builder did. Where that departs from a browser —
+/// an end tag that matches nothing closes every open element here, and a <c>&lt;div/&gt;</c> is closed
+/// at once — the error is a rendering difference in itself, and the message says so.
+/// </para>
 /// </remarks>
 internal static class HtmlInspector
 {
     private const int MaxListed = 40;
+    private const int MaxParseErrors = 200;
 
     /// <summary>The HTML Living Standard's elements. Anything else without a hyphen is unknown to a browser.</summary>
     private static readonly HashSet<string> StandardElements = new(StringComparer.OrdinalIgnoreCase)
@@ -114,7 +139,7 @@ internal static class HtmlInspector
         var parsed = HtmlDocumentParser.ParseDocument(
             fetchedHtml,
             document: null,
-            new HtmlParseOptions(AllowDeclarativeShadowRoots: true));
+            new HtmlParseOptions(AllowDeclarativeShadowRoots: true) { ReportParseErrors = true });
         var fetched = parsed.Document;
         var final = afterScripts ?? fetched;
 
@@ -138,7 +163,11 @@ internal static class HtmlInspector
                 .FirstOrDefault(static e => IsTag(e, "meta")
                     && string.Equals(e.GetAttribute("http-equiv"), "refresh", StringComparison.OrdinalIgnoreCase))
                 ?.GetAttribute("content"),
-            ParseDiagnostics = [.. parsed.Diagnostics.Select(static d => d.SourceOffset is { } offset ? $"{d.Message} (at offset {offset})" : d.Message)],
+            ParseErrorCount = parsed.Diagnostics.Count,
+            ParseErrorsByCode = Top(parsed.Diagnostics.Select(static d => d.Code ?? "(no code)"), MaxListed),
+            ParseErrors = [.. parsed.Diagnostics
+                .Take(MaxParseErrors)
+                .Select(static d => new HtmlParseProblem(d.Code, d.Line, d.Column, d.Message))],
             ElementsAsFetched = fetchedElements.Length,
             ElementsAfterScripts = finalElements.Length,
             TextLengthAsFetched = BodyText(fetchedElements),
