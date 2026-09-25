@@ -103,7 +103,7 @@ public sealed class CaptureServiceTests : IDisposable
 
     /// <summary>
     /// A script asking for an element's size is answered by a real layout. The bridge's null view,
-    /// which is what the window's scripts get, answers 0.
+    /// which is what it gets without one, answers 0.
     /// </summary>
     [Fact(Timeout = 600000)]
     public async Task A_Scripts_Geometry_Comes_From_A_Real_Layout()

@@ -733,22 +733,22 @@ internal sealed class BrowserApp : IDisposable
     /// renderer, the extractor and the bridge all speak for one document object.
     /// </para>
     /// <para>
-    /// <paramref name="layoutView"/> is what answers a script's geometry questions —
-    /// <c>getBoundingClientRect</c>, <c>offsetWidth</c> and the rest. The window passes none, so its
-    /// scripts are answered by the bridge's null layout view; the command line passes the headless
-    /// view it has always laid documents out with.
+    /// <b>A script's geometry questions are answered from a real layout.</b>
+    /// <c>getBoundingClientRect</c>, <c>offsetWidth</c> and the rest go to a
+    /// <see cref="HeadlessLayoutView"/>, which lays the document out on the same network, as the same
+    /// document. Without one the bridge answers from its null layout view, which says 0 to all of
+    /// them — and until the view was added here, that is what the window's scripts got.
     /// </para>
     /// </remarks>
     internal static DomBridgeSessionOptions BridgeOptions(
         BrowserProfile profile,
-        Func<Uri, DocumentRequestContext> documents,
-        Func<Broiler.Layout.ILayoutView>? layoutView = null) =>
+        Func<Uri, DocumentRequestContext> documents) =>
         new()
         {
             Network = profile.Network,
             Cookies = profile.DocumentCookies,
             DocumentContextFactory = documents,
-            LayoutViewFactory = layoutView,
+            LayoutViewFactory = () => new HeadlessLayoutView(profile.Network, documents),
         };
 
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(

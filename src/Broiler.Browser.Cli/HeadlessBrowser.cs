@@ -18,20 +18,16 @@ namespace Broiler.Cli;
 /// the profile's <c>BrowserNetworkSession</c>; its scripts are extracted and fetched by
 /// <see cref="RenderingPipeline"/> on the same network, as the document's own requests; they run on
 /// the engine <see cref="BrowserApp.NewScriptEngine"/> picks for the build configuration, over a
-/// bridge made from <see cref="BrowserApp.BridgeOptions"/>; and the load window settles through
-/// <see cref="InteractiveSession.SettleLoadWindow(CancellationToken)"/>. That is the path the
-/// window's load worker takes, so a page the command line captures has run the way it runs on
-/// screen.
+/// bridge made from <see cref="BrowserApp.BridgeOptions"/> with the same
+/// <see cref="HeadlessLayoutView"/> answering its scripts' geometry questions; and the load window
+/// settles through <see cref="InteractiveSession.SettleLoadWindow(CancellationToken)"/>. That is the
+/// path the window's load worker takes, so a page the command line captures has run the way it runs
+/// on screen.
 /// </para>
 /// <para>
-/// <b>What the command line adds, and each is on purpose.</b>
+/// <b>What the command line does differently, and each is on purpose.</b>
 /// </para>
 /// <list type="bullet">
-/// <item><description>
-/// Its bridge has the <see cref="HeadlessLayoutView"/>, so a script's geometry questions are
-/// answered by a real layout. The window has never had one, and answers them from the bridge's
-/// null view.
-/// </description></item>
 /// <item><description>
 /// It follows none of the page's own navigations — a script assigning <c>location</c>, a refresh
 /// <c>meta</c> — because a capture is of the document asked for. <c>--follow-first-link</c> is the
@@ -58,8 +54,7 @@ internal sealed class HeadlessBrowser : IDisposable
     public HeadlessBrowser(TimeSpan navigationTimeout)
     {
         _profile = BrowserProfile.CreateEphemeral();
-        _bridges = new BridgeRecorder(new DomBridgeFactory(
-            BrowserApp.BridgeOptions(_profile, DocumentFor, static () => new HeadlessLayoutView())));
+        _bridges = new BridgeRecorder(new DomBridgeFactory(BrowserApp.BridgeOptions(_profile, DocumentFor)));
         Engine = BrowserApp.NewScriptEngine(_bridges);
         _pipeline = new RenderingPipeline(
             new TracedPageLoader(new PageLoader(_profile.Network, navigationTimeout)),

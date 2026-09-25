@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Debug-VM" />
+    <BuildType Name="Release" />
+    <BuildType Name="Release-VM" />
+  </Configurations>
+  <Project Path="Broiler.Browser.Cli.csproj" />
+</Solution>

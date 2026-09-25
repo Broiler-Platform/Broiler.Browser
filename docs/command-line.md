@@ -40,14 +40,12 @@ page asked for and did not get.
    the document's own requests.
 3. They run on the engine `BrowserApp.NewScriptEngine` picks for the configuration — Broiler.JS, or
    the Broiler.VM JavaScript profile under `Debug-VM`/`Release-VM` — over a bridge made from
-   `BrowserApp.BridgeOptions`.
+   `BrowserApp.BridgeOptions`, whose `HeadlessLayoutView` answers a script asking for
+   `getBoundingClientRect()` or `offsetWidth` from a real layout.
 4. `InteractiveSession.SettleLoadWindow` runs the load window to a fixed point.
 
-So a capture has run the page the way the window runs it. Three things differ, all on purpose:
+So a capture has run the page the way the window runs it. Two things differ, both on purpose:
 
-- **The bridge has a layout view.** A script asking for `getBoundingClientRect()` or
-  `offsetWidth` is answered from a real layout (`HeadlessLayoutView`). The window has never
-  registered one, and its scripts get the bridge's null view, which answers zero.
 - **The page's own navigations are not followed.** A script assigning `location`, or a refresh
   `meta`, would move the window on; a capture is of the document asked for. `--follow-first-link`
   is the one navigation the command line makes, and it makes it as the landing page's navigation.
@@ -86,11 +84,15 @@ Each of these is a difference from the command line in the Broiler repository.
   expose those, as it does not for the window.
 - **Script geometry does not resolve CSS anchor positioning.** The layout view used to switch the
   layout engine's native anchor-positioning pass on around each layout. That switch is internal to
-  Broiler.Layout, which grants its internals to `Broiler.Cli.Tests` but not to `Broiler.Cli`.
+  Broiler.Layout, which grants its internals to `Broiler.Cli.Tests` but not to
+  `Broiler.Browser.Core`, where the view lives.
 
-Two pieces the command line needed had been deleted from Broiler.HTML on 2026-09-15 as dead code,
+Three pieces the command line needed had been deleted from Broiler.HTML on 2026-09-15 as dead code,
 because nothing Broiler.HTML could see used them: `HeadlessLayoutView` (603c8083) and the fuzzer's
-`HtmlCssGenerator` and `DeltaMinimizer` (4c5a9d58). They live beside the command line now.
+`HtmlCssGenerator` and `DeltaMinimizer` (4c5a9d58). The fuzzer's two live beside the command line.
+The layout view is in `Broiler.Browser.Core`, because the window answers its scripts' geometry
+questions with it too; until it did, the window had never registered a layout view, and its scripts
+got the bridge's null view, which says 0 to all of them.
 
 ## Why the assembly is still called Broiler.Cli
 
