@@ -39,6 +39,12 @@ namespace Broiler.Cli;
 /// next checkpoint on this thread instead of on the thread pool.
 /// </description></item>
 /// </list>
+/// <para>
+/// <b>What <c>--analyze</c> changes on top</b> (<see cref="HeadlessBrowserOptions"/>): the profile's
+/// network is wrapped in a recorder before anything is composed over it, the page runs on Broiler.JS
+/// whatever the configuration, every script evaluation is timed, and the layout view that answers the
+/// scripts' geometry questions is wrapped in a timer. None of them changes what the page is given.
+/// </para>
 /// </remarks>
 internal sealed class HeadlessBrowser : IDisposable
 {
@@ -51,19 +57,36 @@ internal sealed class HeadlessBrowser : IDisposable
     /// How long a document may take from the request to its last byte. Sub-resources are not
     /// bounded by it, as they are not in the window.
     /// </param>
-    public HeadlessBrowser(TimeSpan navigationTimeout)
+    /// <param name="options">
+    /// What <c>--analyze</c> composes differently; the captures pass none and get the window's
+    /// composition.
+    /// </param>
+    public HeadlessBrowser(TimeSpan navigationTimeout, HeadlessBrowserOptions? options = null)
     {
+        options ??= HeadlessBrowserOptions.Default;
         _profile = BrowserProfile.CreateEphemeral();
-        _bridges = new BridgeRecorder(new DomBridgeFactory(BrowserApp.BridgeOptions(_profile, DocumentFor)));
-        Engine = BrowserApp.NewScriptEngine(_bridges);
+        Network = options.WrapNetwork?.Invoke(_profile.Network) ?? _profile.Network;
+        _bridges = new BridgeRecorder(new DomBridgeFactory(
+            BrowserApp.BridgeOptions(Network, _profile.DocumentCookies, DocumentFor, options.WrapLayoutView)));
+        Engine = options.BroilerJsOnly ? new ScriptEngine(_bridges) : BrowserApp.NewScriptEngine(_bridges);
+        if (options.Profiler is { } profiler)
+            Engine.Profiler = profiler;
+
         _pipeline = new RenderingPipeline(
-            new TracedPageLoader(new PageLoader(_profile.Network, navigationTimeout)),
+            new TracedPageLoader(new PageLoader(Network, navigationTimeout)),
             Engine,
-            _profile.Network);
+            Network);
     }
 
     /// <summary>The engine the page's scripts run on.</summary>
     public IScriptEngine Engine { get; }
+
+    /// <summary>
+    /// The network every load of the page goes through: the profile's session, or the wrapper
+    /// <see cref="HeadlessBrowserOptions.WrapNetwork"/> put around it. A renderer that loads the
+    /// page's images, stylesheets and fonts should load them here too, as the window's does.
+    /// </summary>
+    public IBrowserRequestTransport Network { get; }
 
     /// <summary>
     /// The document the current load produced, for the bridge the engine attaches to it — the
@@ -116,6 +139,20 @@ internal sealed class HeadlessBrowser : IDisposable
     /// <param name="cancellationToken">Stops the settle.</param>
     public ScriptedPage Run(LoadedPage page, bool needsRealm = false, CancellationToken cancellationToken = default)
     {
+        var scripted = Start(page, needsRealm);
+        scripted.Settle(cancellationToken);
+        return scripted;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="page"/>'s scripts — the parser-inserted ones, the deferred ones, the module
+    /// roots and the load event — and leaves its load window unsettled, for a caller that times the
+    /// two apart. <see cref="Run"/> is this followed by <see cref="ScriptedPage.Settle"/>.
+    /// </summary>
+    /// <param name="page">The page to run.</param>
+    /// <param name="needsRealm">As for <see cref="Run"/>.</param>
+    public ScriptedPage Start(LoadedPage page, bool needsRealm = false)
+    {
         PageContent content = page.Content;
         ArchiveScripts(content);
 
@@ -124,16 +161,13 @@ internal sealed class HeadlessBrowser : IDisposable
             content = new PageContent(content.Html, [string.Empty], content.Url, [], []);
 
         InteractiveSession? session = _pipeline.ExecuteScriptsInteractive(content);
-        var scripted = new ScriptedPage(
+        return new ScriptedPage(
             session,
             session is null ? null : _bridges.Last,
             Engine.MicroTasks,
             page.FinalUrl,
             page.Content.Html,
             firstEvaluationLabel: page.Content.Scripts.Count);
-
-        scripted.Settle(cancellationToken);
-        return scripted;
     }
 
     /// <summary>
@@ -210,4 +244,37 @@ internal sealed class HeadlessBrowser : IDisposable
 
         public void Dispose() => inner.Dispose();
     }
+}
+
+/// <summary>
+/// What a <see cref="HeadlessBrowser"/> composes differently from the window. The captures use
+/// <see cref="Default"/>, which is the window's composition; <c>--analyze</c> sets every one.
+/// </summary>
+internal sealed record HeadlessBrowserOptions
+{
+    /// <summary>The window's composition.</summary>
+    public static HeadlessBrowserOptions Default { get; } = new();
+
+    /// <summary>
+    /// Wraps the profile's network before anything is composed over it, so the wrapper sees every
+    /// request of the page — the document, the extracted scripts, the bridge's loads and its layout
+    /// view's — whoever sends it.
+    /// </summary>
+    public Func<IBrowserRequestTransport, IBrowserRequestTransport>? WrapNetwork { get; init; }
+
+    /// <summary>
+    /// Runs the page on Broiler.JS whatever the build configuration, instead of the engine
+    /// <see cref="BrowserApp.NewScriptEngine"/> picks — which under <c>Debug-VM</c>/<c>Release-VM</c>
+    /// is the Broiler.VM JavaScript profile in front of Broiler.JS.
+    /// </summary>
+    public bool BroilerJsOnly { get; init; }
+
+    /// <summary>Times every script evaluation the engine performs.</summary>
+    public ScriptProfilingHook? Profiler { get; init; }
+
+    /// <summary>
+    /// Wraps each layout view the page's bridge makes, which is what answers its scripts' geometry
+    /// questions with a layout of the whole document.
+    /// </summary>
+    public Func<Broiler.Layout.ILayoutView, Broiler.Layout.ILayoutView>? WrapLayoutView { get; init; }
 }

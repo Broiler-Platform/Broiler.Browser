@@ -51,6 +51,24 @@ internal sealed class ScriptedPage : IDisposable
     /// </summary>
     public bool AsyncDrainLimitExhausted => _session?.AsyncDrainLimitExhausted ?? false;
 
+    /// <summary>Whether the page ran any script at all. A page with none has no session and no realm.</summary>
+    public bool RanScripts => _session is not null;
+
+    /// <summary>
+    /// Whether timers or animation frames are still queued — after a settle, work the page scheduled
+    /// past the load window, such as a <c>setInterval</c>, which always has a next tick.
+    /// </summary>
+    public bool HasPendingWork => _session?.HasPendingWork ?? false;
+
+    /// <summary>Whether queued work is due inside the load window, which a finished settle leaves false.</summary>
+    public bool HasWorkDueInLoadWindow => _session?.HasWorkDueInLoadWindow ?? false;
+
+    /// <summary>
+    /// Takes the navigation the page asked for — a script assigning <c>location</c>, a refresh
+    /// <c>meta</c> — which the command line does not follow, or null when it asked for none.
+    /// </summary>
+    public NavigationRequest? TakePendingNavigation() => _session?.TakePendingNavigation();
+
     /// <summary>
     /// Runs the load window to a fixed point: microtasks, then the timers due within it, bounded as
     /// the window's load worker bounds them.

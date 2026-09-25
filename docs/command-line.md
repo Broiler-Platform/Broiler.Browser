@@ -20,6 +20,7 @@ dotnet run --project src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj -c Relea
 | `--url <URL> --output <FILE>` | The document the page's scripts left, as HTML — or as text, for a `.txt` output |
 | `--capture-image <URL> --output <FILE>` | A PNG or JPEG of it, `--width` × `--height`, or the whole page with `--full-page`, or scrolled to a `#fragment` |
 | `--evaluate-page <URL> --evaluate <EXPR>… --output <FILE.json>` | A JSON report of each expression's `typeof` and value, run on the page's own global after its load window settled, with the page's work settled between them |
+| `--analyze <URL> --output-dir <DIR>` | Everything below about one page, and a ranked report of what looks wrong with its HTML, CSS, JavaScript, layout, rendering and network — see [Analysing a page](#analysing-a-page) |
 | `--fuzz-layout [--count N] [--seed N]` | The seeds whose random documents break a layout invariant, each with a minimised reproduction |
 | `--test-engines` | Whether the CSS model and the JavaScript engine this build composes answer a trivial question correctly |
 
@@ -28,7 +29,79 @@ its own child process, because the render path still keeps unsynchronised caches
 singletons. `--diagnostic-dir` records a bundle for a capture: every JavaScript failure as it
 happens, the page's console, every document, script, stylesheet, fetch and sub-document it loaded,
 the document its scripts left, and a summary ranking the failures and the platform features the
-page asked for and did not get.
+page asked for and did not get. The bundle also keeps `exceptions.log` — every exception raised in
+the process while it was open, the first-chance ones something caught included, each with the stack
+at the throw — and `messages.log`, every message the pipeline logged at every level.
+
+## Analysing a page
+
+```bash
+dotnet run --project src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj -c Release -- --analyze https://example.com/ --output-dir analysis --verbose
+```
+
+`--analyze` is for the page that renders or runs wrong and gives no clue why. It loads the page the
+way a capture does, runs it, renders it, and writes one directory that holds everything the run
+produced and a report that ranks what looks wrong. Open `report.html` first.
+
+**It always runs the page on Broiler.JS.** The capture commands run a page on the engine the build
+configuration picks, which under `Debug-VM`/`Release-VM` puts the Broiler.VM JavaScript profile in
+front of Broiler.JS. The analysis composes Broiler.JS directly in every configuration
+(`HeadlessBrowserOptions.BroilerJsOnly`), and the report names the engine and its version.
+
+| File | What is in it |
+|---|---|
+| `report.html`, `report.md`, `report.json` | The findings, ranked errors first, each with its evidence and the file that holds the rest; then the page's JavaScript, network, render, layout, HTML and CSS in detail, the phases with their timings, and the versions of every Broiler component that ran |
+| `screenshot.png`, `screenshot-full.png` | The viewport, and the whole page, after the scripts |
+| `screenshot-without-scripts.png` | The document as fetched, rendered as if no script had run — if this one is right and the first is wrong, look at the JavaScript; if both are wrong, look at the HTML, CSS and layout. The report gives the share of pixels the scripts changed |
+| `screenshot-boxes.png` | The viewport with every layout box outlined, coloured by depth; boxes that reach past the right edge are red |
+| `resources/` | Every document, script (as fetched and as run, under the `inline-7` labels the logs use), stylesheet, image, font and fetch response, with `index.json` |
+| `document-as-fetched.html`, `document-after-scripts.html`, `document-as-rendered.html` | The three states of the document: as the server sent it, as its scripts left it, and as the renderer was given it |
+| `exceptions.log`, `exceptions.json` | Every exception in the process — first-chance ones included, with the phase that was running and the stack at the throw — and the same grouped by type and throw site |
+| `javascript-errors.log`, `console.log`, `messages.log` | The script failures with their stacks, the page's console, and every message the pipeline logged |
+| `network.json`, `network.har` | Every request the page's profile sent, with what asked for it (document, script, style, image, font, fetch), status, redirects, timing and the file its body is in — and the same as an HTTP Archive, which browser developer tools import |
+| `layout/` | The fragment tree as text and as JSON, every box's computed style, the display list, and Broiler.Layout's own invariant violations |
+| `watchdog.md` | Only when the watchdog ended the run: the phase it was stuck in, the requests still open and the most frequent exceptions |
+| `slow-phase-stacks.txt` | Only with `--sample-stacks` |
+
+What the findings look for:
+
+- **HTML** — quirks mode and the doctype that caused it, parse diagnostics, duplicate ids, elements
+  HTML does not define, obsolete and custom elements, `<script>` elements of a type nothing runs, and
+  stylesheets, images and frames that did not load.
+- **CSS** — parse problems located by line and column in their own sheet (`style` attributes
+  included), property names Broiler.CSS does not know, values its validator rejects, declarations the
+  style engine dropped while it cascaded, unknown at-rules, and each `font-family` list whose first
+  font is neither declared by `@font-face` nor installed.
+- **JavaScript** — failures grouped by what failed, the platform features they name, unhandled
+  promise rejections, exceptions the page caught itself, the load window not settling, a navigation
+  the page asked for, long turns and idle gaps from the bridge's turn trace
+  (`BROILER_TRACE_JS_ENTRY`), and the time scripts spent waiting for a layout because they asked
+  for geometry.
+- **Layout** — Broiler.Layout's invariant violations, a runaway page height, boxes far taller than
+  their content, elements reaching past the right edge of the viewport, elements with text laid out
+  with no size, and elements placed off the page — each named as `tag#id.class` with its ancestors.
+- **Render and network** — the renderer's own error reports, failed requests, and phases that took
+  longer than ten seconds.
+
+Options: `--width`/`--height` set the viewport, `--timeout` the document's fetch, and
+`--follow-first-link` analyses the landing page's first link. `--verbose` prints every request,
+script failure and console message as it happens, each geometry question that laid the page out
+(those that took 10 ms or more), and the first 300 exceptions (all of them are in `exceptions.log`).
+`--analysis-timeout <SECS>` bounds the whole run (default 300, `0` for none, at most 30 days): when
+it runs out, the watchdog writes what there is and the process exits with code 3, because nothing
+below the command line bounds a script that loops or a layout that does not end. An exception counts
+once however often it is rethrown on its way out, and one thrown with the stack nearly exhausted is
+counted without being recorded, so that recording it cannot overflow the stack. Reusing an output
+directory clears the files an earlier analysis wrote there first; nothing else in it is touched. `--sample-stacks` takes the process's stacks with
+`dotnet-stack` (`dotnet tool install -g dotnet-stack`) every few seconds while a phase runs longer
+than five, and ranks the Broiler methods the busy threads were in. `--analyze` repeated analyses each
+page in its own child process, one after another, into `<DIR>/<page name>`: the exception log
+listens to the whole process, and concurrent analyses would also measure each other.
+
+The exit code is 0 when the analysis ran to the end, whatever the page did; 1 when the arguments
+were wrong, the document could not be fetched or the run failed around its phases; 3 when the
+watchdog ended it. For several pages it is the worst of theirs: 1 if any failed, else 3 if the
+watchdog ended any.
 
 ## How a page runs
 

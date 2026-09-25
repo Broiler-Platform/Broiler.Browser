@@ -42,6 +42,10 @@ public class Program
         var captureImageUrls = new List<string>();
         var evaluatePageUrls = new List<string>();
         var evaluateExpressions = new List<string>();
+        var analyzeUrls = new List<string>();
+        bool verbose = false;
+        bool sampleStacks = false;
+        int analysisTimeoutSeconds = Analysis.PageAnalysisOptions.DefaultWatchdogSeconds;
         string? evaluateHtmlOutput = null;
         string? output = null;
         string? outputDir = null;
@@ -81,6 +85,26 @@ public class Program
                     break;
                 case "--evaluate" when i + 1 < args.Length:
                     evaluateExpressions.Add(args[++i]);
+                    break;
+                case "--analyze" when i + 1 < args.Length:
+                case "--analyse" when i + 1 < args.Length:
+                    analyzeUrls.Add(args[++i]);
+                    break;
+                case "--verbose":
+                    verbose = true;
+                    break;
+                case "--sample-stacks":
+                    sampleStacks = true;
+                    break;
+                case "--analysis-timeout" when i + 1 < args.Length:
+                    // The watchdog is a timer, and a timer's due time ends at about 49 days.
+                    if (!int.TryParse(args[++i], NumberStyles.None, CultureInfo.InvariantCulture, out analysisTimeoutSeconds)
+                        || analysisTimeoutSeconds > Analysis.PageAnalysisOptions.MaxWatchdogSeconds)
+                    {
+                        Console.Error.WriteLine(
+                            $"Error: '--analysis-timeout' must be a whole number of seconds up to {Analysis.PageAnalysisOptions.MaxWatchdogSeconds} (30 days); 0 turns the watchdog off.");
+                        return 1;
+                    }
                     break;
                 case "--evaluate-html-output" when i + 1 < args.Length:
                     evaluateHtmlOutput = args[++i];
@@ -180,6 +204,9 @@ public class Program
                 case "--count":
                 case "--diagnostic-dir":
                 case "--diagnostic-log":
+                case "--analyze":
+                case "--analyse":
+                case "--analysis-timeout":
                     Console.Error.WriteLine($"Error: '{args[i]}' requires a value.");
                     PrintUsage();
                     return 1;
@@ -207,6 +234,28 @@ public class Program
                 outputDir: output,
                 threads: threads,
                 emitTotals: emitFuzzTotals);
+        }
+
+        if (analyzeUrls.Count > 0)
+        {
+            if (urls.Count > 0 || captureImageUrls.Count > 0 || evaluatePageUrls.Count > 0)
+            {
+                Console.Error.WriteLine(
+                    "Error: '--analyze' is a run of its own; it already captures the page, its image and its " +
+                    "diagnostics, so it cannot be combined with '--url', '--capture-image' or '--evaluate-page'.");
+                return 1;
+            }
+
+            return await RunAnalysis(
+                analyzeUrls,
+                outputDir,
+                width,
+                height,
+                timeoutSeconds,
+                followFirstLink,
+                verbose,
+                sampleStacks,
+                analysisTimeoutSeconds);
         }
 
         // --evaluate-page is deliberately single-page: unlike a capture, its whole output is one
@@ -524,6 +573,130 @@ public class Program
     }
 
     /// <summary>
+    /// Runs <c>--analyze</c>: one page into <paramref name="outputDir"/> itself, or several, each in its
+    /// own child process and its own sub-directory named after the page.
+    /// </summary>
+    /// <remarks>
+    /// Several pages never share a process, for the capture's reason and one of the analysis's own:
+    /// the exception log listens to the whole process, so two analyses in one would each record the
+    /// other's exceptions as their own.
+    /// </remarks>
+    private static async Task<int> RunAnalysis(
+        IReadOnlyList<string> inputs,
+        string? outputDir,
+        int width,
+        int height,
+        int timeoutSeconds,
+        bool followFirstLink,
+        bool verbose,
+        bool sampleStacks,
+        int analysisTimeoutSeconds)
+    {
+        if (outputDir is null)
+        {
+            Console.Error.WriteLine("Error: '--analyze' requires '--output-dir <DIR>', which receives the report, the screenshots, the page's files and the logs.");
+            PrintUsage();
+            return 1;
+        }
+
+        var pages = new List<string>(inputs.Count);
+        foreach (var input in inputs)
+        {
+            if (!TryResolvePageUrl(input, out var pageUrl))
+            {
+                Console.Error.WriteLine($"Error: '{input}' is not a valid HTTP, HTTPS, or file URL, or an existing file.");
+                return 1;
+            }
+
+            pages.Add(pageUrl);
+        }
+
+        if (pages.Count == 1)
+        {
+            // A phase that fails is part of the report; what fails around the phases — an output
+            // directory that cannot be created, a teardown that throws — is a run that failed.
+            try
+            {
+                return await new Analysis.PageAnalyzer(new Analysis.PageAnalysisOptions
+                {
+                    Url = pages[0],
+                    OutputDirectory = outputDir,
+                    Width = width,
+                    Height = height,
+                    TimeoutSeconds = timeoutSeconds,
+                    FollowFirstLink = followFirstLink,
+                    Verbose = verbose,
+                    SampleStacks = sampleStacks,
+                    Watchdog = analysisTimeoutSeconds == 0 ? null : TimeSpan.FromSeconds(analysisTimeoutSeconds),
+                }).RunAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: the analysis could not run: {ex.GetType().FullName}: {Analysis.ExceptionText.SafeMessage(ex)}");
+                return Analysis.PageAnalyzer.Failed;
+            }
+        }
+
+        // Each page gets the directory its name derives to, collisions numbered, exactly as a batch
+        // capture names its files — so the directory is findable from the page without an index.
+        var items = BatchRunner.DeriveOutputPaths(pages, outputDir, string.Empty);
+        Directory.CreateDirectory(outputDir);
+        Console.WriteLine($"Analyzing {items.Count} page(s), one process at a time…");
+
+        // One at a time: an analysis already loads, runs and renders its page twice, and its timings
+        // are part of what it reports — concurrent analyses would measure each other.
+        var batch = BatchRunner.RunInChildProcesses(items, degreeOfParallelism: 1, (item, _) =>
+        {
+            var arguments = new List<string>
+            {
+                "--analyze", item.Input,
+                "--output-dir", item.OutputPath,
+                "--width", width.ToString(CultureInfo.InvariantCulture),
+                "--height", height.ToString(CultureInfo.InvariantCulture),
+                "--timeout", timeoutSeconds.ToString(CultureInfo.InvariantCulture),
+                "--analysis-timeout", analysisTimeoutSeconds.ToString(CultureInfo.InvariantCulture),
+            };
+            if (followFirstLink)
+                arguments.Add("--follow-first-link");
+            if (verbose)
+                arguments.Add("--verbose");
+            if (sampleStacks)
+                arguments.Add("--sample-stacks");
+            return arguments;
+        });
+
+        return CombinedAnalysisExitCode(batch.Outcomes.Select(static o => o.ExitCode));
+    }
+
+    /// <summary>
+    /// The exit code of several analyses: a page that failed outranks one the watchdog stopped, which
+    /// outranks one that completed. A child that ended any other way — it crashed — failed.
+    /// </summary>
+    internal static int CombinedAnalysisExitCode(IEnumerable<int> exitCodes)
+    {
+        var codes = exitCodes.ToArray();
+        if (codes.Any(static c => c is not (Analysis.PageAnalyzer.Completed or Analysis.PageAnalyzer.WatchdogExit)))
+            return Analysis.PageAnalyzer.Failed;
+
+        return codes.Contains(Analysis.PageAnalyzer.WatchdogExit) ? Analysis.PageAnalyzer.WatchdogExit : Analysis.PageAnalyzer.Completed;
+    }
+
+    /// <summary>
+    /// Turns what a user typed into a page URL: an absolute HTTP, HTTPS or <c>file:</c> URL as it is, and
+    /// the path of an existing file — with any <c>#fragment</c> kept — as that file's URL.
+    /// </summary>
+    internal static bool TryResolvePageUrl(string input, out string url)
+    {
+        var hash = input.IndexOf('#');
+        var path = hash >= 0 ? input[..hash] : input;
+        var fragment = hash >= 0 ? input[hash..] : string.Empty;
+
+        url = File.Exists(path) ? new Uri(Path.GetFullPath(path)).AbsoluteUri + fragment : input;
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeFile);
+    }
+
+    /// <summary>
     /// Resolves the two diagnostics arguments into one destination. <c>--diagnostic-dir</c> alone
     /// puts the log inside the bundle, which is what a reader expects to find there;
     /// <c>--diagnostic-log</c> alone records the JavaScript failures and archives nothing, for when
@@ -618,6 +791,7 @@ public class Program
         Console.WriteLine("Usage: Broiler.Cli --url <URL> --output <FILE> [OPTIONS]");
         Console.WriteLine("       Broiler.Cli --capture-image <URL> --output <FILE> [OPTIONS]");
         Console.WriteLine("       Broiler.Cli --evaluate-page <URL> --evaluate <EXPR> --output <FILE.json> [OPTIONS]");
+        Console.WriteLine("       Broiler.Cli --analyze <URL> --output-dir <DIR> [--verbose] [OPTIONS]");
         Console.WriteLine("       Broiler.Cli --test-engines");
         Console.WriteLine("       Broiler.Cli --fuzz-layout [--count <N>] [--output <DIR>]");
         Console.WriteLine();
@@ -635,6 +809,22 @@ public class Program
         Console.WriteLine("                         are drained between them, so an expression that starts the page's");
         Console.WriteLine("                         work has settled before the next one reads what it produced");
         Console.WriteLine("  --evaluate-html-output <FILE>  Also write the post-script DOM as HTML to FILE");
+        Console.WriteLine("  --analyze <URL>        Load, run and render the page on Broiler.JS (never the VM profile) and");
+        Console.WriteLine("                         write an analysis of it into --output-dir: report.html/.md/.json with");
+        Console.WriteLine("                         ranked findings; screenshots with and without scripts, full page and");
+        Console.WriteLine("                         with layout boxes outlined; every document, script, stylesheet, image");
+        Console.WriteLine("                         and font in resources/; exceptions.log with every exception, first-");
+        Console.WriteLine("                         chance ones included; JavaScript, console and pipeline logs; the");
+        Console.WriteLine("                         network as network.json and network.har; the layout tree, computed");
+        Console.WriteLine("                         styles and display list in layout/. Repeat it for several pages, each");
+        Console.WriteLine("                         into <DIR>/<page name>. --analyse is the same flag");
+        Console.WriteLine("  --verbose              With --analyze, print every request, script failure, console message");
+        Console.WriteLine("                         and exception as it happens, not only each phase");
+        Console.WriteLine("  --sample-stacks        With --analyze, take the process's stacks with dotnet-stack while a");
+        Console.WriteLine("                         phase runs longer than 5 s, and rank the Broiler methods it was in");
+        Console.WriteLine("                         (dotnet tool install -g dotnet-stack)");
+        Console.WriteLine("  --analysis-timeout <SECS>  With --analyze, write what there is and stop after SECS");
+        Console.WriteLine("                         (default: 300; 0 = never), exit code 3");
         Console.WriteLine("  --output <FILE>        Output file path");
         Console.WriteLine("  --output-dir <DIR>     Output directory for a batch. --url and --capture-image may each");
         Console.WriteLine("                         be repeated; with more than one input the items run concurrently");
