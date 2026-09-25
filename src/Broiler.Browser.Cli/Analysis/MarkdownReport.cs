@@ -213,6 +213,12 @@ internal static class MarkdownReport
         Row(md, "Timings", string.Join(", ", render.Timings.Select(static t => $"{t.Key} {Ms(t.Value)}")));
         if (report.ScriptVisualEffect is { } effect)
             Row(md, "Pixels changed by the scripts", effect.ToString("P2", CultureInfo.InvariantCulture));
+        if (report.Window is { } window)
+        {
+            Row(md, "In the browser window", string.Create(CultureInfo.InvariantCulture,
+                $"{window.Image}, {(window.DifferenceRatio is { } d ? d.ToString("P2", CultureInfo.InvariantCulture) + " of the page area differs" : "not compared")}; " +
+                $"{(window.Settled ? "done" : "not done: " + window.Status)} after {Ms(window.DurationMs)}"));
+        }
         md.AppendLine();
 
         if (render.Errors.Count > 0)

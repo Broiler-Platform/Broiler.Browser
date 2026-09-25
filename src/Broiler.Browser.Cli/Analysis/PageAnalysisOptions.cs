@@ -44,4 +44,11 @@ internal sealed record PageAnalysisOptions
 
     /// <summary>The full-page screenshot's height limit.</summary>
     public int MaxFullPageHeight { get; init; } = RenderProbe.DefaultMaxFullPageHeight;
+
+    /// <summary>
+    /// Whether to show the page in the browser window as well and compare the two images
+    /// (<see cref="WindowProbe"/>). It loads and runs the page a second time; <c>--no-window</c>
+    /// turns it off.
+    /// </summary>
+    public bool RenderInWindow { get; init; } = true;
 }

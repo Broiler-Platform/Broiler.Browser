@@ -295,6 +295,51 @@ public sealed class AnalysisInspectorTests
         Assert.Equal(FindingSeverity.Warning, selfClosed.Severity);
     }
 
+    /// <summary>
+    /// A browser window that shows the page differently from the analysis's own render by the
+    /// threshold or more is a warning pointing at its image; less than that, as anti-aliasing and
+    /// natively hosted form controls make, is nothing.
+    /// </summary>
+    [Theory(Timeout = 600000)]
+    [InlineData(0.241, true)]
+    [InlineData(0.05, true)]
+    [InlineData(0.049, false)]
+    [InlineData(0.0, false)]
+    public void A_Window_That_Shows_The_Page_Differently_Is_A_Warning(double difference, bool reported)
+    {
+        var findings = Triage.Rank(WithWindow(new WindowReport(WindowProbe.ImageName, difference, Settled: true, "Done", 1200)));
+
+        var window = findings.Where(static f => f.Title.Contains("browser window shows", StringComparison.Ordinal)).ToArray();
+        if (!reported)
+        {
+            Assert.Empty(window);
+            return;
+        }
+
+        var finding = Assert.Single(window);
+        Assert.Equal(FindingSeverity.Warning, finding.Severity);
+        Assert.Contains(WindowProbe.ImageName, finding.Detail, StringComparison.Ordinal);
+        Assert.Equal(WindowProbe.ImageName, finding.SeeAlso);
+    }
+
+    [Fact(Timeout = 600000)]
+    public void A_Window_That_Did_Not_Finish_Is_Information()
+    {
+        var findings = Triage.Rank(WithWindow(new WindowReport(WindowProbe.ImageName, 0.0, Settled: false, "Rendering...", 120_000)));
+
+        var finding = Assert.Single(findings, static f => f.Title.Contains("did not finish", StringComparison.Ordinal));
+        Assert.Equal(FindingSeverity.Info, finding.Severity);
+        Assert.Contains("Rendering...", finding.Detail, StringComparison.Ordinal);
+    }
+
+    private static AnalysisReport WithWindow(WindowReport window) => new()
+    {
+        Url = "https://example.test/",
+        StartedAt = System.DateTime.UtcNow,
+        Environment = AnalysisEnvironment.Capture(),
+        Window = window,
+    };
+
     [Fact(Timeout = 600000)]
     public void A_Standards_Mode_Document_Is_Not_Reported_As_Quirks()
     {
