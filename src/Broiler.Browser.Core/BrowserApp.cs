@@ -1718,12 +1718,18 @@ internal sealed class BrowserApp : IDisposable
         private const double FavoritesBarHeight = 30;
         private const double StatusBarHeight = 24;
 
+        /// <summary>Below this width the window drops its favorites bar and the buttons it can spare.</summary>
+        private const double CompactWidth = 600;
+
         /// <summary>
         /// The page area a window of size <paramref name="window"/> leaves between its toolbars and its
-        /// status bar, as the layout below gives it when the favorites bar is shown.
+        /// status bar, as <see cref="ArrangeCore"/> gives it.
         /// </summary>
-        internal static SizeF PageAreaFor(BSize window) =>
-            new((float)window.Width, (float)Math.Max(120, window.Height - ToolbarHeight - FavoritesBarHeight - StatusBarHeight));
+        internal static SizeF PageAreaFor(BSize window)
+        {
+            double favoritesHeight = window.Width < CompactWidth ? 0 : FavoritesBarHeight;
+            return new((float)window.Width, (float)Math.Max(0, window.Height - ToolbarHeight - favoritesHeight - StatusBarHeight));
+        }
 
         private const double Margin = 8;
         private const double ControlHeight = 28;
@@ -1847,7 +1853,7 @@ internal sealed class BrowserApp : IDisposable
 
         protected override void ArrangeCore(BRect finalRect)
         {
-            bool compact = finalRect.Width < 600;
+            bool compact = finalRect.Width < CompactWidth;
             _isCompact = compact;
             _forwardButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
             _refreshButton.Visibility = compact ? UiVisibility.Collapsed : UiVisibility.Visible;
