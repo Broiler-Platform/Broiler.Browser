@@ -54,6 +54,7 @@ front of Broiler.JS. The analysis composes Broiler.JS directly in every configur
 | `screenshot.png`, `screenshot-full.png` | The viewport, and the whole page, after the scripts |
 | `screenshot-without-scripts.png` | The document as fetched, rendered as if no script had run — if this one is right and the first is wrong, look at the JavaScript; if both are wrong, look at the HTML, CSS and layout. The report gives the share of pixels the scripts changed |
 | `screenshot-boxes.png` | The viewport with every layout box outlined, coloured by depth; boxes that reach past the right edge are red |
+| `screenshot-window.png` | The page as the browser window itself shows it: a whole `BrowserApp` over a headless host, on a profile of its own, loads and runs the page again and paints it with the window's code. If this one is wrong and `screenshot.png` is right, the bug is in how the window loads, styles or lays out the page. Not with `--no-window` |
 | `resources/` | Every document, script (as fetched and as run, under the `inline-7` labels the logs use), stylesheet, image, font and fetch response, with `index.json` |
 | `document-as-fetched.html`, `document-after-scripts.html`, `document-as-rendered.html` | The three states of the document: as the server sent it, as its scripts left it, and as the renderer was given it |
 | `exceptions.log`, `exceptions.json` | Every exception in the process — first-chance ones included, with the phase that was running and the stack at the throw — and the same grouped by type and throw site |
@@ -93,10 +94,18 @@ What the findings look for:
   screenshot would not show anyway (`cursor`, `transition`, scrolling) told apart — and the features
   it laid out as something simpler.
 - **Render and network** — the renderer's own error reports, each saying what failed and the
-  exception, failed requests, and phases that took longer than ten seconds.
+  exception, failed requests, and phases that took longer than ten seconds. And the page as the
+  browser window shows it: when 5 % or more of the window's page area differs from the analysis's
+  own render, that is a finding of its own. The window parses a page on its load worker and lays it
+  out on its UI thread, which the analysis's render does not, so this is the one place a bug in the
+  window's own path shows. The two are compared in 16-pixel squares, by their average colour, since
+  they paint text a few pixels apart; and not at all for a URL with a fragment, which the window
+  scrolls to and the analysis's render does not. The two runs load the page separately, so a page
+  that changes from one load to the next differs for that reason as well.
 
 Options: `--width`/`--height` set the viewport, `--timeout` the document's fetch, and
-`--follow-first-link` analyses the landing page's first link. `--verbose` prints every request,
+`--follow-first-link` analyses the landing page's first link. `--no-window` leaves the browser
+window out, which saves the second load and run of the page. `--verbose` prints every request,
 script failure and console message as it happens, each geometry question that laid the page out
 (those that took 10 ms or more), and the first 300 exceptions (all of them are in `exceptions.log`).
 `--analysis-timeout <SECS>` bounds the whole run (default 300, `0` for none, at most 30 days): when

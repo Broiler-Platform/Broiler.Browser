@@ -191,6 +191,19 @@ internal sealed record ExceptionSummary(
 /// <summary>A file the analysis wrote, and what is in it.</summary>
 internal sealed record AnalysisFile(string Path, string Description);
 
+/// <summary>What the browser window itself showed of the page (<see cref="WindowProbe"/>).</summary>
+/// <param name="Image">The window's page area, <c>screenshot-window.png</c>.</param>
+/// <param name="DifferenceRatio">
+/// The share of the page area where it differs from the analysis's own render, <c>screenshot.png</c>
+/// (<see cref="WindowProbe.Difference"/>), or null when the two were not compared.
+/// </param>
+/// <param name="Settled">Whether the window finished loading the page before its time ran out.</param>
+/// <param name="Status">The window's status text when the image was taken.</param>
+/// <param name="DurationMs">How long the window took to load, run and paint the page.</param>
+/// <param name="NotCompared">Why the two were not compared, when they were not.</param>
+internal sealed record WindowReport(
+    string Image, double? DifferenceRatio, bool Settled, string Status, double DurationMs, string? NotCompared = null);
+
 /// <summary>Everything one analysis found, as <c>report.json</c> records it.</summary>
 internal sealed record AnalysisReport
 {
@@ -211,6 +224,9 @@ internal sealed record AnalysisReport
 
     /// <summary>The share of viewport pixels that differ between the page with and without its scripts.</summary>
     public double? ScriptVisualEffect { get; init; }
+
+    /// <summary>What the browser window itself showed of the page (<see cref="WindowProbe"/>).</summary>
+    public WindowReport? Window { get; init; }
 
     public LayoutReport? Layout { get; init; }
     public HtmlReport? Html { get; init; }
@@ -235,6 +251,12 @@ internal sealed record AnalysisReport
 /// </remarks>
 internal static class Triage
 {
+    /// <summary>
+    /// The share of the page area whose pixels may differ between the window and the analysis's render
+    /// before it is a finding: form controls the window hosts natively and anti-aliasing stay below it.
+    /// </summary>
+    internal const double WindowDifferenceThreshold = 0.05;
+
     /// <summary>The parse errors whose repair changes what a page shows, and how a finding names them.</summary>
     private static readonly (string Code, FindingSeverity Severity, string Title)[] RenderingParseErrors =
     [
@@ -456,6 +478,27 @@ internal static class Triage
             if (render.GeometryError is { } geometry)
             {
                 findings.Add(new(FindingSeverity.Info, "Layout", "Element geometry could not be taken", geometry, "exceptions.log"));
+            }
+        }
+
+        // The window runs the page again with its own code. A page it shows differently from the
+        // analysis's render points at how the window loads, styles or lays out the page, which none of
+        // the other findings look at; a page that changes from one load to the next differs too, which
+        // is why this is a lead and a warning, not an error.
+        if (report.Window is { } window)
+        {
+            if (window.DifferenceRatio is { } difference && difference >= WindowDifferenceThreshold)
+            {
+                findings.Add(new(FindingSeverity.Warning, "Render", "The browser window shows this page differently from the analysis",
+                    string.Create(CultureInfo.InvariantCulture,
+                        $"{difference:P0} of the page area differs; compare {window.Image} with screenshot.png"),
+                    window.Image));
+            }
+
+            if (!window.Settled)
+            {
+                findings.Add(new(FindingSeverity.Info, "Render", "The browser window did not finish loading the page",
+                    $"its status was \"{window.Status}\" when its image was taken", window.Image));
             }
         }
 

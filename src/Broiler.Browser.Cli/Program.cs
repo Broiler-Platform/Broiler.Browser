@@ -45,6 +45,7 @@ public class Program
         var analyzeUrls = new List<string>();
         bool verbose = false;
         bool sampleStacks = false;
+        bool noWindow = false;
         int analysisTimeoutSeconds = Analysis.PageAnalysisOptions.DefaultWatchdogSeconds;
         string? evaluateHtmlOutput = null;
         string? output = null;
@@ -95,6 +96,9 @@ public class Program
                     break;
                 case "--sample-stacks":
                     sampleStacks = true;
+                    break;
+                case "--no-window":
+                    noWindow = true;
                     break;
                 case "--analysis-timeout" when i + 1 < args.Length:
                     // The watchdog is a timer, and a timer's due time ends at about 49 days.
@@ -255,6 +259,7 @@ public class Program
                 followFirstLink,
                 verbose,
                 sampleStacks,
+                !noWindow,
                 analysisTimeoutSeconds);
         }
 
@@ -590,6 +595,7 @@ public class Program
         bool followFirstLink,
         bool verbose,
         bool sampleStacks,
+        bool renderInWindow,
         int analysisTimeoutSeconds)
     {
         if (outputDir is null)
@@ -627,6 +633,7 @@ public class Program
                     FollowFirstLink = followFirstLink,
                     Verbose = verbose,
                     SampleStacks = sampleStacks,
+                    RenderInWindow = renderInWindow,
                     Watchdog = analysisTimeoutSeconds == 0 ? null : TimeSpan.FromSeconds(analysisTimeoutSeconds),
                 }).RunAsync();
             }
@@ -662,6 +669,8 @@ public class Program
                 arguments.Add("--verbose");
             if (sampleStacks)
                 arguments.Add("--sample-stacks");
+            if (!renderInWindow)
+                arguments.Add("--no-window");
             return arguments;
         });
 
@@ -816,13 +825,17 @@ public class Program
         Console.WriteLine("                         and font in resources/; exceptions.log with every exception, first-");
         Console.WriteLine("                         chance ones included; JavaScript, console and pipeline logs; the");
         Console.WriteLine("                         network as network.json and network.har; the layout tree, computed");
-        Console.WriteLine("                         styles and display list in layout/. Repeat it for several pages, each");
-        Console.WriteLine("                         into <DIR>/<page name>. --analyse is the same flag");
+        Console.WriteLine("                         styles and display list in layout/; and the page as the browser");
+        Console.WriteLine("                         window itself shows it, compared with the analysis's own render.");
+        Console.WriteLine("                         Repeat it for several pages, each into <DIR>/<page name>.");
+        Console.WriteLine("                         --analyse is the same flag");
         Console.WriteLine("  --verbose              With --analyze, print every request, script failure, console message");
         Console.WriteLine("                         and exception as it happens, not only each phase");
         Console.WriteLine("  --sample-stacks        With --analyze, take the process's stacks with dotnet-stack while a");
         Console.WriteLine("                         phase runs longer than 5 s, and rank the Broiler methods it was in");
         Console.WriteLine("                         (dotnet tool install -g dotnet-stack)");
+        Console.WriteLine("  --no-window            With --analyze, do not show the page in the browser window as well,");
+        Console.WriteLine("                         which loads and runs it a second time");
         Console.WriteLine("  --analysis-timeout <SECS>  With --analyze, write what there is and stop after SECS");
         Console.WriteLine("                         (default: 300; 0 = never), exit code 3");
         Console.WriteLine("  --output <FILE>        Output file path");

@@ -61,6 +61,8 @@ internal static class HtmlReportPage
             shots.Add((viewport, "After scripts"));
         if (report.RenderWithoutScripts?.ViewportImage is { } bare)
             shots.Add((bare, "Without scripts"));
+        if (report.Window?.Image is { } window)
+            shots.Add((window, "In the browser window"));
         if (report.Render?.BoxesImage is { } boxes)
             shots.Add((boxes, "Layout boxes"));
         if (shots.Count == 0)
@@ -78,6 +80,10 @@ internal static class HtmlReportPage
             html.Append("<p class=\"meta\"><a href=\"").Append(E(full)).AppendLine("\">Full-page screenshot</a></p>");
         if (report.ScriptVisualEffect is { } effect)
             html.Append("<p class=\"meta\">The scripts changed ").Append(E(effect.ToString("P2", CultureInfo.InvariantCulture))).AppendLine(" of the viewport's pixels.</p>");
+        if (report.Window?.DifferenceRatio is { } difference)
+            html.Append("<p class=\"meta\">The browser window, which loaded and ran the page again, differs from the render after scripts in ").Append(E(difference.ToString("P2", CultureInfo.InvariantCulture))).AppendLine(" of the page area.</p>");
+        else if (report.Window?.NotCompared is { } notCompared)
+            html.Append("<p class=\"meta\">The browser window was not compared with the render after scripts: ").Append(E(notCompared)).AppendLine(".</p>");
     }
 
     private static void Findings(StringBuilder html, AnalysisReport report)
