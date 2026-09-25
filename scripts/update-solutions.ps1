@@ -182,16 +182,14 @@ function New-SolutionText {
         $deployByProject[$deployProject] = $solutionExpression
     }
 
-    $groups = [ordered]@{}
-    $groups['Entry points'] = @($Projects | Where-Object { $rootSet.Contains($_) })
-    foreach ($project in $Projects | Where-Object { -not $rootSet.Contains($_) }) {
-        $topLevelDirectory = $project.Split('/')[0]
-        $groupName = "Dependencies/$topLevelDirectory"
-        if (-not $groups.Contains($groupName)) {
-            $groups[$groupName] = @()
-        }
-        $groups[$groupName] += $project
+    # Whether the projects are grouped into an "Entry points" folder and a "Dependencies/<dir>"
+    # folder per top-level directory, or listed at the root. The manifest decides, for the deploy
+    # flags' reason: a hand-edit to the .slnx is reverted by the next generator run, and fails
+    # -Verify until then. Absent means folders, which every solution had before the option.
+    if ($null -ne $Definition.folders -and $Definition.folders -isnot [bool]) {
+        throw "$($Definition.path) declares 'folders' as '$($Definition.folders)'; it must be true or false."
     }
+    $useFolders = $null -eq $Definition.folders -or $Definition.folders
 
     # The build types the .slnx offers. A configuration a solution does not declare cannot be
     # built THROUGH it at all -- MSBuild answers MSB4126 and stops before evaluating a project --
@@ -213,26 +211,55 @@ function New-SolutionText {
     }
     $lines.Add('  </Configurations>')
 
-    foreach ($group in $groups.GetEnumerator()) {
-        if ($group.Value.Count -eq 0) {
-            continue
-        }
+    # One <Project> per path, in path order, with its deploy flag when the manifest gives one.
+    function Add-ProjectLines {
+        param(
+            [Parameter(Mandatory)]
+            [string] $Indent,
 
-        $folderName = Convert-ToXmlAttribute -Value "/$($group.Key)/"
-        $lines.Add("  <Folder Name=`"$folderName`">")
-        foreach ($project in $group.Value | Sort-Object) {
+            [Parameter(Mandatory)]
+            [string[]] $ProjectPaths
+        )
+
+        foreach ($project in $ProjectPaths | Sort-Object) {
             $projectPath = Convert-ToXmlAttribute -Value $project
             if ($deployByProject.ContainsKey($project)) {
                 $deploySolution = Convert-ToXmlAttribute -Value $deployByProject[$project]
-                $lines.Add("    <Project Path=`"$projectPath`">")
-                $lines.Add("      <Deploy Solution=`"$deploySolution`" />")
-                $lines.Add('    </Project>')
+                $lines.Add("$Indent<Project Path=`"$projectPath`">")
+                $lines.Add("$Indent  <Deploy Solution=`"$deploySolution`" />")
+                $lines.Add("$Indent</Project>")
             }
             else {
-                $lines.Add("    <Project Path=`"$projectPath`" />")
+                $lines.Add("$Indent<Project Path=`"$projectPath`" />")
             }
         }
-        $lines.Add('  </Folder>')
+    }
+
+    if (-not $useFolders) {
+        Add-ProjectLines -Indent '  ' -ProjectPaths $Projects
+    }
+    else {
+        $groups = [ordered]@{}
+        $groups['Entry points'] = @($Projects | Where-Object { $rootSet.Contains($_) })
+        foreach ($project in $Projects | Where-Object { -not $rootSet.Contains($_) }) {
+            $topLevelDirectory = $project.Split('/')[0]
+            $groupName = "Dependencies/$topLevelDirectory"
+            if (-not $groups.Contains($groupName)) {
+                $groups[$groupName] = @()
+            }
+            $groups[$groupName] += $project
+        }
+
+        foreach ($group in $groups.GetEnumerator()) {
+            if ($group.Value.Count -eq 0) {
+                continue
+            }
+
+            $folderName = Convert-ToXmlAttribute -Value "/$($group.Key)/"
+            $lines.Add("  <Folder Name=`"$folderName`">")
+            Add-ProjectLines -Indent '    ' -ProjectPaths $group.Value
+            $lines.Add('  </Folder>')
+        }
     }
 
     $lines.Add('</Solution>')

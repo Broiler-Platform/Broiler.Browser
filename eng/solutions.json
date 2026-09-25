@@ -13,13 +13,19 @@
     "profile arrives as the Broiler.HtmlBridge.Scripting.Vm PACKAGE, conditional on the -VM pair,",
     "and a package is not a project a solution lists -- so these solutions hold the same src/",
     "projects under all four build types, and what the -VM pair changes is the restore, not the",
-    "solution. See docs/vm-javascript-profile.md."
+    "solution. See docs/vm-javascript-profile.md.",
+    "",
+    "'folders' defaults to true: the solution groups its projects into an 'Entry points' folder",
+    "and one 'Dependencies/<directory>' folder per top-level directory. false lists them at the",
+    "solution's root, in path order. It is set here rather than in the .slnx, which the generator",
+    "rewrites and -Verify rejects when edited by hand."
   ],
   "solutions": [
     {
       "path": "Broiler.Windows.Browser.slnx",
       "description": "Windows browser application and its transitive dependencies.",
       "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],
+      "folders": false,
       "roots": [
         "src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj"
       ],
