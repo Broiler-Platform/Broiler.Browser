@@ -153,17 +153,56 @@ the manifest too: `"folders": false` lists its projects at the root instead of u
 - **Android head** — a separate job, since it pays for the `android` workload. It runs the two
   graph checks for its own solution, which the other job cannot evaluate without the workload.
 - **Publish** — `Release-Windows` and `Release-Linux`, the runtime-identifier-pinned
-  configurations. They are project-level builds by necessity: no solution declares them, so a
-  solution-level build with either fails `MSB4126`.
-
-[`release.yml`](.github/workflows/release.yml) is dispatch-only and uploads build
-artifacts for manual testing — `win-x64`, `linux-x64` and a **debug-signed**
-`android-arm64` APK. It creates no GitHub release and signs nothing for distribution;
-store-ready signed preview packages come from the monorepo's *Prepare Broiler Preview
-Package* workflow, which owns the signing material.
+  configurations, self-contained and single-file as the release ships them. They are
+  project-level builds by necessity: no solution declares them, so a solution-level build with
+  either fails `MSB4126`.
 
 Every job checks out without submodules — there are none — and sets up the SDK through
 [`.github/actions/setup-broiler`](.github/actions/setup-broiler/action.yml).
+
+## Releases
+
+[`release.yml`](.github/workflows/release.yml) is dispatch-only (*Actions → Release → Run
+workflow*). Each run picks the next preview version, builds every head with it, tags the commit
+`browser-v<version>` and drafts a GitHub **pre-release** carrying:
+
+| Asset | Contents |
+|---|---|
+| `Broiler.Browser-<version>-win-x64.zip` | `Broiler.Browser.Windows.exe` |
+| `Broiler.Browser-<version>-linux-x64.zip` | `Broiler.Browser.Linux`, recorded executable |
+| `Broiler.Browser-<version>.aab` | the Android app bundle (arm64 + x86_64), for Google Play |
+| `Broiler.Browser-<version>-arm64.apk` | the Android APK, for sideloading |
+
+The desktop executables are self-contained single files: the .NET runtime and every assembly in
+one file, nothing to install. They are not NativeAOT, as Broiler.Writer's are, because Broiler.JS
+does not start under NativeAOT.
+
+The release optimizations are set in the head projects, so CI and a publish from Visual Studio get
+them too:
+
+| Head | Optimizations | Measured |
+|---|---|---|
+| Windows, Linux | ReadyToRun for a release publish with a runtime identifier; tiered compilation with dynamic PGO | a script-driven page finishes in 1.46 s instead of 2.11 s, first render 62 ms instead of 273 ms; executable 115 MB instead of 84 MB |
+| Android | profiled AOT (the SDK's startup profile) for Release, with the partial trimming AOT requires | cold start 1.98 s instead of 3.15 s on the API 36 emulator; APK 10 MB instead of 24 MB, app bundle 21 MB instead of 49 MB |
+
+Nothing is fully trimmed: Broiler.JS reflects over its own members. Partial trimming keeps every
+assembly whole except those that declare themselves trimmable, and one of Broiler.JS's,
+`Broiler.JavaScript.Expressions`, does so wrongly. The Android head roots it; without that, every
+page with a script fails to load there.
+
+The Android packages are attached as they are, not zipped, and
+are signed with the Broiler release key by
+[`eng/sign-android-packages.ps1`](eng/sign-android-packages.ps1) (the monorepo's script, copied
+unchanged), which reads the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` repository secrets and checks them before
+anything is built.
+
+The release stays a draft until someone reviews and publishes it. The version is
+`BroilerBrowserVersion` in [`Directory.Build.props`](Directory.Build.props) raised past every
+earlier `browser-v*` tag ([`eng/resolve-preview-version.mjs`](eng/resolve-preview-version.mjs)),
+so preview numbers only increase; raise the property to start a new release line. The preview
+number is also the Android `versionCode`. [`eng/release-draft.sh`](eng/release-draft.sh) drafts
+the release, and can do so by hand from a run's downloaded artifacts.
 
 ## Repository layout
 
@@ -178,7 +217,7 @@ Every job checks out without submodules — there are none — and sets up the S
 | `src/Broiler.Browser.Cli.Tests` | xUnit suite for the command line |
 | `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites, per-platform clipboards. It has no project of its own; each head links the files it needs. |
 | `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
-| `eng/`, `scripts/` | Solution manifest, configuration mapping and generator |
+| `eng/`, `scripts/` | Solution manifest, configuration mapping and generator; the release's version resolver, Android signing and draft-release scripts |
 
 *(Corrected 2026-09-08. Two rows here described `Broiler.VM.Profile.JavaScript` and
 `Broiler.VM.Profile.WebAssembly` as top-level directories of this repository holding "documents
