@@ -38,6 +38,9 @@ internal static class LinuxBrowserRunner
         var postedActions = new ConcurrentQueue<Action>();
 
         using LinuxOpenGlRenderer renderer = new();
+        // The page's images go through this when --artifact-dir will replay the last frame on the
+        // CPU, which needs its own copy of each; without it they go straight to the backend.
+        using CpuReplayRenderer? cpuReplay = options.ArtifactDirectory is not null ? new(renderer) : null;
         BSurfaceDescriptor descriptor = BSurfaceDescriptor.Default(new BSize(options.Width, options.Height));
         using IBroilerSurface surface = options.OpenWindow
             ? renderer.CreateX11WindowSurface(descriptor, "Broiler Browser")
@@ -71,7 +74,7 @@ internal static class LinuxBrowserRunner
             text => clipboard?.SetText(text));
         // The run's one profile, declared before the app so it is disposed after it.
         using BrowserProfile profile = BrowserProfile.CreateDefault();
-        using BrowserApp app = new(host, () => renderer, options.InitialUrl, static _ => { }, profile);
+        using BrowserApp app = new(host, () => cpuReplay ?? (IBroilerRenderer)renderer, options.InitialUrl, static _ => { }, profile);
 
         await using LinuxInputCoordinator input = new(
             canUseEvdev,
@@ -152,7 +155,7 @@ internal static class LinuxBrowserRunner
         Console.WriteLine("  bitmap: " + bitmap.Width.ToString(CultureInfo.InvariantCulture) + "x" + bitmap.Height.ToString(CultureInfo.InvariantCulture));
         Console.WriteLine("  render-time: " + FormatMilliseconds(renderTicks) + " ms total across " + renderedFrames.ToString(CultureInfo.InvariantCulture) + " frame(s)");
         Console.WriteLine("  input: " + InputSummary(input.Snapshot));
-        SaveArtifacts(options, surface, bitmap, host.LastRenderList, lastFrameContext);
+        SaveArtifacts(options, surface, bitmap, host.LastRenderList, lastFrameContext, cpuReplay);
         Console.WriteLine();
         return 0;
     }
@@ -211,7 +214,8 @@ internal static class LinuxBrowserRunner
         IBroilerSurface surface,
         BBitmap backendBitmap,
         BRenderList? renderList,
-        BFrameContext frameContext)
+        BFrameContext frameContext,
+        CpuReplayRenderer? cpuReplay)
     {
         if (options.ArtifactDirectory is null)
             return;
@@ -220,10 +224,9 @@ internal static class LinuxBrowserRunner
         string backendPath = Path.Combine(options.ArtifactDirectory, "broiler-browser-linux-opengl.png");
         backendBitmap.Save(backendPath);
 
-        if (renderList is not null)
+        if (renderList is not null && cpuReplay is not null)
         {
-            using BImageRenderer cpu = new();
-            using BBitmap cpuBitmap = cpu.RenderToImage(renderList, new BSurfaceDescriptor(surface.Size, surface.DpiScale), frameContext);
+            using BBitmap cpuBitmap = cpuReplay.RenderToCpuImage(renderList, new BSurfaceDescriptor(surface.Size, surface.DpiScale), frameContext);
             string cpuPath = Path.Combine(options.ArtifactDirectory, "broiler-browser-linux-cpu.png");
             cpuBitmap.Save(cpuPath);
             Console.WriteLine("  artifacts: " + cpuPath + "; " + backendPath);

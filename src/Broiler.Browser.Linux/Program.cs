@@ -1,3 +1,4 @@
+using Broiler.Graphics.Imaging;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -8,6 +9,11 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         AssemblyLoadContext.Default.Resolving += ResolveFromAppDirectory;
+
+        // Composition root: register the concrete image codecs Broiler.Graphics decodes/encodes with,
+        // as the Windows head does. Without them BBitmap.Save, which --artifact-dir writes with, throws.
+        BImageCodecs.Use(
+            new Broiler.Media.MediaCodecCatalog(Broiler.Media.Image.Managed.ManagedImageCodecs.CreateCodecs()));
 
         LinuxBrowserOptions options = LinuxBrowserOptions.Parse(args);
         if (options.ShowHelp)
