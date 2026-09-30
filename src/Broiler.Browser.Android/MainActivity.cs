@@ -5,6 +5,7 @@ using Android.OS;
 using Android.Views;
 using Android.Widget;
 using Broiler.App.Android;
+using Broiler.Graphics.Imaging;
 
 namespace Broiler.Browser.Android;
 
@@ -25,6 +26,17 @@ public sealed class MainActivity : Activity
     /// being reopened. It is never disposed; the process's end releases it.
     /// </summary>
     private static readonly System.Lazy<BrowserProfile> Profile = new(BrowserProfile.CreateDefault);
+
+    /// <summary>
+    /// Composition root: registers the concrete image codecs Broiler.Graphics decodes and encodes
+    /// with, as the desktop heads do in <c>Main</c>. Without them a page's <c>canvas.toDataURL()</c>
+    /// answers <c>"data:,"</c> as if the canvas were blank. Once per process, like the profile.
+    /// </summary>
+    static MainActivity()
+    {
+        BImageCodecs.Use(
+            new Broiler.Media.MediaCodecCatalog(Broiler.Media.Image.Managed.ManagedImageCodecs.CreateCodecs()));
+    }
 
     private AndroidBroilerView? _view;
     private BrowserUiHost? _host;
