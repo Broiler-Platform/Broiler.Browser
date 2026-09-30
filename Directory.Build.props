@@ -7,6 +7,18 @@
   -->
   <Import Project="$(MSBuildThisFileDirectory)eng\Broiler.Configurations.props" />
 
+  <!--
+    The application version: every project here, the heads' file versions and the Android
+    head's display version. It is a floor, not the version of the next release: the Release
+    workflow (.github/workflows/release.yml) raises it past every earlier run's browser-v*
+    tag and passes the result back in as -p:BroilerBrowserVersion (see
+    eng/resolve-preview-version.mjs). Raise it here to start a new release line.
+  -->
+  <PropertyGroup>
+    <BroilerBrowserVersion Condition="'$(BroilerBrowserVersion)' == ''">0.1.0-preview.1</BroilerBrowserVersion>
+    <Version>$(BroilerBrowserVersion)</Version>
+  </PropertyGroup>
+
   <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
 

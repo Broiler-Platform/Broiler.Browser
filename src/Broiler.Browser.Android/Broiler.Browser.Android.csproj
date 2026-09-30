@@ -12,7 +12,9 @@
     <ApplicationId>org.broiler.browser</ApplicationId>
     <ApplicationTitle>Broiler Browser</ApplicationTitle>
     <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <!-- The versionName users see, from BroilerBrowserVersion (Directory.Build.props). The
+         versionCode above is 1 for a local build; the Release workflow passes the preview number. -->
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
     <!-- The ABI set, overridable for a single-ABI package (the preview package's arm64 APK).
          It goes through a Broiler-owned property rather than passing RuntimeIdentifiers itself on
          the command line: that would be an MSBuild global property, so it would reach every
