@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "component": "Broiler.Browser",
+  "projects": [
+    "src/Broiler.App.Android/Broiler.App.Android.csproj",
+    "src/Broiler.Browser.Android/Broiler.Browser.Android.csproj",
+    "src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj",
+    "src/Broiler.Browser.Core/Broiler.Browser.Core.csproj",
+    "src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj",
+    "src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj"
+  ],
+  "exemptionPredicate": "owning-component",
+  // BROILER_VM_JS is defined by eng/Broiler.Configurations.props under Debug-VM and Release-VM,
+  // which CI builds and tests. Defined here so that the members BrowserApp.cs declares only under
+  // it are units of their own; its #else branches hold statements, not declarations.
+  "preprocessorSymbols": [
+    "NET",
+    "NETCOREAPP",
+    "NETCOREAPP1_0_OR_GREATER",
+    "NETCOREAPP1_1_OR_GREATER",
+    "NETCOREAPP2_0_OR_GREATER",
+    "NETCOREAPP2_1_OR_GREATER",
+    "NETCOREAPP2_2_OR_GREATER",
+    "NETCOREAPP3_0_OR_GREATER",
+    "NETCOREAPP3_1_OR_GREATER",
+    "NET5_0_OR_GREATER",
+    "NET6_0_OR_GREATER",
+    "NET7_0_OR_GREATER",
+    "NET8_0_OR_GREATER",
+    "NET9_0_OR_GREATER",
+    "NET10_0_OR_GREATER",
+    "NET10_0",
+    "DEBUG",
+    "RELEASE",
+    "TRACE",
+    "BROILER_VM_JS"
+  ],
+  "spdx": {
+    "copyright": [ "2026 Broiler Platform contributors" ],
+    "license": "Apache-2.0"
+  },
+  "artefacts": {
+    "report": "CODE-ASSURANCE.units.md",
+    "humanReview": "HUMAN_REVIEW.units.md",
+    "manifest": "assurance.manifest.json"
+  },
+  "regenerateCommand": "dotnet run --project Broiler.Code/src/Broiler.Code.Review.Cli -c Release -- assurance generate --root Broiler.Browser",
+  "forbidDirectives": false,
+  "forgeryVocabulary": "narrow"
+}
