@@ -102,5 +102,15 @@ internal sealed class BrowserProfile : IDisposable
         return new(favoritesPath: null, handler);
     }
 
+    /// <summary>
+    /// A profile keeping its favorites in <paramref name="favoritesPath"/> rather than the user's file —
+    /// a test seam for the favorites a window shows.
+    /// </summary>
+    internal static BrowserProfile CreateWithFavorites(string favoritesPath)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(favoritesPath);
+        return new(favoritesPath, handler: null);
+    }
+
     public void Dispose() => Network.Dispose();
 }
