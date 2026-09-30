@@ -16,6 +16,13 @@
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Debug-Linux' Or '$(Configuration)' == 'Release-Linux'">linux-x64</RuntimeIdentifier>
   </PropertyGroup>
 
+  <!-- ReadyToRun for a release publish, tiered compilation with dynamic PGO: see the Windows head. -->
+  <PropertyGroup>
+    <PublishReadyToRun Condition="('$(Configuration)' == 'Release' Or '$(BroilerBaseConfiguration)' == 'Release') And '$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="..\Broiler.App\LinuxInputCoordinator.cs" Link="LinuxInputCoordinator.cs" />
     <Compile Include="..\Broiler.App\LinuxX11Clipboard.cs" Link="LinuxX11Clipboard.cs" />

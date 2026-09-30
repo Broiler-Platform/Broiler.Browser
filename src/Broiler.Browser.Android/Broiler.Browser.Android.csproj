@@ -24,8 +24,18 @@
     <BroilerAndroidAbis Condition="'$(BroilerAndroidAbis)' == ''">android-arm64;android-x64</BroilerAndroidAbis>
     <RuntimeIdentifiers>$(BroilerAndroidAbis)</RuntimeIdentifiers>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
-    <RunAOTCompilation>false</RunAOTCompilation>
-    <PublishTrimmed>false</PublishTrimmed>
+    <!-- A release package is AOT-compiled with the SDK's startup profile (profiled AOT), .NET for
+         Android's recommended release setting: the methods startup runs are native in the package,
+         the rest stays JIT. AOT requires trimming (XA1030), and it is trimmed in partial mode on
+         purpose: the framework is trimmed, every other assembly is kept whole. Broiler.JS reflects
+         over its own members, and full trimming removes them (a NativeAOT desktop build dies in
+         JSObjectBuilder before Main). Debug builds stay JIT-only and untrimmed. -->
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release' Or '$(BroilerBaseConfiguration)' == 'Release'">true</RunAOTCompilation>
+    <RunAOTCompilation Condition="'$(RunAOTCompilation)' == ''">false</RunAOTCompilation>
+    <AndroidEnableProfiledAot Condition="'$(RunAOTCompilation)' == 'true'">true</AndroidEnableProfiledAot>
+    <PublishTrimmed Condition="'$(RunAOTCompilation)' == 'true'">true</PublishTrimmed>
+    <PublishTrimmed Condition="'$(PublishTrimmed)' == ''">false</PublishTrimmed>
+    <TrimMode Condition="'$(PublishTrimmed)' == 'true'">partial</TrimMode>
     <!-- The package format follows the BASE configuration, not the literal name. Keying it on
          '$(Configuration)' == 'Release' alone was correct while Release was the only release-like
          configuration this head built; Release-VM is a second one, and it would have produced a
@@ -40,6 +50,20 @@
   <PropertyGroup>
     <Configurations>Debug;Release;Debug-VM;Release-VM</Configurations>
   </PropertyGroup>
+
+  <!--
+    Partial trimming keeps every assembly whole EXCEPT one that declares itself trimmable, and
+    Broiler.JavaScript.Expressions does (IsTrimmable and IsAotCompatible in Broiler.JS) without
+    being so: Broiler.JS's compiler builds expressions that name its members as strings, such as
+    Box<T>.Value in GeneratorRewriter.AddScriptInfoCapture. Trimmed, that lookup finds nothing,
+    BFieldExpression's constructor throws a NullReferenceException, and every page with a script
+    fails to load with "Object reference not set to an instance of an object" (seen on the API 36
+    emulator). Rooted, it stays whole. Remove this once Broiler.JS drops the claim; the other
+    trimmable-declaring Broiler assemblies (Graphics, Media, Native) are trimmed as they ask.
+  -->
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimmerRootAssembly Include="Broiler.JavaScript.Expressions" RootMode="All" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Broiler.App.Android\Broiler.App.Android.csproj" />

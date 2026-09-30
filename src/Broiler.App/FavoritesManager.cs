@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Broiler.App;
 
@@ -47,7 +48,7 @@ public sealed class FavoritesManager
         try
         {
             var json = File.ReadAllText(_filePath);
-            var urls = JsonSerializer.Deserialize<List<string>>(json);
+            var urls = JsonSerializer.Deserialize(json, FavoritesJson.Default.ListString);
             if (urls != null)
                 _favorites.AddRange(urls);
         }
@@ -69,7 +70,7 @@ public sealed class FavoritesManager
             if (dir != null && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(_favorites, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(_favorites, FavoritesJson.Default.ListString);
             File.WriteAllText(_filePath, json);
         }
         catch (Exception)
@@ -130,3 +131,14 @@ public sealed class FavoritesManager
         return Path.Combine(appData, "Broiler", "favorites.json");
     }
 }
+
+/// <summary>
+/// The favorites file's serializer, generated at compile time. The Android release package is trimmed,
+/// and reflection-based serialization reaches members the trimmer cannot see: it warned (IL2026) that
+/// they might be removed, and Load and Save swallow exceptions, so favorites would stop persisting without
+/// a word. Generated, nothing depends on what the trimmer keeps. The file is the same indented JSON array
+/// of strings either way, so files earlier builds wrote still load.
+/// </summary>
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(List<string>))]
+internal sealed partial class FavoritesJson : JsonSerializerContext;

@@ -21,6 +21,14 @@ name: Release
 # assembly inside one file, nothing to install, nothing beside it. It is not trimmed, for
 # the same reflection.
 #
+# The optimizations live in the head projects, so this workflow, ci.yml's publish job and a
+# publish from Visual Studio all get them. The desktop executables are ReadyToRun (startup
+# on precompiled code; 31% less time to a finished page, 31 MB more executable) with tiered
+# compilation and dynamic PGO. The Android packages are AOT-compiled from the startup
+# profile and trimmed in partial mode, which AOT requires, with Broiler.JS kept whole (the
+# Android head roots the one assembly of it that claims to be trimmable and is not); the
+# collect step below fails a package without its AOT code.
+#
 # The Android packages are signed with the release key held in the ANDROID_KEYSTORE_BASE64,
 # ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD repository secrets
 # (the monorepo's and Broiler.Writer's, under the same names) by eng/sign-android-packages.ps1.
@@ -128,8 +136,10 @@ jobs:
       # Self-contained and single-file: one executable carrying the .NET runtime and every
       # assembly. IncludeNativeLibrariesForSelfExtract bundles any native library a package
       # brings too, rather than leaving it beside the executable. ci.yml's publish job uses
-      # the same switches. BroilerBrowserVersion flows into Version, so the file version
-      # matches the artifact.
+      # the same switches; ReadyToRun and tiered PGO come from the head project.
+      # BroilerBrowserVersion flows into Version, so the file version matches the artifact.
+      # ContinuousIntegrationBuild makes the build deterministic, with source paths in the
+      # symbols normalised rather than the runner's.
       - name: Publish
         run: |
           dotnet publish '${{ matrix.project }}' \
@@ -137,6 +147,7 @@ jobs:
             --self-contained \
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:ContinuousIntegrationBuild=true \
             -p:BroilerBrowserVersion="$VERSION" \
             -o "$OUT"
 
@@ -232,14 +243,15 @@ jobs:
           "ANDROID_SDK_ROOT=$sdkRoot" >> $env:GITHUB_ENV
 
       # Mono, not NativeAOT: the Android SDK still flags NativeAOT as experimental (XA1040),
-      # and Broiler.JS does not start under desktop NativeAOT (see the top of this file).
+      # and Broiler.JS does not start under desktop NativeAOT (see the top of this file). Under
+      # Release the head AOT-compiles its startup profile and trims in partial mode itself.
       # Plain Release is a configuration the head switches to an app bundle under; the APK
       # overrides the format and narrows to arm64, the one ABI a phone needs. The ABI goes
       # through BroilerAndroidAbis, not RuntimeIdentifiers, which as a global property would
       # reach every net10.0 library and fail NETSDK1047. ApplicationVersion is the versionCode.
       - name: Publish the app bundle and the arm64 APK
         run: |
-          $common = @('-c', 'Release', "-p:BroilerBrowserVersion=$env:VERSION", "-p:ApplicationVersion=$env:VERSION_CODE")
+          $common = @('-c', 'Release', '-p:ContinuousIntegrationBuild=true', "-p:BroilerBrowserVersion=$env:VERSION", "-p:ApplicationVersion=$env:VERSION_CODE")
           dotnet publish $env:PROJECT @common -o artifacts/android/aab
           if ($LASTEXITCODE -ne 0) { throw 'Publishing the app bundle failed.' }
           dotnet publish $env:PROJECT @common -p:AndroidPackageFormat=apk -p:BroilerAndroidAbis=android-arm64 -o artifacts/android/apk
@@ -248,7 +260,9 @@ jobs:
       # Each publish leaves the unsigned org.broiler.browser.<ext> beside a -Signed copy
       # carrying the workload's debug key. The unsigned one is carried forward and signed with
       # the release key; checking it here means neither format can ship under the other's name
-      # and a debug-signed package cannot arrive looking release-ready.
+      # and a debug-signed package cannot arrive looking release-ready. Each ABI must also carry
+      # AOT code (lib/<abi>/libaot-*.so): a package without it starts on the JIT alone and
+      # otherwise looks exactly like one with it.
       - name: Collect and verify the packages
         run: |
           Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -263,6 +277,13 @@ jobs:
             $signature = @($Entries | Where-Object { $_ -match '^META-INF/.+\.(RSA|DSA|EC|SF)$' })
             if ($signature) { throw "$Path is already signed; the debug-signed package was picked up." }
           }
+          function Assert-Aot($Path, $Entries, $Abis) {
+            foreach ($abi in $Abis) {
+              $aot = @($Entries | Where-Object { $_ -match "^(?:base/)?lib/$abi/libaot-.+\.so$" })
+              if ($aot.Count -eq 0) { throw "$Path carries no AOT code for $abi; RunAOTCompilation did not take effect." }
+              Write-Host "==> ${Path}: $($aot.Count) AOT images for $abi"
+            }
+          }
 
           $out = 'artifacts/android/signed'
           New-Item -ItemType Directory -Force -Path $out | Out-Null
@@ -275,6 +296,7 @@ jobs:
           $entries = Get-Entries $bundle
           if ($entries -notcontains 'BundleConfig.pb') { throw "$bundle is not an app bundle: BundleConfig.pb is missing." }
           Assert-Unsigned $bundle $entries
+          Assert-Aot $bundle $entries (Get-Abis $entries)
           Write-Host "==> ${bundle}: app bundle, ABIs $((Get-Abis $entries) -join ', ')"
 
           $entries = Get-Entries $apk
@@ -282,6 +304,7 @@ jobs:
           $abis = @(Get-Abis $entries)
           if ($abis.Count -ne 1 -or $abis[0] -ne 'arm64-v8a') { throw "$apk should carry arm64-v8a only; found: $($abis -join ', ')" }
           Assert-Unsigned $apk $entries
+          Assert-Aot $apk $entries $abis
           Write-Host "==> ${apk}: apk, arm64-v8a"
 
           Copy-Item $bundle "$out/Broiler.Browser-$env:VERSION.aab"

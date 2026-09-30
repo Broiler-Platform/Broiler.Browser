@@ -175,7 +175,22 @@ workflow*). Each run picks the next preview version, builds every head with it, 
 
 The desktop executables are self-contained single files: the .NET runtime and every assembly in
 one file, nothing to install. They are not NativeAOT, as Broiler.Writer's are, because Broiler.JS
-does not start under NativeAOT. The Android packages are attached as they are, not zipped, and
+does not start under NativeAOT.
+
+The release optimizations are set in the head projects, so CI and a publish from Visual Studio get
+them too:
+
+| Head | Optimizations | Measured |
+|---|---|---|
+| Windows, Linux | ReadyToRun for a release publish with a runtime identifier; tiered compilation with dynamic PGO | a script-driven page finishes in 1.46 s instead of 2.11 s, first render 62 ms instead of 273 ms; executable 115 MB instead of 84 MB |
+| Android | profiled AOT (the SDK's startup profile) for Release, with the partial trimming AOT requires | cold start 1.98 s instead of 3.15 s on the API 36 emulator; APK 10 MB instead of 24 MB, app bundle 21 MB instead of 49 MB |
+
+Nothing is fully trimmed: Broiler.JS reflects over its own members. Partial trimming keeps every
+assembly whole except those that declare themselves trimmable, and one of Broiler.JS's,
+`Broiler.JavaScript.Expressions`, does so wrongly. The Android head roots it; without that, every
+page with a script fails to load there.
+
+The Android packages are attached as they are, not zipped, and
 are signed with the Broiler release key by
 [`eng/sign-android-packages.ps1`](eng/sign-android-packages.ps1) (the monorepo's script, copied
 unchanged), which reads the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
