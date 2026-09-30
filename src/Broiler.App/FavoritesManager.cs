@@ -19,6 +19,20 @@ public sealed class FavoritesManager
     /// <summary>The file favorites are kept in by default: <c>Broiler\favorites.json</c> under the user's application data.</summary>
     public static string DefaultFilePath => GetDefaultFilePath();
 
+    /// <summary>
+    /// The favorites a profile starts with until it has saved its own (see <see cref="Load"/>): the
+    /// pages the browser's compatibility passes use, one click away.
+    /// </summary>
+    public static IReadOnlyList<string> DefaultFavorites { get; } =
+    [
+        "https://www.7-zip.org",
+        "http://acid1.acidtests.org",
+        "http://acid2.acidtests.org",
+        "https://html5test.com/",
+        "https://www.mediawiki.org/wiki/MediaWiki",
+        "https://duckduckgo.com/",
+    ];
+
     public FavoritesManager()
         : this(GetDefaultFilePath())
     {
@@ -42,8 +56,17 @@ public sealed class FavoritesManager
     {
         _favorites.Clear();
 
-        if (_filePath is null || !File.Exists(_filePath))
+        if (_filePath is null)
             return;
+
+        if (!File.Exists(_filePath))
+        {
+            // A profile that has never saved favorites starts with the defaults. The first add or
+            // remove saves the list, so from then on the file decides, and a removed default stays
+            // removed.
+            _favorites.AddRange(DefaultFavorites);
+            return;
+        }
 
         try
         {
