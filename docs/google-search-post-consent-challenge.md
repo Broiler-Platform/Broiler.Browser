@@ -1,5 +1,9 @@
 # Google Search, after the consent page
 
+For the measured 2026-10-03 reproduction, the retained 429 body, CLI invocation and
+diagnostic changes, see [the current investigation](google-search-429-investigation-2026-10-03.md).
+The observations below describe earlier versions and runs.
+
 Google Search is the browser's hardest single page, and it is hard in a specific way: **it
 almost never fails where it broke.** Its anti-abuse code is an interpreter running its own
 bytecode, so one wrong value early derails the decode for the rest of the page and surfaces
@@ -137,7 +141,7 @@ and surfaced far from its cause, which is this page's entire failure mode.
 > This was recorded as `25da60d` until 2026-09-07, and no object with that prefix exists in
 > `Broiler.JS` — a wrong SHA, not a missing commit. `0031018c` is an ancestor of the pin.
 
-## Where the page fails now
+## Earlier observations (September 2026)
 
 The entries above were each a missing or wrong binding, and each one moved the page further along.
 That is no longer where it stops.
@@ -152,20 +156,19 @@ more token: first `sei`, then a `sg_ss` signal blob of some nine hundred charact
 collecting evidence because it is not satisfied with what it has, and it does not become satisfied.
 google.de answers **429 Too Many Requests**.
 
-**The 429 is the verdict, not the rate.** It was first read as a rate limit — the chain ran to the
-hop cap, and ten requests at one endpoint inside twenty seconds is what a limiter is for. Then
-`SamePathLoadLimit` cut the same page to three loads, and the answer was 429 again. Three is not ten,
-so the count was never what was being objected to: the check has decided what this client is, and
-says so with the status code it has. Tuning the budget further will not change it, and reading the
-429 as "slow down" is what sends the next person tuning a constant instead of reading `sg_ss`.
+**The 429 does not identify the deciding signal.** Reducing the chain from ten loads to three
+still produced 429 in those runs. That observation does not rule out rate limiting, previous
+traffic, shared-IP reputation, cookies, or client capabilities. The earlier version of this
+document incorrectly treated the small request count as proof of a client verdict. Capture the
+response body, redirects and Retry-After header before drawing that conclusion.
 
 **Watch `gbv`.** An earlier run of the same search carried `gbv=1` — Google's basic, no-JavaScript
-variant, which does not run this check at all and is the version that would render. A later one,
+variant, which was observed to avoid this check in that run. A later one,
 after the engine had grown a working `location.replace`, `form.submit()` and control-value
 serialization, carried `gbv=2` and the full JavaScript path. The capability the browser presents is
 what selects the route, so making the engine better can move it onto the harder one. Pinning `gbv=1`
-on the URL is the way to see results today, and the difference between the two runs is worth keeping
-in view when judging whether a change helped.
+on the URL was an earlier workaround, not a verified current solution; the difference between the
+two runs is worth keeping in view when judging whether a change helped.
 
 So the shape of the problem has changed. Every entry above was a binding that could be written, and
 writing it moved the page on. This one is the anti-abuse check declining the client, and there is no
