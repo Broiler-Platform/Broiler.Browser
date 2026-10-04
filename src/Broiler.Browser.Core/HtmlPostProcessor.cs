@@ -27,11 +27,19 @@ internal static class HtmlPostProcessor
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
+    /// A start tag's attributes, up to the <c>&gt;</c> that ends the tag: a quoted value may hold a
+    /// <c>&gt;</c> of its own. An <c>&lt;iframe srcdoc&gt;</c> whose markup is not escaped — legal
+    /// HTML — ended its tag at the first <c>&gt;</c> of that markup, and the passes that write the
+    /// attributes back cut the value off there, leaving the frame's document unterminated.
+    /// </summary>
+    private const string Attributes = @"(?<attrs>(?:[^>""']|""[^""]*""|'[^']*')*)";
+
+    /// <summary>
     /// Matches <c>&lt;iframe …&gt;…&lt;/iframe&gt;</c> elements including
     /// their inline fallback content.
     /// </summary>
     private static readonly Regex IframeContentPattern = new(
-        @"<iframe(?<attrs>[^>]*)>[\s\S]*?</iframe>",
+        "<iframe" + Attributes + @">[\s\S]*?</iframe>",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
@@ -39,7 +47,7 @@ internal static class HtmlPostProcessor
     /// their inline fallback content.
     /// </summary>
     private static readonly Regex ObjectContentPattern = new(
-        @"<object(?<attrs>[^>]*)>[\s\S]*?</object>",
+        "<object" + Attributes + @">[\s\S]*?</object>",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
