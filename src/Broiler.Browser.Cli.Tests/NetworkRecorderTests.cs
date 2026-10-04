@@ -113,6 +113,68 @@ public sealed class NetworkRecorderTests
     }
 
     [Fact(Timeout = 600000)]
+    public async Task The_Journal_Is_Readable_Before_Disposal_And_Records_Archived_Bodies_Without_Credentials()
+    {
+        using var pages = new TestPages();
+        var journal = pages.Output("network-events.jsonl");
+        var recorder = new NetworkRecorder(static (_, _) => "body.html", journal);
+        var transport = recorder.Wrap(new FixedTransport("body-marker", setCookie: "session=secret-marker"), "window");
+        var request = Get("https://example.test/page");
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer token-marker");
+        request.Headers.TryAddWithoutValidation("Cookie", "input=secret-cookie");
+
+        using var response = await transport.SendAsync(request, Script);
+        Assert.Equal(2, File.ReadAllLines(journal).Length);
+        _ = await response.Message.Content.ReadAsStringAsync();
+
+        var text = await File.ReadAllTextAsync(journal);
+        Assert.DoesNotContain("secret-marker", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("token-marker", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-cookie", text, StringComparison.Ordinal);
+        var events = File.ReadAllLines(journal).Select(static line => JsonSerializer.Deserialize<JsonElement>(line)).ToArray();
+        Assert.Equal(["request", "response", "body", "archived"], events.Select(static item => item.GetProperty("event").GetString()));
+        var entry = events[^1].GetProperty("entry");
+        Assert.Equal("window", entry.GetProperty("scope").GetString());
+        Assert.Equal("complete", entry.GetProperty("body").GetString());
+        Assert.Equal("body.html", entry.GetProperty("savedAs").GetString());
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task A_Failed_Request_Is_Journaled_Before_It_Is_Thrown()
+    {
+        using var pages = new TestPages();
+        var journal = pages.Output("network-failure.jsonl");
+        var recorder = new NetworkRecorder(journalPath: journal);
+
+        await Assert.ThrowsAsync<TransportException>(() => recorder.Wrap(new FailingTransport())
+            .SendAsync(Get("https://example.test/blocked"), Script));
+
+        var last = JsonSerializer.Deserialize<JsonElement>(File.ReadLines(journal).Last());
+        Assert.Equal("failure", last.GetProperty("event").GetString());
+        Assert.Equal("Blocked", last.GetProperty("entry").GetProperty("errorKind").GetString());
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task Independent_Page_Runs_Are_Distinguished_In_Json_And_Har()
+    {
+        var recorder = new NetworkRecorder();
+        foreach (var transport in new[] { recorder.Wrap(new FixedTransport("analysis")), recorder.Wrap(new FixedTransport("window"), "window") })
+        {
+            using var response = await transport.SendAsync(Get("https://example.test/page"), Script);
+            _ = await response.Message.Content.ReadAsStringAsync();
+        }
+
+        Assert.Equal(["analysis", "window"], recorder.Snapshot().Select(static entry => entry.Scope));
+        var har = JsonSerializer.SerializeToElement(
+            NetworkRecorder.ToHar(recorder.Snapshot(), "https://example.test/page", System.DateTime.UtcNow, "1.0"),
+            AnalysisJson.Options);
+        var entries = har.GetProperty("log").GetProperty("entries").EnumerateArray().ToArray();
+        Assert.Equal("analysis", entries[0].GetProperty("_scope").GetString());
+        Assert.Equal("window", entries[1].GetProperty("_scope").GetString());
+        Assert.Equal("before-session-processing", entries[1].GetProperty("_requestHeadersCapturePoint").GetString());
+    }
+
+    [Fact(Timeout = 600000)]
     public async Task The_Requests_Export_As_An_Http_Archive()
     {
         var recorder = new NetworkRecorder();

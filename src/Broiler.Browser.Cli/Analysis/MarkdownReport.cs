@@ -156,6 +156,19 @@ internal static class MarkdownReport
         md.Append(net.Requests).Append(" request(s), ").Append(net.Failed).Append(" failed, ")
             .Append(Bytes(net.Bytes)).Append(" received. ")
             .AppendLine(string.Join(", ", net.ByDestination.Select(static d => $"{d.Key} ×{d.Value}")));
+        md.AppendLine();
+        if (net.RequestsByScope.Count > 0)
+        {
+            md.Append("Requests by scope: ")
+                .AppendLine(string.Join(", ", net.RequestsByScope.Select(static scope => $"{Escape(scope.Key)} ×{scope.Value}")) + ".")
+                .AppendLine();
+            md.AppendLine("The analysis and browser-window comparison load the page separately; their requests are counted in their own scopes.").AppendLine();
+        }
+        if (net.Requests > 0)
+        {
+            md.AppendLine("Request headers in [network.json](network.json) are captured before session processing. " +
+                "Headers added later by the session or transport, including cookies, may be absent; this capture is not a wire-level header trace.").AppendLine();
+        }
         if (net.Requests == 0)
             md.AppendLine("Nothing went over HTTP: a `file:` page and what it references are read from disk, and a `data:` URL is decoded in place.");
         if (net.NeverRead > 0)
@@ -164,14 +177,39 @@ internal static class MarkdownReport
             md.Append("- ").Append(net.StillPending).AppendLine(" request(s) had no response when the analysis ended.");
         md.AppendLine();
 
+        if (net.Http429Responses.Count > 0)
+        {
+            md.AppendLine("### HTTP 429 responses").AppendLine();
+            md.AppendLine("These are received HTTP response statuses. " + Http429Diagnostics.CauseLimit).AppendLine();
+            md.AppendLine("A missing Retry-After header does not rule out rate limiting.").AppendLine();
+            md.AppendLine("| Request | Scope | Destination | Final URL | Retry-After | Body | Saved response |");
+            md.AppendLine("| --- | --- | --- | --- | --- | --- | --- |");
+            foreach (var response in net.Http429Responses)
+            {
+                md.Append("| ").Append(response.Id)
+                    .Append(" | ").Append(Escape(response.Scope))
+                    .Append(" | ").Append(Escape(response.Destination))
+                    .Append(" | `").Append(Code(response.FinalUrl ?? response.Url))
+                    .Append("` | ").Append(Escape(Http429Diagnostics.RetryAfter(response) ?? "not received"))
+                    .Append(" | ").Append(response.Body).Append(", ").Append(Bytes(response.BodyBytes))
+                    .Append(" | ").Append(response.SavedAs is { } saved
+                        ? $"[{Escape(saved)}](resources/{Uri.EscapeDataString(saved)})"
+                        : "not saved")
+                    .AppendLine(" |");
+            }
+
+            md.AppendLine();
+        }
+
         if (net.Failures.Count > 0)
         {
             md.AppendLine("### Failed requests").AppendLine();
-            md.AppendLine("| Destination | Status | URL | Error |");
-            md.AppendLine("| --- | --- | --- | --- |");
+            md.AppendLine("| Scope | Destination | Status | URL | Error |");
+            md.AppendLine("| --- | --- | --- | --- | --- |");
             foreach (var failure in net.Failures)
             {
-                md.Append("| ").Append(failure.Destination)
+                md.Append("| ").Append(Escape(failure.Scope))
+                    .Append(" | ").Append(failure.Destination)
                     .Append(" | ").Append(failure.Status?.ToString(CultureInfo.InvariantCulture) ?? "—")
                     .Append(" | `").Append(Code(failure.Url))
                     .Append("` | ").Append(Escape(failure.Error ?? failure.BodyError ?? failure.StatusText ?? string.Empty)).AppendLine(" |");

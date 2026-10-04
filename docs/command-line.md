@@ -60,6 +60,9 @@ front of Broiler.JS. The analysis composes Broiler.JS directly in every configur
 | `exceptions.log`, `exceptions.json` | Every exception in the process — first-chance ones included, with the phase that was running and the stack at the throw — and the same grouped by type and throw site |
 | `javascript-errors.log`, `console.log`, `messages.log` | The script failures with their stacks, the page's console, and every message the pipeline logged |
 | `network.json`, `network.har` | Every request the page's profile sent, with what asked for it (document, script, style, image, font, fetch), status, redirects, timing and the file its body is in — and the same as an HTTP Archive, which browser developer tools import |
+| `network-events.jsonl` | A flushed journal of request starts, response headers and completed bodies, including the body file; remains available after a fatal process crash |
+| `bridge-phases.json` | Time spent parsing the DOM and registering document/window bindings, outside the JavaScript turn measurements; nested phases overlap |
+| `checkpoint-before-window.json` | Incomplete report plus network, bridge timing and resource snapshots before the separate window run; `analysis-in-progress.txt` remains if the run did not finish writing its final report |
 | `layout/` | The fragment tree as text and as JSON, every box's computed style, the display list, and Broiler.Layout's own invariant violations |
 | `watchdog.md` | Only when the watchdog ended the run: the phase it was stuck in, the requests still open and the most frequent exceptions |
 | `slow-phase-stacks.txt` | Only with `--sample-stacks` |
@@ -102,6 +105,28 @@ What the findings look for:
   they paint text a few pixels apart; and not at all for a URL with a fragment, which the window
   scrolls to and the analysis's render does not. The two runs load the page separately, so a page
   that changes from one load to the next differs for that reason as well.
+
+`--submit-form <INDEX>` submits one form from the fetched document before analysing the
+response. The index is zero-based; the browser's form serializer uses the default field values,
+without a submit button's name/value and without running the initial page's scripts. The
+submission uses the same temporary profile and cookies as the initial load. The window repeats
+the initial load and submission on its own temporary profile. Inspect the fetched form before
+selecting an index: this option sends a real request, including a POST when the form specifies it.
+It cannot be combined with `--follow-first-link`. The initial markup is saved in
+`document-before-submit.html`. This is useful for reproducing a page behind a consent form.
+
+`network.json` labels each request with `scope`: `analysis` or `window`; the HAR carries
+the same value as `_scope`. Requests made by the window, including its script-initiated
+navigations, are recorded too. Each entry is one transport operation: HTTP redirects are
+listed together, not emitted as separate per-hop transactions. Request headers are captured
+**before** session processing, so they do not show headers the transport adds, such as
+User-Agent and Cookie. Response headers describe the final response, with credentials redacted.
+An empty request-header list does not mean an empty request went over the wire.
+
+Top-level HTTP error responses, including 429, are read before the loader reports the
+HTTP failure. Their bodies are kept in the diagnostic resource archive and linked from
+the report. The browser still displays its load-error page; it does not run the error
+document's scripts. The CLI does not automatically retry an HTTP 429.
 
 Options: `--width`/`--height` set the viewport, `--timeout` the document's fetch, and
 `--follow-first-link` analyses the landing page's first link. `--no-window` leaves the browser

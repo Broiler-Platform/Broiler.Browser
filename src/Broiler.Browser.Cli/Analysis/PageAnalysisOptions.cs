@@ -21,6 +21,9 @@ internal sealed record PageAnalysisOptions
     /// <summary>Whether to load the first link on the page and analyse that page instead.</summary>
     public bool FollowFirstLink { get; init; }
 
+    /// <summary>Submit this zero-based form from the fetched page before analysis, without a submit button.</summary>
+    public int? SubmitForm { get; init; }
+
     /// <summary>Whether to print each event as it happens, not only each phase.</summary>
     public bool Verbose { get; init; }
 

@@ -93,6 +93,13 @@ public sealed class PageAnalysisTests : IDisposable
             Assert.True(File.Exists(Path.Combine(directory, file)), $"{file} was not written");
         }
 
+        Assert.True(File.Exists(Path.Combine(directory, "bridge-phases.json")));
+        using var checkpoint = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "checkpoint-before-window.json")));
+        Assert.False(checkpoint.RootElement.GetProperty("report").GetProperty("completed").GetBoolean());
+        Assert.Equal(JsonValueKind.Array, checkpoint.RootElement.GetProperty("bridgePhases").ValueKind);
+        Assert.Equal(JsonValueKind.Array, checkpoint.RootElement.GetProperty("network").ValueKind);
+        Assert.False(File.Exists(Path.Combine(directory, "analysis-in-progress.txt")));
+
         // The page's own files: the external script and stylesheet as fetched, the inline script as run.
         var archived = string.Concat(Directory.GetFiles(Path.Combine(directory, "resources")).Select(File.ReadAllText));
         Assert.Contains("external-script-marker", archived, StringComparison.Ordinal);

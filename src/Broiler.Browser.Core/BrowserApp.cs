@@ -42,6 +42,7 @@ internal sealed class BrowserApp : IDisposable
     private readonly Action<bool> _setAnimationActive;
     private readonly UiSession _session;
     private readonly BrowserProfile _profile;
+    private readonly IBrowserRequestTransport _network;
     private readonly bool _ownsProfile;
     private readonly FavoritesManager _favorites;
     private readonly List<PageRequest> _history = [];
@@ -93,8 +94,10 @@ internal sealed class BrowserApp : IDisposable
         Func<IBroilerRenderer?> getRenderer,
         string? initialUrl,
         Action<bool> setAnimationActive,
-        BrowserProfile profile)
-        : this(host, getRenderer, initialUrl, setAnimationActive, profile ?? throw new ArgumentNullException(nameof(profile)), ownsProfile: false)
+        BrowserProfile profile,
+        Func<IBrowserRequestTransport, IBrowserRequestTransport>? wrapNetwork = null,
+        PageRequest? initialRequest = null)
+        : this(host, getRenderer, initialUrl, setAnimationActive, profile ?? throw new ArgumentNullException(nameof(profile)), ownsProfile: false, wrapNetwork, initialRequest)
     {
     }
 
@@ -104,9 +107,12 @@ internal sealed class BrowserApp : IDisposable
         string? initialUrl,
         Action<bool> setAnimationActive,
         BrowserProfile profile,
-        bool ownsProfile)
+        bool ownsProfile,
+        Func<IBrowserRequestTransport, IBrowserRequestTransport>? wrapNetwork = null,
+        PageRequest? initialRequest = null)
     {
         _profile = profile;
+        _network = wrapNetwork?.Invoke(profile.Network) ?? profile.Network;
         _ownsProfile = ownsProfile;
         _favorites = new FavoritesManager(profile.FavoritesPath);
         _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -195,7 +201,7 @@ internal sealed class BrowserApp : IDisposable
         if (_host.ViewportSize is { Width: > 0, Height: > 0 } window)
             _viewport.SeedPageArea(BrowserContent.PageAreaFor(window));
 
-        NavigateTo(initialUrl ?? "about:blank");
+        NavigateTo(initialRequest ?? PageRequest.ForUrl(initialUrl ?? "about:blank"));
     }
 
     public UiSession Session => _session;
@@ -685,7 +691,7 @@ internal sealed class BrowserApp : IDisposable
         NavigationLoadResult? result = null;
         try
         {
-            result = await LoadUrlOnWorkerAsync(_profile, request, progress, cancellation.Token).ConfigureAwait(false);
+            result = await LoadUrlOnWorkerAsync(_profile, _network, request, progress, cancellation.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -846,6 +852,7 @@ internal sealed class BrowserApp : IDisposable
 
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(
         BrowserProfile profile,
+        IBrowserRequestTransport network,
         PageRequest request,
         LoadProgress progress,
         CancellationToken cancellationToken)
@@ -860,9 +867,9 @@ internal sealed class BrowserApp : IDisposable
                 : DocumentRequestContext.CreateTopLevel(url);
 
         using var pipeline = new RenderingPipeline(
-            new PageLoader(profile.Network),
-            NewScriptEngine(new DomBridgeFactory(BridgeOptions(profile, DocumentFor))),
-            profile.Network);
+            new PageLoader(network),
+            NewScriptEngine(new DomBridgeFactory(BridgeOptions(network, profile.DocumentCookies, DocumentFor))),
+            network);
 
         // Keyed by everything ahead of the query, because that is what separates a chain moving on
         // from a page re-submitting itself. See TryFollowNavigation.
@@ -964,7 +971,7 @@ internal sealed class BrowserApp : IDisposable
                 // fonts are already in hand, and the finished page reuses them instead of fetching
                 // every one again, synchronously, on the UI thread's first layout.
                 HtmlContainer container = BrowserViewport.CreateContentContainer(
-                    html, normalisedUrl, profile.Network, document, progress.LastFrame, progress.Viewport);
+                    html, normalisedUrl, network, document, progress.LastFrame, progress.Viewport);
                 return NavigationLoadResult.FromSuccess(
                     normalisedUrl,
                     container,
@@ -1317,7 +1324,7 @@ internal sealed class BrowserApp : IDisposable
 
                 _lastPublishedHtml = html;
                 container = BrowserViewport.CreateContentContainer(
-                    PrepareForBrowsing(html), url, app._profile.Network, document, LastFrame, Viewport);
+                    PrepareForBrowsing(html), url, app._network, document, LastFrame, Viewport);
                 LastFrame = container;
             }
             catch

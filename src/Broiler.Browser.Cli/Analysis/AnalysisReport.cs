@@ -123,10 +123,29 @@ internal sealed record NetworkSummary
     public int Failed { get; init; }
     public long Bytes { get; init; }
     public IReadOnlyDictionary<string, int> ByDestination { get; init; } = new Dictionary<string, int>();
+    public IReadOnlyDictionary<string, int> RequestsByScope { get; init; } = new Dictionary<string, int>();
     public IReadOnlyList<NetworkEntry> Failures { get; init; } = [];
+    /// <summary>Every received HTTP 429 response, including ones beyond the general failure list's limit.</summary>
+    public IReadOnlyList<NetworkEntry> Http429Responses { get; init; } = [];
     public IReadOnlyList<NetworkEntry> Slowest { get; init; } = [];
     public int NeverRead { get; init; }
     public int StillPending { get; init; }
+}
+
+/// <summary>Evidence common to the ranked findings and the network report.</summary>
+internal static class Http429Diagnostics
+{
+    public const string CauseLimit = "The status alone does not identify whether request frequency, shared IP traffic, or automated-traffic detection caused the rejection.";
+    public const string MissingRetryAfter = "No Retry-After header was received; its absence does not rule out rate limiting.";
+
+    public static string? RetryAfter(NetworkEntry response)
+    {
+        var values = response.ResponseHeaders
+            .Where(static header => header.Key.Equals("Retry-After", StringComparison.OrdinalIgnoreCase))
+            .Select(static header => header.Value)
+            .ToArray();
+        return values.Length == 0 ? null : string.Join("; ", values);
+    }
 }
 
 /// <summary>One render of the page, summarised.</summary>
@@ -299,7 +318,7 @@ internal static class Triage
             if (document.Status is >= 400)
             {
                 findings.Add(new(FindingSeverity.Error, "Network", $"The document was answered with HTTP {document.Status}",
-                    $"{document.FinalUrl} — what rendered is the server's error page", "network.json"));
+                    $"{document.FinalUrl} — the document response has an HTTP error status; inspect its response body", "network.json"));
             }
 
             if (document.Redirects.Count > 1)
@@ -459,11 +478,26 @@ internal static class Triage
             }
         }
 
-        if (report.Network is { } network && network.Failed > 0)
+        if (report.Network is { } network)
         {
-            findings.Add(new(FindingSeverity.Warning, "Network", $"{network.Failed} of {network.Requests} request(s) failed",
-                string.Join("; ", network.Failures.Take(5).Select(static f => $"{f.Destination} {f.Url} → {f.Error ?? f.Status?.ToString(CultureInfo.InvariantCulture) ?? f.BodyError}")),
-                "network.json"));
+            foreach (var response in network.Http429Responses)
+            {
+                var retryAfter = Http429Diagnostics.RetryAfter(response);
+                findings.Add(new(response.Destination == "document" ? FindingSeverity.Error : FindingSeverity.Warning,
+                    "Network", $"HTTP 429 Too Many Requests received in {response.Scope} ({response.Destination})",
+                    $"Request #{response.Id}: {response.Method} {response.FinalUrl ?? response.Url}. " +
+                    "This is a received HTTP response status. " +
+                    (retryAfter is null ? Http429Diagnostics.MissingRetryAfter : $"Retry-After: {retryAfter}.") +
+                    $" Body: {response.Body}, {response.BodyBytes} byte(s). {Http429Diagnostics.CauseLimit}",
+                    response.SavedAs is { } saved ? $"resources/{Uri.EscapeDataString(saved)}" : "network.json"));
+            }
+
+            if (network.Failed > 0)
+            {
+                findings.Add(new(FindingSeverity.Warning, "Network", $"{network.Failed} of {network.Requests} request(s) failed",
+                    string.Join("; ", network.Failures.Take(5).Select(static f => $"{f.Destination} {f.Url} → {f.Error ?? f.Status?.ToString(CultureInfo.InvariantCulture) ?? f.BodyError}")),
+                    "network.json"));
+            }
         }
 
         if (report.Render is { } render)
