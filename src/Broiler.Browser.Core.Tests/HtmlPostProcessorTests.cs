@@ -29,6 +29,18 @@ public class HtmlPostProcessorTests
         Assert.Equal("""<iframe src="frame.html"></iframe>""", result);
     }
 
+    /// <summary>
+    /// A <c>srcdoc</c> may hold its markup unescaped. The tag used to end at that markup's first
+    /// <c>&gt;</c>, and writing the attributes back cut the frame's document off there.
+    /// </summary>
+    [Fact]
+    public void ProcessForBrowsing_KeepsAnUnescapedSrcdocWhole()
+    {
+        const string html = """<iframe srcdoc="<p class='a'>frame</p>" title='x > y'>fallback</iframe><p>after</p>""";
+        var result = HtmlPostProcessor.ProcessForBrowsing(html);
+        Assert.Equal("""<iframe srcdoc="<p class='a'>frame</p>" title='x > y'></iframe><p>after</p>""", result);
+    }
+
     [Fact]
     public void StampFormControlIds_AssignsUniqueSequentialSyntheticIds()
     {
