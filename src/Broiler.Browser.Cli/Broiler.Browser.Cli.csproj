@@ -8,6 +8,8 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Broiler.Cli</RootNamespace>
     <IsPackable>false</IsPackable>
+    <!-- Configure default 8MB stack reserve for the process and threads to accommodate heavy web scripts -->
+    <StackReserveSize>8388608</StackReserveSize>
   </PropertyGroup>
 
   <!--

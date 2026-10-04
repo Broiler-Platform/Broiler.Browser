@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -11,6 +11,8 @@
     <IsPackable>false</IsPackable>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Configure default 8MB stack reserve for the process and threads to accommodate heavy web scripts -->
+    <StackReserveSize>8388608</StackReserveSize>
   </PropertyGroup>
 
   <PropertyGroup>
