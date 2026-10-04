@@ -1969,6 +1969,11 @@ internal sealed class BrowserApp : IDisposable
         private bool _controlsDirty = true;
         private HtmlContainer _container = CreateContentContainer(WelcomePage, string.Empty);
         private HtmlGraphicsRenderList? _renderList;
+
+        /// <summary>The documents of the page's frames, which its display list does not paint.</summary>
+        private readonly FrameCompositor _frames = new(
+            static (html, baseUrl, network, document, viewport) =>
+                CreateContentContainer(html, baseUrl, network, document, viewport: viewport));
         private InteractiveSession? _interactiveSession;
         private string? _lastAppliedHtml;
         private bool _layoutDirty = true;
@@ -2073,6 +2078,7 @@ internal sealed class BrowserApp : IDisposable
             _controlHost.Clear();
             _controlsDirty = true;
             DisposeRenderList();
+            _frames.Clear();
             _container.LinkClicked -= OnLinkClicked;
             _container.Dispose();
 
@@ -2148,6 +2154,7 @@ internal sealed class BrowserApp : IDisposable
         public void ReleaseGraphicsResources()
         {
             DisposeRenderList();
+            _frames.ReleaseRenderLists();
             _layoutDirty = true;
             _renderDirty = true;
         }
@@ -2229,7 +2236,8 @@ internal sealed class BrowserApp : IDisposable
             context.RenderList.PushTransform(
                 BMatrix3x2.Scale(_viewportZoom, _viewportZoom) *
                 BMatrix3x2.Translation(Bounds.Left, Bounds.Top));
-            ReplayCommands(context.RenderList, htmlList.Commands);
+            RenderListReplay.Replay(context.RenderList, htmlList.Commands);
+            _frames.Replay(context.RenderList, _container.ScrollOffset);
             context.RenderList.PopTransform();
 
             // Hosted form controls paint over the page, in viewport coordinates,
@@ -2292,6 +2300,7 @@ internal sealed class BrowserApp : IDisposable
             {
                 StopSession();
                 DisposeRenderList();
+                _frames.Dispose();
                 _container.LinkClicked -= OnLinkClicked;
                 _container.Dispose();
             }
@@ -2332,6 +2341,7 @@ internal sealed class BrowserApp : IDisposable
                     renderer,
                     _container.CreateDisplayList(),
                     new RectangleF(0, 0, viewportWidth, viewportHeight));
+                _frames.Update(renderer, _container);
                 _renderDirty = false;
             }
 
@@ -2663,46 +2673,6 @@ internal sealed class BrowserApp : IDisposable
 
         private PointF ToLocalPoint(BPoint point) =>
             new((float)((point.X - Bounds.Left) / _viewportZoom), (float)((point.Y - Bounds.Top) / _viewportZoom));
-
-        private static void ReplayCommands(BRenderList target, IReadOnlyList<BRenderCommand> commands)
-        {
-            foreach (BRenderCommand command in commands)
-            {
-                switch (command)
-                {
-                    case BRenderCommand.FillRect fill:
-                        target.FillRect(fill.Rect, fill.Color);
-                        break;
-                    case BRenderCommand.StrokeRect stroke:
-                        target.StrokeRect(stroke.Rect, stroke.Color, stroke.Thickness);
-                        break;
-                    case BRenderCommand.FillRoundedRect fillRounded:
-                        target.FillRoundedRect(fillRounded.Rect, fillRounded.Color, fillRounded.RadiusX, fillRounded.RadiusY);
-                        break;
-                    case BRenderCommand.StrokeRoundedRect strokeRounded:
-                        target.StrokeRoundedRect(strokeRounded.Rect, strokeRounded.Color, strokeRounded.RadiusX, strokeRounded.RadiusY, strokeRounded.Thickness);
-                        break;
-                    case BRenderCommand.DrawText text:
-                        target.DrawText(text.Text, text.Origin);
-                        break;
-                    case BRenderCommand.DrawImage image:
-                        target.DrawImage(image.Image, image.Source, image.Destination, image.Opacity);
-                        break;
-                    case BRenderCommand.PushClip clip:
-                        target.PushClip(clip.Rect);
-                        break;
-                    case BRenderCommand.PopClip:
-                        target.PopClip();
-                        break;
-                    case BRenderCommand.PushTransform transform:
-                        target.PushTransform(transform.Transform);
-                        break;
-                    case BRenderCommand.PopTransform:
-                        target.PopTransform();
-                        break;
-                }
-            }
-        }
     }
 
     /// <summary>
