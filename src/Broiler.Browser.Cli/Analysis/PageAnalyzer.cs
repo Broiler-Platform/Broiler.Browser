@@ -84,6 +84,7 @@ internal sealed class PageAnalyzer
     // A field rather than a local so the watchdog can report what the phases had produced when it fired.
     private readonly RunState _state = new();
     private int _consoleExceptions;
+    private BridgePhaseRecorder? _bridgePhases;
 
     // 0 until the run or the watchdog claims the reports; the other then stands aside.
     private int _reporter;
@@ -109,6 +110,10 @@ internal sealed class PageAnalyzer
         var output = Path.GetFullPath(_options.OutputDirectory);
         Directory.CreateDirectory(output);
         RemovePreviousAnalysis(output);
+        File.WriteAllText(Path.Combine(output, "analysis-in-progress.txt"),
+            "This run has not completed. If the process exited, inspect the console log, network-events.jsonl and checkpoint-before-window.json when available.\n");
+        using var bridgePhases = new BridgePhaseRecorder();
+        _bridgePhases = bridgePhases;
         var previousTurnTrace = EnableJavaScriptTurnTrace();
         _console.Line($"analyzing {_options.Url}");
         _console.Line($"output    {output}");
@@ -138,7 +143,7 @@ internal sealed class PageAnalyzer
             entry.ContentType,
             entry.Status,
             entry.Method,
-            entry.HeadersMs));
+            entry.HeadersMs), journalPath: Path.Combine(output, "network-events.jsonl"));
 
         var layouts = new LayoutQueryRecorder(() => _phases.ElapsedMs, () => _phases.Current);
 
@@ -194,7 +199,10 @@ internal sealed class PageAnalyzer
 
         _console.Line(bundle.Describe());
         if (report is not null)
+        {
+            File.Delete(Path.Combine(output, "analysis-in-progress.txt"));
             PrintSummary(report, output);
+        }
 
         return state.Page is null ? Failed : Completed;
     }
@@ -241,6 +249,16 @@ internal sealed class PageAnalyzer
                 $"{p.Response.StatusCode} {p.Response.GetHeaderValues("Content-Type").FirstOrDefault() ?? "(no content type)"}, " +
                 $"{Encoding.UTF8.GetByteCount(p.Content.Html):N0} bytes from {p.FinalUrl}; " +
                 $"{p.Content.Scripts.Count} classic, {p.Content.DeferredScripts.Count} deferred, {p.Content.ModuleRoots.Count} module script(s)")).ConfigureAwait(false);
+        if (page is not null && _options.SubmitForm is { } formIndex)
+        {
+            WriteText(output, "document-before-submit.html", page.Content.Html, "the fetched document whose selected form was submitted");
+            var formPage = page;
+            page = await _phases.RunAsync(
+                "submit-form",
+                () => browser.LoadAsync(AnalysisFormSubmission.Build(formPage.Response, formIndex)),
+                static p => $"HTTP {p.Response.StatusCode} from {p.FinalUrl}").ConfigureAwait(false);
+        }
+
         state.Page = page;
         if (page is null)
         {
@@ -368,6 +386,23 @@ internal sealed class PageAnalyzer
             return;
         }
 
+        // A stack overflow cannot run finally blocks. Keep an explicitly incomplete checkpoint
+        // before starting the second load, without competing with the watchdog's final filenames.
+        var checkpointRequests = network.Snapshot();
+        var checkpoint = BuildReport(bundle, checkpointRequests, state, watchdogFired: null) with
+        {
+            Completed = false,
+            Files = Files().Where(f => File.Exists(Path.Combine(output, f.Path)) || Directory.Exists(Path.Combine(output, f.Path))).ToArray(),
+        };
+        AnalysisJson.Write(Path.Combine(output, "checkpoint-before-window.json"), new
+        {
+            Stage = "Before window comparison; the run is incomplete. Final report files may not exist yet.",
+            Report = checkpoint,
+            Network = checkpointRequests,
+            BridgePhases = _bridgePhases?.Snapshot(),
+            Resources = bundle.Resources(),
+        });
+
         state.Window = _phases.Run(
             "window",
             () =>
@@ -378,10 +413,18 @@ internal sealed class PageAnalyzer
                     _options.Width,
                     _options.Height,
                     output,
-                    TimeSpan.FromSeconds(Math.Max(60, 4 * _options.TimeoutSeconds)));
+                    TimeSpan.FromSeconds(Math.Max(60, 4 * _options.TimeoutSeconds)),
+                    recorder: network,
+                    submitForm: _options.SubmitForm,
+                    navigationTimeout: TimeSpan.FromSeconds(_options.TimeoutSeconds));
                 using var shownPage = shown.Page;
                 var analysis = state.Render?.Viewport;
-                var notCompared = WindowProbe.WhyNotCompared(opened, page.FinalUrl, analysis is not null);
+                var windowDocument = network.Snapshot().LastOrDefault(static r => r.Scope == "window" && r.Destination == "document");
+                var notCompared = !shown.Settled || shown.Status != "Done"
+                    ? $"the window ended with status '{shown.Status}'"
+                    : windowDocument?.FinalUrl is { } finalUrl && finalUrl != page.FinalUrl
+                        ? "the window navigated to a different document: " + finalUrl
+                        : WindowProbe.WhyNotCompared(opened, page.FinalUrl, analysis is not null);
                 double? difference = notCompared is null && analysis is not null
                     ? Math.Round(WindowProbe.Difference(analysis, shownPage), 4)
                     : null;
@@ -543,6 +586,8 @@ internal sealed class PageAnalyzer
         string? watchdogFired)
     {
         var requests = network.Snapshot();
+        if (_bridgePhases is { } bridgePhases)
+            AnalysisJson.Write(Path.Combine(output, "bridge-phases.json"), bridgePhases.Snapshot());
         AnalysisJson.Write(Path.Combine(output, "network.json"), requests);
         AnalysisJson.Write(
             Path.Combine(output, "network.har"),
@@ -571,7 +616,7 @@ internal sealed class PageAnalyzer
                 page.Response.StatusCode,
                 page.Response.GetHeaderValues("Content-Type").FirstOrDefault(),
                 Encoding.UTF8.GetByteCount(page.Content.Html),
-                requests.FirstOrDefault(static r => r.Destination == "document")?.Redirects ?? []);
+                page.Response.RedirectChain.Select(static u => u.AbsoluteUri).ToArray());
 
         var report = new AnalysisReport
         {
@@ -613,6 +658,8 @@ internal sealed class PageAnalyzer
     {
         Requests = requests.Count,
         Failed = requests.Count(static r => r.IsFailure),
+        Http429Responses = [.. requests.Where(static r => r.Status == 429)],
+        RequestsByScope = requests.GroupBy(static r => r.Scope).ToDictionary(static g => g.Key, static g => g.Count()),
         Bytes = requests.Sum(static r => r.BodyBytes),
         ByDestination = requests
             .GroupBy(static r => r.Destination)
@@ -637,7 +684,9 @@ internal sealed class PageAnalyzer
             new("console.log", "the page's console output"),
             new("messages.log", "every message the pipeline logged, at every level"),
             new("network.json", "every request: destination, status, timing, redirects, headers, body file"),
+            new("network-events.jsonl", "flushed request, response and body events, retained if the process crashes"),
             new("network.har", "the same requests as an HTTP Archive, which browser developer tools open"),
+            new("bridge-phases.json", "DOM parsing and binding registration timings; nested phases overlap"),
             new("resources/", "every document, script, stylesheet, image, font and fetch response, with resources/index.json"),
             new("diagnostics.json", "every log entry, and the JavaScript failures grouped"),
         };
@@ -748,7 +797,7 @@ internal sealed class PageAnalyzer
             : string.Create(CultureInfo.InvariantCulture, $"{entry.Status} {entry.ContentType ?? string.Empty}");
         _console.Event("network", string.Create(
             CultureInfo.InvariantCulture,
-            $"{entry.Method} {entry.Destination,-8} {outcome} {entry.HeadersMs:0} ms {entry.Url}"));
+            $"[{entry.Scope}] {entry.Method} {entry.Destination,-8} {outcome} {entry.HeadersMs:0} ms {entry.Url}"));
     }
 
     private void OnLayoutQuery(LayoutQuery query)
@@ -805,7 +854,8 @@ internal sealed class PageAnalyzer
     [
         "report.html", "report.md", "report.json", "screenshot.png", "screenshot-full.png",
         "screenshot-without-scripts.png", "screenshot-boxes.png", "document-as-fetched.html",
-        "document-after-scripts.html", "document-as-rendered.html", "exceptions.log", "exceptions.json",
+        "document-after-scripts.html", "document-as-rendered.html", "document-before-submit.html", "bridge-phases.json", "analysis-in-progress.txt",
+        "checkpoint-before-window.json", "network-events.jsonl", "exceptions.log", "exceptions.json",
         "javascript-errors.log", "console.log", "messages.log", "diagnostics.json", "network.json",
         "network.har", "watchdog.md", "slow-phase-stacks.txt", "summary.md",
         "layout/fragment-tree.txt", "layout/fragments.json", "layout/computed-styles.json",

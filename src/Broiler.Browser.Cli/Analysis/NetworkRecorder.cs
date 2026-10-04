@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Broiler.Net.Http;
 
 namespace Broiler.Cli.Analysis;
@@ -34,6 +35,9 @@ internal sealed record NetworkEntry
     public required string Method { get; init; }
     public required string Url { get; init; }
 
+    /// <summary>The independent page run that sent this request: analysis or window.</summary>
+    public string Scope { get; init; } = "analysis";
+
     /// <summary>Fetch's destination: <c>document</c>, <c>script</c>, <c>style</c>, <c>image</c>, <c>font</c>, <c>empty</c> for fetch/XHR, …</summary>
     public required string Destination { get; init; }
 
@@ -46,6 +50,12 @@ internal sealed record NetworkEntry
     public bool Synchronous { get; init; }
 
     public IReadOnlyList<KeyValuePair<string, string>> RequestHeaders { get; init; } = [];
+
+    /// <summary>
+    /// These are caller-supplied headers before the network session adds cookies, User-Agent,
+    /// referrer and other transport headers; they are not a recording of the wire request.
+    /// </summary>
+    public string RequestHeadersCapturePoint => "before-session-processing";
     public int? Status { get; init; }
     public string? StatusText { get; init; }
     public string? HttpVersion { get; init; }
@@ -121,18 +131,34 @@ internal sealed class NetworkRecorder
     private readonly List<NetworkEntry> _entries = [];
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly Func<NetworkEntry, byte[], string?>? _archive;
+    private readonly string? _journalPath;
+    private readonly Lock _journalSync = new();
+    private static readonly JsonSerializerOptions JournalJson = new(AnalysisJson.Options) { WriteIndented = false };
 
     /// <param name="archive">
     /// Keeps a complete body and returns the file it was kept as, or null when it was not kept.
     /// Called on whatever thread finished reading the body.
     /// </param>
-    public NetworkRecorder(Func<NetworkEntry, byte[], string?>? archive = null) => _archive = archive;
+    /// <param name="journalPath">
+    /// Optional JSON-lines journal, written and closed on every state change so requests remain
+    /// inspectable if a fatal script or renderer failure prevents the final reports being written.
+    /// </param>
+    public NetworkRecorder(Func<NetworkEntry, byte[], string?>? archive = null, string? journalPath = null)
+    {
+        _archive = archive;
+        _journalPath = journalPath;
+        if (journalPath is not null)
+            File.WriteAllText(journalPath, string.Empty);
+    }
 
     /// <summary>Raised when a request has its response headers, or has failed.</summary>
     public event Action<NetworkEntry>? Responded;
 
     /// <summary>Wraps <paramref name="inner"/> so that every request through it is recorded.</summary>
-    public IBrowserRequestTransport Wrap(IBrowserRequestTransport inner) => new RecordingTransport(inner, this);
+    public IBrowserRequestTransport Wrap(IBrowserRequestTransport inner) => Wrap(inner, "analysis");
+
+    /// <summary>Records an independent browser run alongside the analysis without conflating them.</summary>
+    public IBrowserRequestTransport Wrap(IBrowserRequestTransport inner, string scope) => new RecordingTransport(inner, this, scope);
 
     /// <summary>The requests so far, in the order they were sent.</summary>
     public IReadOnlyList<NetworkEntry> Snapshot()
@@ -143,7 +169,7 @@ internal sealed class NetworkRecorder
 
     private double Now => _clock.Elapsed.TotalMilliseconds;
 
-    private (int Index, double StartMs) Begin(HttpRequestMessage request, RequestContext context, bool synchronous)
+    private (int Index, double StartMs) Begin(HttpRequestMessage request, RequestContext context, bool synchronous, string scope)
     {
         var entry = new NetworkEntry
         {
@@ -151,6 +177,7 @@ internal sealed class NetworkRecorder
             Started = DateTime.UtcNow,
             Method = request.Method.Method,
             Url = request.RequestUri?.AbsoluteUri ?? "(no URL)",
+            Scope = scope,
             Destination = context.Destination.ToString().ToLowerInvariant(),
             Mode = context.Mode.ToString().ToLowerInvariant(),
             Initiator = context.Client?.DocumentUrl?.AbsoluteUri,
@@ -161,7 +188,9 @@ internal sealed class NetworkRecorder
         lock (_sync)
         {
             var index = _entries.Count;
-            _entries.Add(entry with { Id = index + 1 });
+            entry = entry with { Id = index + 1 };
+            _entries.Add(entry);
+            Journal("request", entry);
             return (index, Now);
         }
     }
@@ -190,6 +219,7 @@ internal sealed class NetworkRecorder
         }
 
         message.Content = new TeeContent(message.Content, new BodyTap(this, index, startMs));
+        Journal("response", updated);
         Responded?.Invoke(updated);
     }
 
@@ -213,6 +243,7 @@ internal sealed class NetworkRecorder
             _entries[index] = updated;
         }
 
+        Journal("failure", updated);
         Responded?.Invoke(updated);
     }
 
@@ -229,6 +260,8 @@ internal sealed class NetworkRecorder
                 CompleteMs = Math.Round(Now - startMs, 1),
             };
         }
+
+        Journal("body", entry);
 
         if (state != BodyState.Complete || captured is null || _archive is null)
             return;
@@ -247,7 +280,25 @@ internal sealed class NetworkRecorder
             return;
 
         lock (_sync)
-            _entries[index] = _entries[index] with { SavedAs = savedAs };
+            entry = _entries[index] = _entries[index] with { SavedAs = savedAs };
+        Journal("archived", entry);
+    }
+
+    private void Journal(string eventName, NetworkEntry entry)
+    {
+        if (_journalPath is null)
+            return;
+
+        // A diagnostics write must never change what the page can load. Opening and closing each
+        // append flushes managed buffers before returning to code that might crash the process.
+        try
+        {
+            var line = JsonSerializer.Serialize(new { Event = eventName, Entry = entry }, JournalJson) + Environment.NewLine;
+            lock (_journalSync)
+                File.AppendAllText(_journalPath, line);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static IReadOnlyList<KeyValuePair<string, string>> Headers(
@@ -270,14 +321,14 @@ internal sealed class NetworkRecorder
     }
 
     /// <summary>The profile's transport, with every request through it recorded.</summary>
-    private sealed class RecordingTransport(IBrowserRequestTransport inner, NetworkRecorder recorder) : IBrowserRequestTransport
+    private sealed class RecordingTransport(IBrowserRequestTransport inner, NetworkRecorder recorder, string scope) : IBrowserRequestTransport
     {
         public async Task<TransportResponse> SendAsync(
             HttpRequestMessage request,
             RequestContext context,
             CancellationToken cancellationToken = default)
         {
-            var (index, start) = recorder.Begin(request, context, synchronous: false);
+            var (index, start) = recorder.Begin(request, context, synchronous: false, scope);
             TransportResponse response;
             try
             {
@@ -298,7 +349,7 @@ internal sealed class NetworkRecorder
             RequestContext context,
             CancellationToken cancellationToken = default)
         {
-            var (index, start) = recorder.Begin(request, context, synchronous: true);
+            var (index, start) = recorder.Begin(request, context, synchronous: true, scope);
             TransportResponse response;
             try
             {
@@ -591,6 +642,8 @@ internal sealed class NetworkRecorder
                         receive = e.CompleteMs is { } complete ? Math.Max(0, Math.Round(complete - e.HeadersMs, 1)) : 0,
                     },
                     _destination = e.Destination,
+                    _scope = e.Scope,
+                    _requestHeadersCapturePoint = e.RequestHeadersCapturePoint,
                     _initiator = e.Initiator,
                     _error = e.Error,
                     _bodyState = e.Body.ToString(),

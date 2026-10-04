@@ -24,10 +24,12 @@ namespace Broiler.App.Rendering;
 /// own business.
 /// </para>
 /// <para>
-/// <b>Error statuses.</b> A response outside 2xx still fails the load with
-/// <see cref="HttpRequestException"/>, as it always has — but only once the response has been
-/// received, so its cookies are already stored. A consent or login flow that answers an error while
-/// setting the cookie it needs keeps working.
+/// <b>Error statuses.</b> A response outside 2xx fails the load with
+/// <see cref="HttpRequestException"/> after its body has been read. The diagnostic transport can
+/// therefore archive the server's explanation, including a 429 response's challenge, without
+/// running its scripts in the browser. Cookies are already stored by the transport. Network
+/// failures and failures reading the body still throw; an HTTP error does not cause an automatic
+/// retry.
 /// </para>
 /// </remarks>
 public sealed class PageLoader : IPageLoader
@@ -214,10 +216,10 @@ public sealed class PageLoader : IPageLoader
             .SendAsync(message, NavigationContext(request), cancellationToken)
             .ConfigureAwait(false);
 
-        // The transport stored this response's cookies, and every redirect hop's, before it returned.
-        response.Message.EnsureSuccessStatusCode();
-
+        // Read before rejecting an HTTP error so the diagnostic transport archives its explanation.
+        // The error still follows the browser's error path; its scripts are not run as a document.
         string html = await response.Message.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        response.Message.EnsureSuccessStatusCode();
         return new PageLoadResult
         {
             FinalUrl = response.FinalUrl.AbsoluteUri,
@@ -241,9 +243,8 @@ public sealed class PageLoader : IPageLoader
         using HttpResponseMessage response = await client
             .SendAsync(message, cancellationToken)
             .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-
         string html = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
 
         // A client that follows redirects itself points the response's request at where it landed.
         Uri finalUrl = response.RequestMessage?.RequestUri ?? url;

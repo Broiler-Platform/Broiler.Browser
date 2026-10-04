@@ -119,7 +119,7 @@ internal sealed class HeadlessBrowser : IDisposable
         return page;
     }
 
-    private async Task<LoadedPage> LoadAsync(PageRequest request, CancellationToken cancellationToken)
+    internal async Task<LoadedPage> LoadAsync(PageRequest request, CancellationToken cancellationToken = default)
     {
         LoadedPage page = await _pipeline.LoadAsync(request, cancellationToken).ConfigureAwait(false);
         _currentDocument = page.Document;

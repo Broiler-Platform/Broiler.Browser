@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Broiler.App.Rendering;
 using Broiler.Browser;
 using Broiler.Graphics.Color;
 using Broiler.Graphics.Geometry;
@@ -11,7 +12,7 @@ namespace Broiler.Cli.Analysis;
 /// <summary>What the browser window showed of a page: <see cref="WindowProbe.Render"/>'s result.</summary>
 /// <param name="Image">The window's page area, as a file of the analysis.</param>
 /// <param name="Page">The same image, for comparing with the analysis's own render.</param>
-/// <param name="Settled">Whether the window finished loading the page before its time ran out.</param>
+/// <param name="Settled">Whether the window reached a terminal state before its time ran out, including a load error.</param>
 /// <param name="Status">The window's status text when the image was taken.</param>
 /// <param name="DurationMs">How long the window took to load, run and paint the page.</param>
 internal sealed record WindowRender(string Image, BBitmap Page, bool Settled, string Status, double DurationMs);
@@ -34,7 +35,8 @@ internal sealed record WindowRender(string Image, BBitmap Page, bool Settled, st
 /// </para>
 /// <para>
 /// <b>It loads the page a second time.</b> The window runs its own navigation: the page's requests
-/// are sent again, on the window's own ephemeral profile, and are not in <c>network.json</c>. Content
+/// are sent again, on the window's own ephemeral profile, and recorded with scope <c>window</c> when
+/// a network recorder is supplied. Content
 /// that changes from one load to the next differs between the two images for that reason alone.
 /// </para>
 /// </remarks>
@@ -47,11 +49,28 @@ internal static class WindowProbe
     /// <paramref name="width"/>×<paramref name="height"/>, runs it until the window reports it done or
     /// <paramref name="budget"/> runs out, and writes the page area to <see cref="ImageName"/>.
     /// </summary>
-    public static WindowRender Render(string url, int width, int height, string outputDirectory, TimeSpan budget)
+    public static WindowRender Render(
+        string url,
+        int width,
+        int height,
+        string outputDirectory,
+        TimeSpan budget,
+        NetworkRecorder? recorder = null,
+        int? submitForm = null,
+        TimeSpan? navigationTimeout = null)
     {
         var clock = Stopwatch.StartNew();
         var posted = new ConcurrentQueue<Action>();
         BSize window = BrowserApp.WindowSizeFor(width, height);
+        using var profile = BrowserProfile.CreateEphemeral();
+        var network = recorder?.Wrap(profile.Network, "window") ?? profile.Network;
+        PageRequest? initialRequest = null;
+        if (submitForm is { } formIndex)
+        {
+            using var loader = new PageLoader(network, navigationTimeout ?? TimeSpan.FromSeconds(30));
+            var landing = loader.LoadAsync(PageRequest.ForUrl(url)).GetAwaiter().GetResult();
+            initialRequest = AnalysisFormSubmission.Build(landing, formIndex);
+        }
 
         // The host posts to this thread, which is the window's UI thread for the length of the run:
         // everything the window would do on its message loop happens in the loop below.
@@ -66,7 +85,8 @@ internal static class WindowProbe
                 return true;
             });
         using BImageRenderer renderer = new();
-        using BrowserApp app = new(host, () => renderer, url, static _ => { });
+        using BrowserApp app = new(host, () => renderer, url, static _ => { }, profile,
+            wrapNetwork: _ => network, initialRequest: initialRequest);
 
         var settled = false;
         while (clock.Elapsed < budget)
@@ -80,7 +100,7 @@ internal static class WindowProbe
             if (host.IsInvalidated)
                 _ = app.RenderFrame();
 
-            if (string.Equals(app.Status, "Done", StringComparison.Ordinal) && posted.IsEmpty && !host.IsInvalidated)
+            if (!app.IsBusy && posted.IsEmpty && !host.IsInvalidated)
             {
                 settled = true;
                 break;

@@ -75,6 +75,29 @@ public sealed class ProgramTests
         Assert.Contains("--output-dir", error);
     }
 
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("no")]
+    public async Task A_Submit_Form_Index_Must_Be_Nonnegative(string index)
+    {
+        var (exitCode, error) = await RunAsync("--analyze", "https://example.test/", "--submit-form", index);
+        Assert.Equal(1, exitCode);
+        Assert.Contains("form index", error);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Submit_Form_Requires_Analysis_Without_Follow_First_Link(bool follow)
+    {
+        var args = follow
+            ? new[] { "--analyze", "https://example.test/", "--submit-form", "0", "--follow-first-link" }
+            : new[] { "--url", "https://example.test/", "--submit-form", "0" };
+        var (exitCode, error) = await RunAsync(args);
+        Assert.Equal(1, exitCode);
+        Assert.Contains("requires '--analyze'", error);
+    }
+
     [Fact(Timeout = 600000)]
     public async Task An_Analysis_Is_Not_Combined_With_A_Capture()
     {

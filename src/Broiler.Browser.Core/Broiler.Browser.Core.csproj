@@ -69,19 +69,19 @@
   <ItemGroup>
     <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.10" />
     <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.10" />
+    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.11" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.11" />
     <PackageReference Include="Broiler.Net" Version="0.1.0-preview.1" />
     <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.5" />
     <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.5" />
     <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.10" />
-    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.10" />
+    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.17" />
   </ItemGroup>
 
   <!--

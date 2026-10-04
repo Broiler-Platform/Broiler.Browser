@@ -46,6 +46,7 @@ public class Program
         bool verbose = false;
         bool sampleStacks = false;
         bool noWindow = false;
+        int? submitForm = null;
         int analysisTimeoutSeconds = Analysis.PageAnalysisOptions.DefaultWatchdogSeconds;
         string? evaluateHtmlOutput = null;
         string? output = null;
@@ -99,6 +100,14 @@ public class Program
                     break;
                 case "--no-window":
                     noWindow = true;
+                    break;
+                case "--submit-form" when i + 1 < args.Length:
+                    if (!int.TryParse(args[++i], NumberStyles.None, CultureInfo.InvariantCulture, out var formIndex))
+                    {
+                        Console.Error.WriteLine("Error: '--submit-form' requires a non-negative, zero-based form index.");
+                        return 1;
+                    }
+                    submitForm = formIndex;
                     break;
                 case "--analysis-timeout" when i + 1 < args.Length:
                     // The watchdog is a timer, and a timer's due time ends at about 49 days.
@@ -240,6 +249,12 @@ public class Program
                 emitTotals: emitFuzzTotals);
         }
 
+        if (submitForm is not null && (analyzeUrls.Count == 0 || followFirstLink))
+        {
+            Console.Error.WriteLine("Error: '--submit-form' requires '--analyze' and cannot be combined with '--follow-first-link'.");
+            return 1;
+        }
+
         if (analyzeUrls.Count > 0)
         {
             if (urls.Count > 0 || captureImageUrls.Count > 0 || evaluatePageUrls.Count > 0)
@@ -260,7 +275,8 @@ public class Program
                 verbose,
                 sampleStacks,
                 !noWindow,
-                analysisTimeoutSeconds);
+                analysisTimeoutSeconds,
+                submitForm);
         }
 
         // --evaluate-page is deliberately single-page: unlike a capture, its whole output is one
@@ -596,7 +612,8 @@ public class Program
         bool verbose,
         bool sampleStacks,
         bool renderInWindow,
-        int analysisTimeoutSeconds)
+        int analysisTimeoutSeconds,
+        int? submitForm)
     {
         if (outputDir is null)
         {
@@ -631,6 +648,7 @@ public class Program
                     Height = height,
                     TimeoutSeconds = timeoutSeconds,
                     FollowFirstLink = followFirstLink,
+                    SubmitForm = submitForm,
                     Verbose = verbose,
                     SampleStacks = sampleStacks,
                     RenderInWindow = renderInWindow,
@@ -671,6 +689,8 @@ public class Program
                 arguments.Add("--sample-stacks");
             if (!renderInWindow)
                 arguments.Add("--no-window");
+            if (submitForm is { } index)
+                arguments.AddRange(["--submit-form", index.ToString(CultureInfo.InvariantCulture)]);
             return arguments;
         });
 
@@ -836,6 +856,8 @@ public class Program
         Console.WriteLine("                         (dotnet tool install -g dotnet-stack)");
         Console.WriteLine("  --no-window            With --analyze, do not show the page in the browser window as well,");
         Console.WriteLine("                         which loads and runs it a second time");
+        Console.WriteLine("  --submit-form <INDEX>  With --analyze, submit a zero-based form from the fetched page first,");
+        Console.WriteLine("                         using its default fields and no submit button; repeats in the window");
         Console.WriteLine("  --analysis-timeout <SECS>  With --analyze, write what there is and stop after SECS");
         Console.WriteLine("                         (default: 300; 0 = never), exit code 3");
         Console.WriteLine("  --output <FILE>        Output file path");
