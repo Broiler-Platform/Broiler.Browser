@@ -1929,7 +1929,11 @@ internal sealed class BrowserApp : IDisposable
                     continue;
                 }
 
-                double width = Math.Min(button.DesiredSize.Width, Math.Max(0, finalRect.Right - Margin - favoriteX));
+                // The width the bar gave the button (RefreshFavoritesBar), not its measured one: a
+                // button collapsed by a compact layout measures to nothing, and sizing by that kept
+                // every favorite collapsed at any width once the window had been compact — an
+                // Android phone starts in portrait, and landscape showed an empty bar.
+                double width = Math.Min(button.PreferredSize.Width, Math.Max(0, finalRect.Right - Margin - favoriteX));
                 if (width < 24)
                 {
                     button.Visibility = UiVisibility.Collapsed;
