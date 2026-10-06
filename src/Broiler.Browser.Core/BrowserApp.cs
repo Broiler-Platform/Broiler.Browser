@@ -1820,7 +1820,10 @@ internal sealed partial class BrowserApp : IDisposable
             }
         }
 
-        if (Uri.TryCreate(link, UriKind.Absolute, out _))
+        // A link with a scheme is absolute as it stands. Uri's own test is not enough: on Unix it takes a
+        // root-relative "/next" for a rooted file path (file:///next) and "//host/a" for a UNC one, so on Linux
+        // such a link stayed unresolved and was then refused as a web page opening a local file.
+        if (HasUrlScheme(link) && Uri.TryCreate(link, UriKind.Absolute, out _))
             return link;
 
         string baseUrl = !string.IsNullOrWhiteSpace(_viewport.BaseUrl)
@@ -1834,6 +1837,28 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         return link;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="reference"/> starts with a URL scheme and its colon (RFC 3986: a letter, then
+    /// letters, digits, <c>+</c>, <c>-</c> or <c>.</c>), as an absolute URL does. A root-relative <c>/path</c>
+    /// and a protocol-relative <c>//host/path</c> have none, though <see cref="Uri"/> takes both for files on
+    /// Unix.
+    /// </summary>
+    internal static bool HasUrlScheme(string reference)
+    {
+        int colon = reference.IndexOf(':');
+        if (colon <= 0 || !char.IsAsciiLetter(reference[0]))
+            return false;
+
+        for (int i = 1; i < colon; i++)
+        {
+            char c = reference[i];
+            if (!char.IsAsciiLetterOrDigit(c) && c is not ('+' or '-' or '.'))
+                return false;
+        }
+
+        return true;
     }
 
     private string CurrentHistoryUrl() =>
