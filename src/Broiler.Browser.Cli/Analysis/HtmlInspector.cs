@@ -1,6 +1,5 @@
 using System.Globalization;
 using Broiler.Dom.Html;
-using Broiler.Layout;
 using BDom = Broiler.Dom;
 
 namespace Broiler.Cli.Analysis;
@@ -78,8 +77,8 @@ internal sealed record HtmlReport
 /// <b>Quirks mode leads the report for a reason.</b> A missing or legacy doctype switches the whole
 /// document into quirks mode, and quirks mode changes box sizing in tables, line heights and the
 /// unitless-length rule — the kind of difference that looks like a layout bug in a dozen unrelated
-/// places. Broiler decides it with Broiler.Layout's own reading of the doctype
-/// (<see cref="DocumentModeContext.IsQuirksHtml"/>), which is what is reported.
+/// places. Broiler decides it with Broiler.Dom.Html's reading of the doctype, the one its tree builder
+/// applies (<see cref="HtmlDocumentQueries.IsQuirksMode"/>), which is what is reported.
 /// </para>
 /// <para>
 /// <b>Before and after.</b> The document as fetched is parsed here with the same parser and the same
@@ -154,7 +153,7 @@ internal static class HtmlInspector
         return new HtmlReport
         {
             Doctype = doctype is null ? null : DescribeDoctype(doctype),
-            QuirksMode = DocumentModeContext.IsQuirksHtml(fetchedHtml),
+            QuirksMode = HtmlDocumentQueries.IsQuirksMode(fetchedHtml),
             DeclaredCharset = DeclaredCharset(fetchedElements),
             Title = FirstElement(finalElements, "title")?.TextContent?.Trim() is { Length: > 0 } title ? title : parsed.Title,
             Language = head?.GetAttribute("lang"),
