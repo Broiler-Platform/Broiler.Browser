@@ -280,7 +280,7 @@ internal static class RenderProbe
         try
         {
             var parsed = HtmlDocumentParser.ParseDocument(html).Document;
-            DocumentModeContext.CurrentQuirksMode = DocumentModeContext.IsQuirksHtml(html);
+            DocumentModeContext.CurrentQuirksMode = HtmlDocumentQueries.IsQuirksMode(html);
 
             using var probe = new HtmlContainer
             {

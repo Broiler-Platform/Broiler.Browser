@@ -221,6 +221,31 @@ internal sealed class TestWindow : IDisposable
     private InputEventHeader NextHeader(string device) =>
         new(InputDeviceId.FromOpaqueValue(device), new InputTimestamp(++_sequence, TimeSpan.TicksPerSecond, "test"), _sequence);
 
+    /// <summary>
+    /// Turns the mouse wheel by <paramref name="notches"/> over (<paramref name="x"/>, <paramref name="y"/>) in the
+    /// window: a negative turn scrolls the page down.
+    /// </summary>
+    public void Wheel(double x, double y, double notches) =>
+        _app.Dispatch(UiInputEvent.FromMouseWheel(new MouseWheelEvent(
+            NextHeader("test-pointer"),
+            InputPoint.ClientDeviceIndependentPixels(x, y),
+            MouseButtons.None,
+            MouseWheelAxis.Vertical,
+            notches)));
+
+    /// <summary>Paints what is pending, as a window does when it was invalidated, without stepping the page.</summary>
+    public void Paint()
+    {
+        while (_posted.TryDequeue(out Action? action))
+            action();
+
+        if (_host.IsInvalidated)
+            _frame = _app.RenderFrame();
+    }
+
+    /// <summary>Whether the page has work the window's animation tick would step.</summary>
+    public bool PageHasWork => _app.HasPendingWork || _tickArmed;
+
     public void Click(double x, double y)
     {
         _app.Dispatch(Button(x, y, MouseButtons.Left, MouseButtonTransition.Down));
