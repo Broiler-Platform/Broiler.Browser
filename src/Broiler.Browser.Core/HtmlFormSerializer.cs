@@ -1,5 +1,6 @@
 using System.Text;
 using Broiler.Dom;
+using Broiler.HtmlBridge.Dom;
 
 namespace Broiler.Browser;
 
@@ -83,6 +84,93 @@ internal static class HtmlFormSerializer
     }
 
     /// <summary>
+    /// The <c>button</c> or <c>input</c> at <paramref name="index"/> among the document's in document
+    /// order, or <c>null</c> -- how a script's submission names its submitter, by position, as it names
+    /// its form.
+    /// </summary>
+    public static DomElement? FindButtonOrInputByIndex(DomNode? root, int index)
+    {
+        if (root is null || index < 0)
+            return null;
+
+        var seen = 0;
+        foreach (DomElement element in root.InclusiveDescendants().OfType<DomElement>())
+        {
+            if (!IsTag(element, "button") && !IsTag(element, "input"))
+                continue;
+
+            if (seen == index)
+                return element;
+
+            seen++;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The form's default button: its first submit button in tree order -- a <c>button</c> whose type is
+    /// submit or unknown, or an <c>input</c> of type submit or image -- or <c>null</c> when it has none.
+    /// </summary>
+    public static DomElement? FindDefaultButton(DomElement form)
+    {
+        foreach (DomElement control in Descendants(form))
+        {
+            string type = (control.GetAttribute("type") ?? string.Empty).Trim();
+            if (IsTag(control, "button") && !string.Equals(type, "reset", StringComparison.OrdinalIgnoreCase) && !string.Equals(type, "button", StringComparison.OrdinalIgnoreCase))
+                return control;
+            if (IsTag(control, "input") && ButtonInputTypes.Contains(type))
+                return control;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Replays what a page's <c>formdata</c> listeners did to the entry list -- <c>append</c>, <c>set</c>,
+    /// <c>delete</c>, in order -- on <paramref name="entries"/>.
+    /// </summary>
+    public static IReadOnlyList<FormEntry> ApplyEdits(IReadOnlyList<FormEntry> entries, IReadOnlyList<FormDataEdit> edits)
+    {
+        if (edits.Count == 0)
+            return entries;
+
+        List<FormEntry> edited = [.. entries];
+        foreach (FormDataEdit edit in edits)
+        {
+            switch (edit.Kind)
+            {
+                case FormDataEditKind.Append:
+                    edited.Add(new FormEntry(edit.Name, edit.Value));
+                    break;
+
+                case FormDataEditKind.Delete:
+                    edited.RemoveAll(entry => string.Equals(entry.Name, edit.Name, StringComparison.Ordinal));
+                    break;
+
+                case FormDataEditKind.Set:
+                    int first = edited.FindIndex(entry => string.Equals(entry.Name, edit.Name, StringComparison.Ordinal));
+                    if (first < 0)
+                    {
+                        edited.Add(new FormEntry(edit.Name, edit.Value));
+                        break;
+                    }
+
+                    edited[first] = new FormEntry(edit.Name, edit.Value);
+                    for (int index = edited.Count - 1; index > first; index--)
+                    {
+                        if (string.Equals(edited[index].Name, edit.Name, StringComparison.Ordinal))
+                            edited.RemoveAt(index);
+                    }
+
+                    break;
+            }
+        }
+
+        return edited;
+    }
+
+    /// <summary>
     /// Finds the form control in <paramref name="root"/> that the given attributes
     /// describe — how a clicked submit button, reported by the renderer as a bare
     /// attribute bag, is located in the parsed document. Matches on <c>id</c> first,
@@ -152,18 +240,20 @@ internal static class HtmlFormSerializer
     /// Every encoding is built from this, so they cannot disagree about which
     /// controls submit.
     /// </summary>
+    /// <param name="imagePoint">For an image button that submitted, where in it it was clicked.</param>
     public static IReadOnlyList<FormEntry> BuildEntryList(
         DomElement form,
         DomElement? submitter = null,
         Func<DomElement, string?>? valueOverride = null,
         FileProvider? fileProvider = null,
-        SelectProvider? selectProvider = null)
+        SelectProvider? selectProvider = null,
+        (int X, int Y) imagePoint = default)
     {
         ArgumentNullException.ThrowIfNull(form);
 
         List<FormEntry> entries = [];
         foreach (DomElement control in Descendants(form))
-            AppendControl(entries, control, submitter, valueOverride, fileProvider, selectProvider);
+            AppendControl(entries, control, submitter, valueOverride, fileProvider, selectProvider, imagePoint);
 
         return entries;
     }
@@ -188,9 +278,10 @@ internal static class HtmlFormSerializer
     /// The encoding the form asks for. An unrecognised <c>enctype</c> falls back to
     /// URL encoding, which is what the HTML spec's missing-value default is.
     /// </summary>
-    public static string ResolveEncoding(DomElement form)
+    public static string ResolveEncoding(DomElement form, DomElement? submitter = null)
     {
-        string? declared = form.GetAttribute("enctype")?.Trim();
+        // A submit button's formenctype stands in for the form's.
+        string? declared = (submitter?.GetAttribute("formenctype") ?? form.GetAttribute("enctype"))?.Trim();
         if (string.Equals(declared, MultipartFormData, StringComparison.OrdinalIgnoreCase))
             return MultipartFormData;
         if (string.Equals(declared, TextPlain, StringComparison.OrdinalIgnoreCase))
@@ -316,8 +407,8 @@ internal static class HtmlFormSerializer
     /// Whether the form submits with <c>method="get"</c> — the only method the
     /// browser's navigation path can carry, since it fetches by URL.
     /// </summary>
-    public static bool IsGetSubmission(DomElement form) =>
-        !string.Equals(form.GetAttribute("method"), "post", StringComparison.OrdinalIgnoreCase);
+    public static bool IsGetSubmission(DomElement form, DomElement? submitter = null) =>
+        !string.Equals((submitter?.GetAttribute("formmethod") ?? form.GetAttribute("method"))?.Trim(), "post", StringComparison.OrdinalIgnoreCase);
 
     private static void AppendControl(
         List<FormEntry> body,
@@ -325,7 +416,8 @@ internal static class HtmlFormSerializer
         DomElement? submitter,
         Func<DomElement, string?>? valueOverride,
         FileProvider? fileProvider,
-        SelectProvider? selectProvider)
+        SelectProvider? selectProvider,
+        (int X, int Y) imagePoint)
     {
         // A disabled control is never successful.
         if (control.HasAttribute("disabled"))
@@ -386,8 +478,22 @@ internal static class HtmlFormSerializer
 
         if (ButtonInputTypes.Contains(type))
         {
-            if (ReferenceEquals(control, submitter) && name.Length > 0)
-                Append(body, name, live ?? control.GetAttribute("value") ?? string.Empty);
+            if (!ReferenceEquals(control, submitter))
+                return;
+
+            // An image button submits where it was clicked, as name.x and name.y -- x and y when it has
+            // no name -- and a submit input with no value its label, "Submit" (Chromium, measured).
+            if (string.Equals(type, "image", StringComparison.OrdinalIgnoreCase))
+            {
+                string prefix = name.Length > 0 ? name + "." : string.Empty;
+                Append(body, prefix + "x", imagePoint.X.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                Append(body, prefix + "y", imagePoint.Y.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+            else if (name.Length > 0)
+            {
+                Append(body, name, live ?? control.GetAttribute("value") ?? "Submit");
+            }
+
             return;
         }
 

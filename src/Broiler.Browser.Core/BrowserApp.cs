@@ -65,6 +65,12 @@ internal sealed partial class BrowserApp : IDisposable
     private readonly BrowserContent _content;
     private readonly StandardWindow _rootWindow;
     private int _historyIndex = -1;
+
+    // The run of history entries that are the document on screen's: the one it was loaded at, and those
+    // its fragment navigations and pushState added. Back and forward among them are the page's to make
+    // (BrowserViewport.TraverseHistory); anywhere else loads a document.
+    private int _documentFirstEntry = -1;
+    private int _documentLastEntry = -1;
     private bool _isPageBusy;
     private bool _isShuttingDown;
     private long _navigationGeneration;
@@ -235,6 +241,11 @@ internal sealed partial class BrowserApp : IDisposable
             painted.FramePainted();
         }
 
+        // The frame told the page where the user scrolled the view; the page hears its scroll event in a
+        // task, which the tick steps. Nothing else would step it before the next input.
+        if (_viewport.TakeReportedScroll() && _viewport.HasPendingWork)
+            _setAnimationActive(true);
+
         return frame;
     }
 
@@ -247,6 +258,9 @@ internal sealed partial class BrowserApp : IDisposable
 
     /// <summary>Where the window draws the page, in window coordinates.</summary>
     internal BRect PageArea => _viewport.Bounds;
+
+    /// <summary>The address the window shows.</summary>
+    internal string AddressText => _address.Text;
 
     public void Dispatch(UiInputEvent input)
     {
@@ -280,6 +294,9 @@ internal sealed partial class BrowserApp : IDisposable
     private void AfterPageInput()
     {
         if (_isShuttingDown)
+            return;
+
+        if (ApplyPageHistory())
             return;
 
         if (_viewport.TakePendingNavigation() is { } requested
@@ -342,6 +359,12 @@ internal sealed partial class BrowserApp : IDisposable
         //
         // The request names the page that asked (the bridge's initiator, or the document on screen),
         // so the transport judges it as that document's navigation rather than the user's own.
+        //
+        // The page's session history is read first: a pushState before a location.href leaves an entry
+        // behind the page it navigates to, as it does in a browser.
+        if (ApplyPageHistory())
+            return;
+
         if (_viewport.TakePendingNavigation() is { } requested
             && !(requested.IsRepeatable
                 && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
@@ -436,7 +459,27 @@ internal sealed partial class BrowserApp : IDisposable
         if (_isShuttingDown || string.IsNullOrWhiteSpace(request.Url))
             return;
 
+        // A javascript: URL runs its script in the page on screen -- if its scripts run at all -- and
+        // loads nothing: navigating to one would replace the page with an error (HTML "navigate to a
+        // javascript: URL").
+        if (request.Url.TrimStart().StartsWith("javascript:", StringComparison.OrdinalIgnoreCase))
+        {
+            if (_viewport.RunJavaScriptUrl(request.Url.Trim()))
+                AfterPageInput();
+            return;
+        }
+
         request = request with { Url = NormalizeInput(request.Url) };
+
+        // A link to the fragment the page is already at is no new entry, as it is none in a browser.
+        if (FragmentWithinCurrentDocument(request) is { } sameFragment &&
+            string.Equals(request.Url, CurrentHistoryUrl(), StringComparison.Ordinal))
+        {
+            _viewport.ScrollToFragment(sameFragment);
+            _host.RequestInvalidate();
+            return;
+        }
+
         if (_historyIndex < _history.Count - 1)
             _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1);
 
@@ -446,9 +489,10 @@ internal sealed partial class BrowserApp : IDisposable
         _historyIndex = _history.Count - 1;
 
         // HTML §7.4.2.3.3, navigate to a fragment: a link into the document on screen scrolls it and
-        // loads nothing.
+        // loads nothing. Its entry is the document's.
         if (FragmentWithinCurrentDocument(request) is { } fragment)
         {
+            _documentLastEntry = _historyIndex;
             ShowFragment(request.Url, fragment);
             return;
         }
@@ -474,6 +518,54 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         return FragmentOf(request.Url) ?? (orTop ? string.Empty : null);
+    }
+
+    /// <summary>
+    /// Applies what the page's session history did since the window last asked: an entry its pushState or
+    /// a fragment navigation added -- after which the forward entries are gone -- or replaced, and its
+    /// traversals among its own entries, which move the window's place in its history and the address it
+    /// shows. A traversal to another document's entry is the window's to make; answers whether it made one,
+    /// which leaves the page.
+    /// </summary>
+    private bool ApplyPageHistory()
+    {
+        var changes = _viewport.TakeHistoryChanges();
+        foreach (HistoryChange change in changes)
+        {
+            switch (change.Kind)
+            {
+                case HistoryChangeKind.Push:
+                    if (_historyIndex < _history.Count - 1)
+                        _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1);
+                    _history.Add(PageRequest.ForUrl(change.Url) with { Initiator = _viewport.DocumentContext });
+                    _historyIndex = _history.Count - 1;
+                    _documentLastEntry = _historyIndex;
+                    NoteVisited(change.Url);
+                    break;
+
+                case HistoryChangeKind.Replace when _historyIndex >= 0 && _historyIndex < _history.Count:
+                    _history[_historyIndex] = _history[_historyIndex] with { Url = change.Url };
+                    NoteVisited(change.Url);
+                    break;
+
+                case HistoryChangeKind.Traverse:
+                    _historyIndex = Math.Clamp(_historyIndex + change.Delta, _documentFirstEntry, _documentLastEntry);
+                    break;
+
+                case HistoryChangeKind.TraverseAway:
+                    GoHistory(change.Delta);
+                    return true;
+            }
+        }
+
+        if (changes.Count > 0)
+        {
+            SetUrlText(CurrentHistoryUrl());
+            UpdateNavigationButtons();
+            UpdateStarButton();
+        }
+
+        return false;
     }
 
     /// <summary>What follows the <c>#</c> of <paramref name="url"/>, or null when it has none.</summary>
@@ -518,6 +610,21 @@ internal sealed partial class BrowserApp : IDisposable
         int target = _historyIndex + delta;
         if (target < 0 || target >= _history.Count)
             return;
+
+        // An entry of the page on screen -- one its pushState or a fragment made -- is the page's to go
+        // to: it moves its URL and state and hears popstate, and nothing loads.
+        if (target >= _documentFirstEntry && target <= _documentLastEntry && _viewport.TraverseHistory(delta))
+        {
+            _historyIndex = target;
+            SetUrlText(_history[target].Url);
+            UpdateNavigationButtons();
+            UpdateStarButton();
+            if (FragmentOf(_history[target].Url) is { Length: > 0 } entryFragment)
+                _viewport.ScrollToFragment(entryFragment);
+            AfterPageInput();
+            _host.RequestInvalidate();
+            return;
+        }
 
         // Re-issued as the entry's own navigation: the initiator it was created with, if any, still
         // started it.
@@ -1212,7 +1319,9 @@ internal sealed partial class BrowserApp : IDisposable
         }
         else
         {
-            request = formState.TryBuildScriptSubmitRequest(pageHtml, navigation.FormIndex, baseUrl);
+            request = formState.TryBuildScriptSubmitRequest(
+                pageHtml, navigation.FormIndex, baseUrl, navigation.Url, navigation.SubmitterIndex,
+                (navigation.SubmitterX, navigation.SubmitterY), navigation.FormDataEdits);
             if (request is null)
             {
                 RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.navigation",
@@ -1491,6 +1600,11 @@ internal sealed partial class BrowserApp : IDisposable
         _viewport.ReplacePage(result.TakeContainer(), result.TakeSession(), result.NormalisedUrl, result.DocumentHtml);
         NoteVisited(result.NormalisedUrl);
         NoteVisited(startedAt);
+
+        // The document's entry is the current one; the page counts the window's entries around it in its
+        // history.length, and may go back or forward to them.
+        _documentFirstEntry = _documentLastEntry = _historyIndex;
+        _viewport.SetSessionHistory(_historyIndex, _history.Count - 1 - _historyIndex);
 
         // HTML §7.4.6.4: a page navigated to with a fragment opens scrolled to it. The request the
         // navigation started with carries the fragment when the loaded URL lost it on the way.
@@ -2145,6 +2259,12 @@ internal sealed partial class BrowserApp : IDisposable
         /// </summary>
         private string? _pendingFragment;
 
+        // Where the page's viewport was last seen scrolled, and where this view last told the page it was:
+        // a page that scrolled itself since moves this view, and this view's own scroll moves the page's.
+        private double _pageScrollSeen;
+        private double _viewScrollReported;
+        private bool _viewScrollReportedSinceTaken;
+
         private const double TouchPanThreshold = 6;
 
         private sealed record PageArea(float Width, float Height);
@@ -2242,6 +2362,8 @@ internal sealed partial class BrowserApp : IDisposable
             _appliedRenderVersion = interactiveSession?.RenderVersion ?? 0;
             BaseUrl = baseUrl ?? string.Empty;
             _scrollY = 0;
+            _pageScrollSeen = 0;
+            _viewScrollReported = 0;
             _pendingFragment = null;
             _viewportZoom = 1f;
             MarkLayoutDirty();
@@ -2308,6 +2430,25 @@ internal sealed partial class BrowserApp : IDisposable
             NavigationRequest? pending = _interactiveSession?.TakePendingNavigation();
             return pending is null ? null : BuildRequest(pending, _formState, GetPageHtml(), BaseUrl, DocumentContext);
         }
+
+        /// <summary>What the page's session history did since the window last asked (InteractiveSession.TakeHistoryChanges).</summary>
+        public IReadOnlyList<HistoryChange> TakeHistoryChanges() => _interactiveSession?.TakeHistoryChanges() ?? [];
+
+        /// <summary>Back or forward by <paramref name="delta"/> to one of the page's own entries; false when the page has none there.</summary>
+        public bool TraverseHistory(int delta)
+        {
+            if (_interactiveSession is not { } page || !page.TraverseHistory(delta))
+                return false;
+
+            ShowPageIfChanged();
+            return true;
+        }
+
+        /// <summary>Tells the page how many of the window's history entries surround its own.</summary>
+        public void SetSessionHistory(int before, int after) => _interactiveSession?.SetSessionHistory(before, after);
+
+        /// <summary>A <c>javascript:</c> URL the user followed: its script runs in the page, if the page's scripts run.</summary>
+        public bool RunJavaScriptUrl(string url) => _interactiveSession?.RunJavaScriptUrl(url) == true;
 
         public void StopSession()
         {
@@ -2490,10 +2631,12 @@ internal sealed partial class BrowserApp : IDisposable
             float viewportHeight = (float)Math.Max(0, Bounds.Height);
             EnsureLayout();
 
+            FollowPageScroll();
             if (_pendingFragment is { } fragment)
                 TryScrollToFragment(fragment);
 
             ClampScroll(viewportHeight);
+            ReportViewScroll();
             if (_renderDirty || _renderList is null)
             {
                 _container.ScrollOffset = new PointF(0, -_scrollY / _viewportZoom);
@@ -3242,15 +3385,6 @@ internal sealed partial class BrowserApp : IDisposable
         private void ScrollBy(float delta) => SetScroll(_scrollY + delta);
 
         /// <summary>
-        /// Scrolls to what <paramref name="fragment"/> indicates, as soon as the page has a layout to
-        /// find it in: HTML §7.4.6.4, "scroll to the fragment".
-        /// </summary>
-        /// <remarks>
-        /// Nothing scrolled to a fragment. A link to <c>#top</c> reloaded the page at the top, and a
-        /// page loaded with a fragment opened at the top too: Acid2's "Take The Acid2 Test" link, which
-        /// is <c>href="#top"</c>, left the test's face far below the window.
-        /// </remarks>
-        /// <summary>
         /// The user followed a link into the page, or went back or forward between two places in it: a
         /// page whose scripts run hears it as its own fragment navigation -- <c>location.hash</c>,
         /// <c>hashchange</c>, <c>:target</c> -- and one without has the renderer style the new target.
@@ -3290,6 +3424,15 @@ internal sealed partial class BrowserApp : IDisposable
             MarkLayoutDirty();
         }
 
+        /// <summary>
+        /// Scrolls to what <paramref name="fragment"/> indicates, as soon as the page has a layout to
+        /// find it in: HTML §7.4.6.4, "scroll to the fragment".
+        /// </summary>
+        /// <remarks>
+        /// Nothing scrolled to a fragment. A link to <c>#top</c> reloaded the page at the top, and a
+        /// page loaded with a fragment opened at the top too: Acid2's "Take The Acid2 Test" link, which
+        /// is <c>href="#top"</c>, left the test's face far below the window.
+        /// </remarks>
         public void ScrollToFragment(string fragment)
         {
             _pendingFragment = fragment;
@@ -3320,6 +3463,54 @@ internal sealed partial class BrowserApp : IDisposable
 
             _pendingFragment = null;
             _renderDirty = true;
+        }
+
+        /// <summary>
+        /// Follows the page when it scrolled its viewport itself -- <c>scrollTo</c>, <c>scrollIntoView</c>, a
+        /// script's fragment navigation -- since this view last saw it: the page did not scroll at all before.
+        /// </summary>
+        private void FollowPageScroll()
+        {
+            if (_interactiveSession is not { } page)
+                return;
+
+            double pageY = page.ViewportScroll.Y;
+            if (Math.Abs(pageY - _pageScrollSeen) <= 0.5)
+                return;
+
+            _pageScrollSeen = pageY;
+            _viewScrollReported = pageY;
+            _pendingFragment = null;
+            _scrollY = (float)(pageY * _viewportZoom);
+            _renderDirty = true;
+        }
+
+        /// <summary>
+        /// Tells the page where this view is scrolled when it moved since the page was last told -- the user's
+        /// scroll, a fragment the window scrolled to, a clamp -- so its <c>scrollY</c> and its geometry answer
+        /// for what is on screen and it hears its <c>scroll</c>. The page knew nothing of it before.
+        /// </summary>
+        private void ReportViewScroll()
+        {
+            if (_interactiveSession is not { } page)
+                return;
+
+            double viewY = _scrollY / _viewportZoom;
+            if (Math.Abs(viewY - _viewScrollReported) <= 0.5)
+                return;
+
+            _viewScrollReported = viewY;
+            _viewScrollReportedSinceTaken = true;
+            page.ScrollViewportTo(0, viewY);
+            _pageScrollSeen = page.ViewportScroll.Y;
+        }
+
+        /// <summary>Whether a frame told the page where this view is scrolled since this was last asked.</summary>
+        public bool TakeReportedScroll()
+        {
+            bool reported = _viewScrollReportedSinceTaken;
+            _viewScrollReportedSinceTaken = false;
+            return reported;
         }
 
         private void SetScroll(float value)

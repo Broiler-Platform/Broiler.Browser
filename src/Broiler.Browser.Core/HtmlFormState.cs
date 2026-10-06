@@ -1,6 +1,7 @@
 using Broiler.App.Rendering;
 using Broiler.Dom;
 using Broiler.Dom.Html;
+using Broiler.HtmlBridge.Dom;
 
 namespace Broiler.Browser;
 
@@ -159,23 +160,34 @@ internal sealed class HtmlFormState
         if (form is null)
             return null;
 
-        // No submitter: pressing Enter in a field submits the form without any
-        // button contributing its own name and value.
-        return BuildRequest(form, submitter: null, ResolveAction(form.GetAttribute("action"), baseUrl));
+        // Enter in a field clicks the form's default button -- its first submit button -- which then
+        // submits the form as that button would, its name and value included; a form with none submits
+        // without a submitter (HTML "implicit submission").
+        DomElement? defaultButton = HtmlFormSerializer.FindDefaultButton(form);
+        return BuildRequest(form, defaultButton, ResolveAction(defaultButton?.GetAttribute("formaction") ?? form.GetAttribute("action"), baseUrl));
     }
 
     /// <summary>
-    /// Builds the request for a submission a script asked for — <c>form.submit()</c>, which names
-    /// its form by position. Returns <c>null</c> when the document has no such form.
+    /// Builds the request for a submission the page made — <c>form.submit()</c>, <c>requestSubmit()</c>,
+    /// a submit button's click — which names its form, and its submitter, by position. Returns
+    /// <c>null</c> when the document has no such form.
     /// </summary>
     /// <remarks>
-    /// No submitter, and that is the specified behaviour rather than a shortcut:
-    /// <c>form.submit()</c> submits the form without any button contributing its name and value,
-    /// which is exactly what separates it from a click on one (HTML §4.10.21.3). The same as
-    /// pressing Enter in a field, and it shares that path's shape for the same reason.
+    /// <c>form.submit()</c> has no submitter, which is the specified behaviour rather than a shortcut: it
+    /// submits the form without any button contributing its name and value (HTML §4.10.21.3). A button
+    /// that submitted adds its own, and its <c>formmethod</c> and <c>formenctype</c> stand in for the
+    /// form's; what the page's <c>formdata</c> listeners did to the entry list is replayed on it.
     /// </remarks>
     /// <param name="baseUrl">Page URL, used to resolve a relative form action.</param>
-    public PageRequest? TryBuildScriptSubmitRequest(string pageHtml, int formIndex, string baseUrl)
+    /// <param name="action">The action the page resolved -- the submitter's <c>formaction</c> or the form's -- or null to resolve the form's here.</param>
+    public PageRequest? TryBuildScriptSubmitRequest(
+        string pageHtml,
+        int formIndex,
+        string baseUrl,
+        string? action = null,
+        int submitterIndex = -1,
+        (int X, int Y) imagePoint = default,
+        IReadOnlyList<FormDataEdit>? edits = null)
     {
         if (string.IsNullOrEmpty(pageHtml) || formIndex < 0)
             return null;
@@ -188,24 +200,27 @@ internal sealed class HtmlFormState
         if (form is null)
             return null;
 
-        return BuildRequest(form, submitter: null, ResolveAction(form.GetAttribute("action"), baseUrl));
+        DomElement? submitter = HtmlFormSerializer.FindButtonOrInputByIndex(root, submitterIndex);
+        return BuildRequest(form, submitter, action ?? ResolveAction(form.GetAttribute("action"), baseUrl), imagePoint, edits);
     }
 
     /// <summary>
     /// Turns a form and its submitter into a navigation: a GET puts the form data set
     /// in the query, a POST carries it as the request body.
     /// </summary>
-    private PageRequest BuildRequest(DomElement form, DomElement? submitter, string action)
+    private PageRequest BuildRequest(
+        DomElement form, DomElement? submitter, string action, (int X, int Y) imagePoint = default, IReadOnlyList<FormDataEdit>? edits = null)
     {
-        IReadOnlyList<HtmlFormSerializer.FormEntry> entries =
-            HtmlFormSerializer.BuildEntryList(form, submitter, ResolveOverride, ResolveFiles, ResolveSelection);
+        IReadOnlyList<HtmlFormSerializer.FormEntry> entries = HtmlFormSerializer.ApplyEdits(
+            HtmlFormSerializer.BuildEntryList(form, submitter, ResolveOverride, ResolveFiles, ResolveSelection, imagePoint),
+            edits ?? []);
 
         // A GET form always puts its data in the query, whatever enctype says — the
         // enctype only applies to a body, and a GET has none.
-        if (HtmlFormSerializer.IsGetSubmission(form))
+        if (HtmlFormSerializer.IsGetSubmission(form, submitter))
             return new PageRequest(HtmlFormSerializer.ApplyQuery(action, HtmlFormSerializer.EncodeUrlEncoded(entries)));
 
-        string encoding = HtmlFormSerializer.ResolveEncoding(form);
+        string encoding = HtmlFormSerializer.ResolveEncoding(form, submitter);
         if (encoding == HtmlFormSerializer.MultipartFormData)
         {
             string boundary = HtmlFormSerializer.CreateMultipartBoundary();

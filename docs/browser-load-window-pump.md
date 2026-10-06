@@ -139,6 +139,23 @@ user has left it wrong.
   `:target` follow. A page with no scripts has the renderer find the target
   (`HtmlContainer.TargetFragment`) and style the document again without parsing it
   (`RestyleDocument`), so what the user typed stays.
+- **The page's session history is the window's.** A page's `pushState`, `replaceState` and fragment
+  navigations are entries in the window's history too (`InteractiveSession.TakeHistoryChanges`, read
+  after every input and every step): the address moves and back is enabled. Back and forward between
+  the page's entries are the page's traversals (`TraverseHistory`) -- it hears `popstate` and nothing
+  loads -- and its `history.length` counts the window's entries around its own (`SetSessionHistory`).
+  A `history.back()` past the page's first entry is the window's to make.
+- **A `javascript:` URL** -- a link, the address bar -- runs its script in the page on screen
+  (`RunJavaScriptUrl`) if the page's policy allows inline script. It loaded an error page before.
+- **A submission names its button.** The page's request carries its submitter (`SubmitterIndex`, an
+  image button's point) and what its `formdata` listeners changed (`FormDataEdits`), which the window
+  replays on the entry list it builds from the serialised document. Enter submits as the form's default
+  button, as in Chromium. A `method="dialog"` form closes its dialog and loads nothing.
+- **Scrolling is shared.** The window follows the page's own scroll -- `scrollTo`, `scrollIntoView`, a
+  script's fragment navigation (`ViewportScroll`) -- and tells the page where the user scrolled
+  (`ScrollViewportTo`), so its `scrollY` and its geometry answer for what is on screen. The page hears
+  that `scroll` in a task, queued when the frame that reported the scroll is drawn, so `RenderFrame`
+  arms the tick for it; nothing else would step it before the next input.
 - **History.** The window remembers every page it has shown, fragment included, for as long as it is
   open, and writes it nowhere. The renderer asks it about each link (`VisitedLinkPredicate`), so a
   link to one of them takes its `:visited` colours — only colours, as in a browser, and never where

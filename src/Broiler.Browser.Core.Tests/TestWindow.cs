@@ -19,6 +19,7 @@ internal sealed class TestWindow : IDisposable
     private readonly BImageRenderer _renderer = new();
     private readonly BrowserApp _app;
     private BRenderList? _frame;
+    private bool _tickArmed;
     private long _sequence;
 
     public TestWindow(string url)
@@ -29,7 +30,7 @@ internal sealed class TestWindow : IDisposable
             static () => { },
             static _ => { },
             action => { _posted.Enqueue(action); return true; });
-        _app = new BrowserApp(_host, () => _renderer, url, static _ => { });
+        _app = new BrowserApp(_host, () => _renderer, url, active => _tickArmed = active);
     }
 
     public void Settle()
@@ -40,14 +41,21 @@ internal sealed class TestWindow : IDisposable
             while (_posted.TryDequeue(out Action? action))
                 action();
 
-            if (_app.HasPendingWork)
+            // A window's animation tick, once armed, fires at least once.
+            if (_app.HasPendingWork || _tickArmed)
+            {
+                _tickArmed = false;
                 _app.StepAnimation();
+            }
 
             if (_host.IsInvalidated)
                 _frame = _app.RenderFrame();
 
-            if (string.Equals(_app.Status, "Done", StringComparison.Ordinal) && _posted.IsEmpty && !_host.IsInvalidated)
+            if (string.Equals(_app.Status, "Done", StringComparison.Ordinal) && _posted.IsEmpty && !_host.IsInvalidated
+                && !_tickArmed)
+            {
                 break;
+            }
 
             Thread.Sleep(5);
         }
@@ -58,6 +66,12 @@ internal sealed class TestWindow : IDisposable
 
     /// <summary>Where the page is drawn in the window.</summary>
     public BRect PageArea => _app.PageArea;
+
+    /// <summary>The address the window shows.</summary>
+    public string Address => _app.AddressText;
+
+    /// <summary>The window's back button: false when there is nothing to go back to.</summary>
+    public bool GoBack() => _app.TryGoBack();
 
     /// <summary>Every text run of the last frame, with where it was drawn in the window.</summary>
     public IReadOnlyList<(string Text, BPoint At)> Texts() =>
