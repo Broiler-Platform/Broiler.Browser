@@ -70,6 +70,27 @@ public sealed record PageRequest(
     /// </remarks>
     public SameSiteStatus? RecordedSameSite { get; init; }
 
+    /// <summary>
+    /// A document to show at <see cref="Url"/> without fetching anything: what a <c>javascript:</c> URL's
+    /// script answered, which replaces the page's document at its URL (HTML "navigate to a javascript:
+    /// URL").
+    /// </summary>
+    public string? InlineDocument { get; init; }
+
+    /// <summary>
+    /// The Content-Security-Policy an <see cref="InlineDocument"/> is bound by besides any its markup declares: the
+    /// policy of the document a <c>javascript:</c> URL replaced, which HTML hands the new one (a clone of its policy
+    /// container). Chromium, measured: the replaced page's <c>&lt;meta&gt;</c> policy refuses in the new one what it
+    /// refused there.
+    /// </summary>
+    public Broiler.HtmlBridge.Scripting.ContentSecurityPolicy? InheritedPolicy { get; init; }
+
+    /// <summary>
+    /// Where the window was scrolled, in CSS pixels, when it last left this entry of its history: what going
+    /// back or forward to it restores, as Chromium does.
+    /// </summary>
+    public float? LeftAtScrollY { get; init; }
+
     /// <summary>Whether this request has anything to send.</summary>
     public bool HasBody => BinaryBody is not null || Body is not null;
 

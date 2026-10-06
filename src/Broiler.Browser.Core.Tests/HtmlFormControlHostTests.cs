@@ -304,6 +304,24 @@ public class HtmlFormControlHostTests
         Assert.Equal("b", state.GetSelectedValue($"{HtmlPostProcessor.SyntheticIdPrefix}0", "colour"));
     }
 
+    /// <summary>
+    /// A drop-down whose markup marks two options starts on the last, as the page's select does (measured in
+    /// Chromium). It started on the first.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void AComboStartsOnTheLastMarkedOption()
+    {
+        using TestUiSession session = new();
+        using HtmlContainer container = LayOut(
+            "<html><body><form><select name='s'><option value='x'>X</option><option value='y' selected>Y</option>" +
+            "<option value='z' selected>Z</option></select></form></body></html>");
+        (HtmlFormControlHost host, _, _) = Create(session);
+
+        host.Rebuild(container.GetHtml());
+
+        Assert.Equal(2, host.Controls.OfType<StandardComboBox>().Single().SelectedIndex);
+    }
+
     private const string MultiSelectPage =
         "<html><body style='margin:0'><form action='/s'>" +
         "<select name='colours' multiple><option value='r'>Red</option>" +

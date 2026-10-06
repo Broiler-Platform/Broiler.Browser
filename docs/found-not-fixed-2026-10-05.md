@@ -6,10 +6,9 @@ form controls and `javascript:` URLs.
 **Components:** Broiler.HTML, Broiler.HtmlBridge, Broiler.JSeal, Broiler.VM, Broiler.Browser.
 **Affects:** the Broiler.Browser window and `Broiler.Cli --analyze`.
 
-The work that found these is under review: Broiler.DOM #28, Broiler.JSeal #3, Broiler.CSS #61 and
-Broiler.Layout #127. Changes to Broiler.HTML, Broiler.HtmlBridge and this repository follow once those
-are published, since they pin the published packages. Several items below describe behaviour those
-changes bring; each item says so. Chromium's behaviour was measured unless an item says otherwise.
+The work that found these landed as Broiler.DOM #28, Broiler.JSeal #3, Broiler.CSS #61, Broiler.Layout
+#127, Broiler.HTML #240, Broiler.HtmlBridge #12 and this repository's change that takes their packages.
+Chromium's behaviour was measured unless an item says otherwise.
 
 | # | Gap | Where the fix goes |
 | --- | --- | --- |
@@ -33,14 +32,14 @@ is 30px tall. Broiler.HTML's `CssDefaults.cs` sets no box sizing for it, so the 
 tall, its padding and border added. The fix is a user-agent rule in Broiler.HTML and the same rule in
 Broiler.CSS.Dom's `CssUserAgentDefaults`. The button-like `input` types and `select` should be checked
 in the same pass. The window's top-layer tests give their button `box-sizing: border-box` until then.
-Broiler.HTML's roadmap carries this in section 5, with the pending HTML change.
+Broiler.HTML's roadmap carries this in section 5.
 
 ## 2. Anchored boxes the layout engine does not place
 
-With the pending HtmlBridge change, the bridge leaves boxes in the subset that Broiler.Layout's anchor
-placement takes (`IsMvpNativeAnchorBox`) to the renderer, which places them both for what is drawn and
-for what a script measures. Any other anchored box is baked by the bridge, and only into a page that is
-drawn. That has two consequences:
+The bridge leaves boxes in the subset that Broiler.Layout's anchor placement takes
+(`IsMvpNativeAnchorBox`) to the renderer, which places them both for what is drawn and for what a
+script measures. Any other anchored box is baked by the bridge, and only into a page that is drawn.
+That has two consequences:
 
 - A script measures such a box (`getBoundingClientRect`, `offsetTop`) where it would stand with no
   anchor, because the projection a geometry snapshot lays out has no bakes.
@@ -51,9 +50,8 @@ Widening the engine's subset closes both. Baking into geometry snapshots would c
 
 ## 3. Anchors in frames are not resolved
 
-A frame's top layer is stamped into the markup the frame is rendered from (with the pending HtmlBridge
-change). But nothing in a frame's document resolves `anchor()`, `position-area` or a popover's
-implicit anchor.
+A frame's top layer is stamped into the markup the frame is rendered from. But nothing in a frame's
+document resolves `anchor()`, `position-area` or a popover's implicit anchor.
 
 ## 4. `delete options[i]` answers true; option entries are read-only
 
@@ -69,7 +67,7 @@ After `select.selectedIndex = -1`, Chromium draws the select blank. The markup t
 renderer then marks no option `selected`, which is also what a select with nothing marked looks like,
 and that select has its first option selected. So the window's drop-down shows the first option. The
 page itself keeps no selection and hears no `change`, which the window test
-`A_Select_A_Script_Empties_Stays_Empty` pins (with the pending window change).
+`A_Select_A_Script_Empties_Stays_Empty` pins.
 
 The fix needs a way for the projection to say that no option is selected, and the window's
 `HtmlFormControlHost.ShownOption` to honour it.
@@ -77,17 +75,17 @@ The fix needs a way for the projection to say that no option is selected, and th
 ## 6. A document runs under one policy
 
 This gap is older than these rounds. `ScriptEngine` runs a document under its own `<meta>` policy when
-it declares one, and otherwise under the policy the host set (`Csp`). So a policy the host delivered
-is dropped when the document declares its own. That covers a header policy, and a `javascript:`
-document's inherited policy with the pending changes. Content Security Policy enforces every policy a
-document has. Frames already keep a set (`ContentSecurityPolicySet`); the page should keep one too.
+it declares one, and otherwise under the policy the host set (`Csp`). So a policy the host delivered is
+dropped when the document declares its own. That covers a header policy, and a `javascript:` document's
+inherited policy. Content Security Policy enforces every policy a document has. Frames already keep a
+set (`ContentSecurityPolicySet`); the page should keep one too.
 
 ## 7. Removing a frame that holds focus blurs nothing
 
-With Broiler.DOM #28's `DomDocument.Removing` and the pending HtmlBridge change, a focused element
-taken out of its document is blurred first, as Chromium does. `DomRemoval.Removes` does not look into
-a frame's document, though, so removing an `iframe` whose document holds focus moves no focus and fires
-nothing. Chromium's behaviour here has not been measured yet.
+With Broiler.DOM's `DomDocument.Removing`, a focused element taken out of its document is blurred
+first, as Chromium does. `DomRemoval.Removes` does not look into a frame's document, though, so
+removing an `iframe` whose document holds focus moves no focus and fires nothing. Chromium's behaviour
+here has not been measured yet.
 
 ## 8. A refused `eval` throws `Error`, not `EvalError`
 
@@ -98,17 +96,17 @@ take. The window's `javascript:` policy test asks only whether `eval` was refuse
 
 ## 9. The file button keeps the picked file's name
 
-With the pending window change, the window sends the submission the page encoded, so a file the page
-cleared from its input is not sent. But the window's hosted file button still names the file the user
-picked: `HtmlFormControlHost.DescribeFile` reads the window's own record, because the markup carries no
-files. The fix is for the session to report an input's file names, or for the label to follow the
-input's `value`.
+The window sends the submission the page encoded, so a file the page cleared from its input is not
+sent. But the window's hosted file button still names the file the user picked:
+`HtmlFormControlHost.DescribeFile` reads the window's own record, because the markup carries no files.
+The fix is for the session to report an input's file names, or for the label to follow the input's
+`value`.
 
 ## 10. After Stop, the window's record outranks the page again
 
-With the pending window change, the page's state outranks the window's record of the user's choices
-while the page's scripting session runs (`HtmlFormState.PageHoldsState`): the record steps aside, and
-the bridge reflects the page's state into the markup.
+The page's state outranks the window's record of the user's choices while the page's scripting session
+runs (`HtmlFormState.PageHoldsState`): the record steps aside, and the bridge reflects the page's state
+into the markup.
 
 Stop during loading ends that session. From then on the record outranks the markup again, so a
 submission the window builds can send a choice the page had already changed. The hosted controls

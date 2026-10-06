@@ -106,6 +106,22 @@ internal sealed class HtmlFormEditor
     public string Text => _edit.Text;
 
     /// <summary>
+    /// The hosted control's selection, in UTF-16 code units of its text: backward when the user marked
+    /// it towards the start, so its caret is at <c>Start</c>.
+    /// </summary>
+    public (int Start, int End, bool Backward) Selection =>
+        (_edit.SelectionStart, _edit.SelectionEnd, _edit.HasSelection && _edit.SelectionAnchor == _edit.SelectionEnd);
+
+    /// <summary>Selects the text between <paramref name="start"/> and <paramref name="end"/>, clamped to the text.</summary>
+    public void SetSelection(int start, int end)
+    {
+        int length = _edit.Text.Length;
+        start = Math.Clamp(start, 0, length);
+        end = Math.Clamp(end, start, length);
+        _edit.SetSelection(start, end - start);
+    }
+
+    /// <summary>
     /// Starts editing the form control under <paramref name="viewportPoint"/> (a point in the
     /// viewport's own coordinate space, as produced by the viewport's pointer handling).
     /// Returns <c>false</c> — leaving any in-progress edit untouched — when the point is not
@@ -185,6 +201,22 @@ internal sealed class HtmlFormEditor
 
     /// <summary>Stops editing and discards the typed text.</summary>
     public void Cancel() => Reset();
+
+    /// <summary>Whether the field being edited is the one at <paramref name="documentPoint"/>, a point in document coordinates.</summary>
+    public bool Covers(PointF documentPoint) => IsActive && _documentRect.Contains(documentPoint);
+
+    /// <summary>
+    /// Puts <paramref name="text"/> back in the hosted control, the caret at its end: what the field
+    /// held before a change the page cancelled.
+    /// </summary>
+    public void SetText(string text)
+    {
+        if (!IsActive)
+            return;
+
+        _edit.Text = text;
+        _edit.SetSelection(text.Length, 0);
+    }
 
     /// <summary>
     /// Places the hosted control over its field for the current viewport transform.

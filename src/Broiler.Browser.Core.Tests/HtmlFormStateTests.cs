@@ -91,7 +91,7 @@ public class HtmlFormStateTests
     }
 
     [Fact(Timeout = 600000)]
-    public void PressingEnterInAFieldSubmitsItsFormWithoutAButton()
+    public void PressingEnterInAFieldSubmitsItsFormAsItsDefaultButton()
     {
         using HtmlContainer container = LayOut(SearchPage);
         HtmlFormState state = new();
@@ -99,8 +99,9 @@ public class HtmlFormStateTests
         PageRequest? target = state.TryBuildFieldSubmitRequest(
             container.GetHtml(), "q", "q", "https://example.com/");
 
-        // No submitter, so btnG does not contribute; the relative action resolves.
-        Assert.Equal("https://example.com/search?q=broiler&src=hp", target?.Url);
+        // Enter clicks the default button, which submits as itself: btnG contributes, as it does in
+        // Chromium (measured: ?q=broiler&src=hp&btnG=Search); the relative action resolves.
+        Assert.Equal("https://example.com/search?q=broiler&src=hp&btnG=Search", target?.Url);
     }
 
     [Fact(Timeout = 600000)]

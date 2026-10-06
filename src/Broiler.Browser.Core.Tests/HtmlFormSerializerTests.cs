@@ -252,6 +252,20 @@ public class HtmlFormSerializerTests
         Assert.Equal("s=a", HtmlFormSerializer.BuildFormData(form));
     }
 
+    /// <summary>
+    /// A single select whose markup marks two options submits the last, which the page's select is on (HTML's
+    /// selectedness setting algorithm; measured in Chromium). It submitted the first.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void SingleSelectWithTwoMarkedSubmitsTheLast()
+    {
+        DomElement form = Form(
+            "<form><select name='s'><option value='x'>X</option><option value='y' selected>Y</option>" +
+            "<option value='z' selected>Z</option></select></form>");
+
+        Assert.Equal("s=z", HtmlFormSerializer.BuildFormData(form));
+    }
+
     [Fact(Timeout = 600000)]
     public void MultiSelectSubmitsEverySelectedOption()
     {
