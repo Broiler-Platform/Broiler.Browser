@@ -69,15 +69,32 @@ public class FormSubmitNavigationTests
     }
 
     [Fact]
-    public void PreventDefaultOnTheSubmitListenerStopsIt()
+    public void SubmitFiresNoSubmitEventSoNoListenerStopsIt()
     {
-        // The default action used to be nothing, which made preventDefault() a no-op cancelling a
-        // no-op. It is now the difference between the form going and staying.
+        // As in a browser: submit() fires no submit event, so a listener that cancels the form's
+        // submit -- the "check first" listener a page later sends the form past with submit() --
+        // does not hold it back. It fired one of its own, which did.
         const string html = "<html><body><form id=\"f\" action=\"/go\"><input name=\"q\"></form></body></html>";
         const string script = """
             var f = document.getElementById('f');
             f.addEventListener('submit', function (e) { e.preventDefault(); });
             f.submit();
+            """;
+
+        var pending = PendingAfter(html, script);
+        Assert.Equal(NavigationKind.FormSubmit, pending?.Kind);
+        Assert.Equal("https://example.test/go", pending!.Url);
+    }
+
+    [Fact]
+    public void PreventDefaultOnTheSubmitListenerStopsARequestedSubmission()
+    {
+        // requestSubmit() is the submission that fires submit, and its cancelling listener stops it.
+        const string html = "<html><body><form id=\"f\" action=\"/go\"><input name=\"q\"></form></body></html>";
+        const string script = """
+            var f = document.getElementById('f');
+            f.addEventListener('submit', function (e) { e.preventDefault(); });
+            f.requestSubmit();
             """;
 
         Assert.Null(PendingAfter(html, script));

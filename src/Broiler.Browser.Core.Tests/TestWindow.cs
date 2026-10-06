@@ -107,6 +107,17 @@ internal sealed class TestWindow : IDisposable
     public string Describe() =>
         string.Join("; ", Texts().Where(static t => t.Text.Contains("marker", StringComparison.Ordinal)).Select(static t => $"{t.Text}@{t.At.Y:0}"));
 
+    /// <summary>Moves the pointer to (<paramref name="x"/>, <paramref name="y"/>) in the window, with no button held.</summary>
+    public void Move(double x, double y) =>
+        _app.Dispatch(UiInputEvent.FromMouseMove(new MouseMoveEvent(
+            new InputEventHeader(
+                InputDeviceId.FromOpaqueValue("test-pointer"),
+                new InputTimestamp(++_sequence, TimeSpan.TicksPerSecond, "test"),
+                _sequence),
+            InputPoint.ClientDeviceIndependentPixels(x, y),
+            MouseButtons.None,
+            InputEventSource.Synthetic)));
+
     public void Click(double x, double y)
     {
         _app.Dispatch(Button(x, y, MouseButtons.Left, MouseButtonTransition.Down));

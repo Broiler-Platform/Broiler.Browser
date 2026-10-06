@@ -71,19 +71,24 @@ touch the DOM — read what it is handed and return.
 
 ## After the settle
 
-If `HasWorkDueInLoadWindow` is false once the settle returns, the session is disposed rather
-than carried forward. A page whose only remaining work is an interval's later ticks is finished
-loading, and handing the viewport a live JavaScript context it is never going to step is a leak
-dressed up as a feature.
+The session goes to the viewport whether or not work is still due: it is the page's scripts, and
+what the user does to the page is delivered to them through it (`HandlePointerButton` →
+`InteractiveSession.DispatchPointer`). It used to be disposed when `HasWorkDueInLoadWindow` was
+false once the settle returned, on the reasoning that a page whose only remaining work is an
+interval's later ticks is finished loading and a context nobody steps is a leak. It is finished
+loading, but it is not finished: a click handler, a checkbox drawn by script, reCAPTCHA's widget
+— none of them answered, because nothing was left to deliver a click to.
 
-If work *is* still due, the session goes to the viewport and `StepAnimation` runs it one batch
-per tick. That path re-parses only when a step actually changed the document:
+What keeps that from costing anything is the same bounded question. `StepAnimation` runs only
+while work is due — in the load window, or within the same span after the user's last click,
+which `DispatchPointer` opens — one batch per tick. That path re-parses only when a step actually
+changed the document:
 
 > A callback batch that touched no DOM — a timer that only reads, schedules, or measures —
 > still returns the serialised document, and `google.com` runs many of those.
 
 Re-parsing costs a full parse and layout, so it is compared against the last applied HTML first.
-When the bounded question finally goes false, `StepAnimation` stops the session itself.
+When the bounded question goes false, the tick stops; the session stays until the page is left.
 
 ## The shape of the bug, if it comes back
 

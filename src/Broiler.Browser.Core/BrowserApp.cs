@@ -33,7 +33,7 @@ using Broiler.HTML.Image;
 
 namespace Broiler.Browser;
 
-internal sealed class BrowserApp : IDisposable
+internal sealed partial class BrowserApp : IDisposable
 {
     private const double AnimationIntervalMs = 16;
 
@@ -257,6 +257,32 @@ internal sealed class BrowserApp : IDisposable
 
         if (_session.DispatchInput(input))
             _host.RequestInvalidate();
+
+        // A move is page input too: a hover handler can start a timer, or navigate.
+        if (input.Kind is UiInputEventKind.PointerButton or UiInputEventKind.PointerMove)
+            AfterPageInput();
+    }
+
+    /// <summary>
+    /// What a page's scripts asked for when the user clicked it: a navigation -- a click handler
+    /// setting <c>location.href</c>, or submitting a form -- or work to step, a spinner turning or a
+    /// request's answer arriving, which the animation tick steps as it steps a page loading.
+    /// </summary>
+    private void AfterPageInput()
+    {
+        if (_isShuttingDown)
+            return;
+
+        if (_viewport.TakePendingNavigation() is { } requested
+            && !(requested.IsRepeatable
+                && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
+        {
+            NavigateTo(requested);
+            return;
+        }
+
+        if (_viewport.HasPendingWork)
+            _setAnimationActive(true);
     }
 
     public void Invalidate() => _host.RequestInvalidate();
@@ -835,11 +861,17 @@ internal sealed class BrowserApp : IDisposable
     /// Wraps each layout view the bridge makes — <c>--analyze</c> times the layouts a script's geometry
     /// questions cause — or null for the view as it is.
     /// </param>
+    /// <param name="viewport">
+    /// The size the window shows the page at, asked as each document's bridge is made, or null for the
+    /// bridge's default. The window passes its page area, so the page's scripts measure the page on
+    /// screen and a click is hit-tested against the layout the user sees.
+    /// </param>
     internal static DomBridgeSessionOptions BridgeOptions(
         IBrowserRequestTransport network,
         IDocumentCookieAccess cookies,
         Func<Uri, DocumentRequestContext> documents,
-        Func<Broiler.Layout.ILayoutView, Broiler.Layout.ILayoutView>? wrapLayoutView = null) =>
+        Func<Broiler.Layout.ILayoutView, Broiler.Layout.ILayoutView>? wrapLayoutView = null,
+        Func<Size?>? viewport = null) =>
         new()
         {
             Network = network,
@@ -848,6 +880,7 @@ internal sealed class BrowserApp : IDisposable
             LayoutViewFactory = wrapLayoutView is null
                 ? () => new HeadlessLayoutView(network, documents)
                 : () => wrapLayoutView(new HeadlessLayoutView(network, documents)),
+            Viewport = viewport,
         };
 
     private static async Task<NavigationLoadResult> LoadUrlOnWorkerAsync(
@@ -868,7 +901,8 @@ internal sealed class BrowserApp : IDisposable
 
         using var pipeline = new RenderingPipeline(
             new PageLoader(network),
-            NewScriptEngine(new DomBridgeFactory(BridgeOptions(network, profile.DocumentCookies, DocumentFor))),
+            NewScriptEngine(new DomBridgeFactory(BridgeOptions(
+                network, profile.DocumentCookies, DocumentFor, viewport: () => ViewportOf(progress)))),
             network);
 
         // Keyed by everything ahead of the query, because that is what separates a chain moving on
@@ -903,10 +937,11 @@ internal sealed class BrowserApp : IDisposable
             NavigationRequest? pending = MetaRefreshDiscovery.Find(content.Html, normalisedUrl, document);
 
             string html = PrepareForBrowsing(content.Html);
+            string? documentHtml = null;
             InteractiveSession? session = null;
             try
             {
-                session = pipeline.ExecuteScriptsInteractive(content);
+                session = pipeline.ExecuteScriptsInteractive(WithRealmForInlineHandlers(content));
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (session is not null)
@@ -926,7 +961,10 @@ internal sealed class BrowserApp : IDisposable
                         serialize => progress.PublishFrame(serialize, normalisedUrl, document),
                         cancellationToken);
                     if (!string.IsNullOrWhiteSpace(initial))
+                    {
                         html = PrepareForBrowsing(initial);
+                        documentHtml = initial;
+                    }
 
                     // After the settle, because the script that decides to leave usually runs on a
                     // timer rather than inline — asking before it would miss exactly the pages that
@@ -942,14 +980,11 @@ internal sealed class BrowserApp : IDisposable
                     // the refusal undone by the code that was supposed to catch what came after it.
                     pending = session.TakePendingNavigation() ?? pending;
 
-                    // Same bounded question the viewport pumps on: a page whose only remaining work is
-                    // an interval's later ticks is finished loading, and carrying its session forward
-                    // would hand the viewport a live JS context it is never going to step.
-                    if (!session.HasWorkDueInLoadWindow)
-                    {
-                        session.Dispose();
-                        session = null;
-                    }
+                    // The session is carried forward whether or not work is left in the load window: it
+                    // is the page's scripts, and what the user does to the page -- a click -- is
+                    // delivered to them through it. A page whose only remaining work is an interval's
+                    // later ticks is still finished loading; the viewport steps only what is due
+                    // (HasWorkDueInLoadWindow), and from then on only what a click makes due.
                 }
 
                 // The next hop is this document's navigation: the bridge names the document whose
@@ -976,6 +1011,7 @@ internal sealed class BrowserApp : IDisposable
                     normalisedUrl,
                     container,
                     session,
+                    documentHtml,
                     hop > 0,
                     request.ForLoadedDocument(page.Response));
             }
@@ -986,6 +1022,29 @@ internal sealed class BrowserApp : IDisposable
             }
         }
     }
+
+    /// <summary>The window's page area as whole CSS pixels, or null before the window has one.</summary>
+    private static Size? ViewportOf(LoadProgress progress) =>
+        progress.Viewport is { Width: >= 1, Height: >= 1 } area
+            ? new Size((int)Math.Round(area.Width), (int)Math.Round(area.Height))
+            : null;
+
+    /// <summary>
+    /// <paramref name="content"/>, given a realm when it has no scripts of its own but still has script
+    /// to run: the event handler attributes the user's input fires -- an <c>onclick</c>, an
+    /// <c>onmouseenter</c>, an <c>onfocus</c> -- or frames, whose own scripts run only in a page that
+    /// has one. Without a session nothing the user does reaches either.
+    /// </summary>
+    internal static Broiler.HtmlBridge.Scripting.PageContent WithRealmForInlineHandlers(Broiler.HtmlBridge.Scripting.PageContent content) =>
+        content.Scripts.Count == 0 && content.DeferredScripts.Count == 0 && content.ModuleRoots.Count == 0 &&
+        ScriptWithoutScripts().IsMatch(content.Html)
+            ? new Broiler.HtmlBridge.Scripting.PageContent(content.Html, [string.Empty], content.Url, [], [])
+            : content;
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"<[^>]*\son(?:click|dblclick|auxclick|contextmenu|mouse[a-z]+|pointer[a-z]+|focus(?:in|out)?|blur|change|input)\s*=|<i?frame[\s>]",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex ScriptWithoutScripts();
 
     /// <summary>
     /// Whether a document's navigation request should be followed.
@@ -1396,7 +1455,7 @@ internal sealed class BrowserApp : IDisposable
         }
 
         SetUrlText(result.NormalisedUrl);
-        _viewport.ReplacePage(result.TakeContainer(), result.TakeSession(), result.NormalisedUrl);
+        _viewport.ReplacePage(result.TakeContainer(), result.TakeSession(), result.NormalisedUrl, result.DocumentHtml);
 
         // HTML §7.4.6.4: a page navigated to with a fragment opens scrolled to it. The request the
         // navigation started with carries the fragment when the loaded URL lost it on the way.
@@ -1665,6 +1724,7 @@ internal sealed class BrowserApp : IDisposable
             string normalisedUrl,
             HtmlContainer? container,
             InteractiveSession? session,
+            string? documentHtml,
             bool followedNavigation,
             PageRequest? historyEntry,
             Exception? error)
@@ -1672,10 +1732,17 @@ internal sealed class BrowserApp : IDisposable
             NormalisedUrl = normalisedUrl;
             _container = container;
             _session = session;
+            DocumentHtml = documentHtml;
             FollowedNavigation = followedNavigation;
             HistoryEntry = historyEntry;
             Error = error;
         }
+
+        /// <summary>
+        /// The document the container shows, as the session serialised it, or null when the page has no
+        /// session: what the viewport compares the session's document with before it parses it again.
+        /// </summary>
+        public string? DocumentHtml { get; }
 
         /// <summary>The URL the document was served from, after every redirect and followed navigation.</summary>
         public string NormalisedUrl { get; }
@@ -1699,12 +1766,13 @@ internal sealed class BrowserApp : IDisposable
             string normalisedUrl,
             HtmlContainer container,
             InteractiveSession? session,
+            string? documentHtml,
             bool followedNavigation,
             PageRequest historyEntry) =>
-            new(normalisedUrl, container, session, followedNavigation, historyEntry, null);
+            new(normalisedUrl, container, session, documentHtml, followedNavigation, historyEntry, null);
 
         public static NavigationLoadResult FromError(Exception error) =>
-            new(string.Empty, null, null, false, null, error);
+            new(string.Empty, null, null, null, false, null, error);
 
         public HtmlContainer TakeContainer()
         {
@@ -1983,6 +2051,27 @@ internal sealed class BrowserApp : IDisposable
                 CreateContentContainer(html, baseUrl, network, document, viewport: viewport));
         private InteractiveSession? _interactiveSession;
         private string? _lastAppliedHtml;
+
+        // The session's RenderVersion when the document on screen was taken from it: a move shows the
+        // page again only when the page has changed since.
+        private long _appliedRenderVersion;
+
+        // A run of presses at one place: when the last one was, where, and how many there have been, so
+        // a page is told which press of a double click this is.
+        private long _lastPressTicks;
+        private PointF _lastPressPoint;
+        private int _clickCount;
+
+        // The buttons held, as MouseEvent.buttons' mask, and where the pointer last moved: a move to the
+        // same place is not news to the page.
+        private int _heldButtons;
+        private PointF? _lastMovePoint;
+
+        /// <summary>A press is part of a double click within this long of the last, as Windows' default.</summary>
+        private const int DoubleClickMilliseconds = 500;
+
+        /// <summary>... and this close to it, in CSS pixels.</summary>
+        private const float DoubleClickDistance = 4;
         private bool _layoutDirty = true;
         private bool _renderDirty = true;
         private bool _suppressNavigation;
@@ -2076,7 +2165,11 @@ internal sealed class BrowserApp : IDisposable
         // hang while the CLI (which asks the bounded question) rendered it.
         public bool HasPendingWork => _interactiveSession?.HasWorkDueInLoadWindow == true;
 
-        public void ReplacePage(HtmlContainer container, InteractiveSession? interactiveSession, string baseUrl)
+        /// <param name="documentHtml">
+        /// The document <paramref name="container"/> was parsed from, as <paramref name="interactiveSession"/>
+        /// serialised it -- so the page is not parsed again until its scripts change it -- or null.
+        /// </param>
+        public void ReplacePage(HtmlContainer container, InteractiveSession? interactiveSession, string baseUrl, string? documentHtml = null)
         {
             ArgumentNullException.ThrowIfNull(container);
             StopSession();
@@ -2092,7 +2185,8 @@ internal sealed class BrowserApp : IDisposable
             _container = container;
             _container.LinkClicked += OnLinkClicked;
             _interactiveSession = interactiveSession;
-            _lastAppliedHtml = null;
+            _lastAppliedHtml = documentHtml;
+            _appliedRenderVersion = interactiveSession?.RenderVersion ?? 0;
             BaseUrl = baseUrl ?? string.Empty;
             _scrollY = 0;
             _pendingFragment = null;
@@ -2106,31 +2200,41 @@ internal sealed class BrowserApp : IDisposable
                 return false;
 
             string? html = _interactiveSession.Step();
+            ApplyPageDocument(html);
 
-            // Re-parsing costs a full parse and layout of the document, so it is worth paying only
-            // when the step actually changed it. A callback batch that touched no DOM — a timer
-            // that only reads, schedules, or measures — still returns the serialised document, and
-            // google.com runs many of those.
-            if (!string.IsNullOrWhiteSpace(html) && !string.Equals(html, _lastAppliedHtml, StringComparison.Ordinal))
+            // The session stays when nothing is left to step: the page's scripts live on in it, for
+            // the next thing the user does to the page.
+            return html is not null;
+        }
+
+        /// <summary>
+        /// Shows <paramref name="html"/>, the page's document as its scripts left it, when it differs
+        /// from what is on screen.
+        /// </summary>
+        /// <remarks>
+        /// Re-parsing costs a full parse and layout of the document, so it is worth paying only when
+        /// the scripts actually changed it. A callback batch that touched no DOM — a timer that only
+        /// reads, schedules, or measures — still returns the serialised document, and google.com runs
+        /// many of those.
+        /// </remarks>
+        private void ApplyPageDocument(string? html)
+        {
+            _appliedRenderVersion = _interactiveSession?.RenderVersion ?? 0;
+            if (string.IsNullOrWhiteSpace(html) || string.Equals(html, _lastAppliedHtml, StringComparison.Ordinal))
+                return;
+
+            _lastAppliedHtml = html;
+            _suppressNavigation = true;
+            try
             {
-                _lastAppliedHtml = html;
-                _suppressNavigation = true;
-                try
-                {
-                    _container.SetHtmlWithStyleSet(PrepareForBrowsing(html), baseUrl: BaseUrl);
-                }
-                finally
-                {
-                    _suppressNavigation = false;
-                }
-
-                MarkLayoutDirty();
+                _container.SetHtmlWithStyleSet(PrepareForBrowsing(html), baseUrl: BaseUrl);
+            }
+            finally
+            {
+                _suppressNavigation = false;
             }
 
-            if (!_interactiveSession.HasWorkDueInLoadWindow)
-                StopSession();
-
-            return html is not null;
+            MarkLayoutDirty();
         }
 
         /// <summary>
@@ -2332,7 +2436,14 @@ internal sealed class BrowserApp : IDisposable
                 _layoutDirty = false;
                 _renderDirty = true;
                 if (viewportSize != _lastLayoutSize)
+                {
                     Volatile.Write(ref _pageArea, new PageArea(viewportWidth, viewportHeight));
+
+                    // The page's scripts, and the hit test of the user's next click, measure the page
+                    // at the size it is shown at.
+                    _interactiveSession?.SetViewport((int)Math.Round(viewportWidth), (int)Math.Round(viewportHeight));
+                }
+
                 _lastLayoutSize = viewportSize;
             }
 
@@ -2355,6 +2466,22 @@ internal sealed class BrowserApp : IDisposable
             return _renderList.RenderList;
         }
 
+        /// <remarks>
+        /// <para>
+        /// <b>The page's scripts hear it first.</b> A press and a release are delivered to them as a
+        /// browser delivers them (<see cref="InteractiveSession.DispatchPointer"/>): hit-tested against
+        /// the page's layout, into a frame where the pointer is over one, and fired as trusted pointer,
+        /// mouse and click events. Nothing the user did reached a page's scripts before: the window
+        /// selected text and followed links itself, so a button with a click listener -- reCAPTCHA's
+        /// checkbox, a <c>span</c> in a frame -- did nothing at all.
+        /// </para>
+        /// <para>
+        /// <b>Then the window does what it does by default, unless the page cancelled it:</b> no text
+        /// selection for a cancelled press, no link followed for a cancelled click. The document the
+        /// scripts changed is shown after that, so the window's own handling of the release sees the
+        /// document the press was on.
+        /// </para>
+        /// </remarks>
         private bool HandlePointerButton(UiInputEvent input)
         {
             PointF point = ToLocalPoint(input.Position);
@@ -2363,26 +2490,118 @@ internal sealed class BrowserApp : IDisposable
 
             if (input.MouseButtonTransition == MouseButtonTransition.Down)
             {
-                // A click on a text field starts editing instead of a text selection.
-                if (left && BeginFormEdit(point))
+                // The page hears the press first, a press on a text field included -- it sees the field
+                // focused -- and a press it cancels neither edits a field nor starts a selection.
+                _heldButtons |= ButtonMask(input.MouseButton);
+                bool cancelled = DeliverPointer(input, point, PointerInputKind.Down);
+
+                // A click on a text field starts editing instead of a text selection. Its release goes to
+                // the field's editor rather than here, so the press ends now, and what the page did with
+                // it -- a focus listener's changes -- is shown now.
+                if (left && !cancelled && BeginFormEdit(point))
+                {
+                    _heldButtons &= ~ButtonMask(input.MouseButton);
+                    ApplyPageDocument(_interactiveSession?.CurrentHtml());
+                    InvalidateRenderedContent();
                     return true;
+                }
 
                 _formEditor.Commit();
                 Session?.SetFocus(this);
-                _container.HandleMouseDown(point, left, right);
+                if (!cancelled)
+                    _container.HandleMouseDown(point, left, right);
+
+                // What the press changed is shown at the release: parsing the page again now would
+                // lose the press the container is holding, and with it the link the release follows.
                 InvalidateRenderedContent();
                 return true;
             }
 
             if (input.MouseButtonTransition == MouseButtonTransition.Up)
             {
-                _container.HandleMouseUp(point, left, right);
+                _heldButtons &= ~ButtonMask(input.MouseButton);
+                bool cancelled = DeliverPointer(input, point, PointerInputKind.Up);
+
+                // The release still ends a text selection; a click the page cancelled follows no link.
+                _suppressNavigation = cancelled;
+                try
+                {
+                    _container.HandleMouseUp(point, left, right);
+                }
+                finally
+                {
+                    _suppressNavigation = false;
+                }
+
+                ApplyPageDocument(_interactiveSession?.CurrentHtml());
                 InvalidateRenderedContent();
                 return true;
             }
 
             return false;
         }
+
+        /// <summary>
+        /// Delivers a press, a release or a move at <paramref name="point"/> to the page's scripts, if it
+        /// has any. Answers whether they cancelled what it does by default.
+        /// </summary>
+        private bool DeliverPointer(UiInputEvent input, PointF point, PointerInputKind kind)
+        {
+            if (_interactiveSession is not { } session)
+                return false;
+
+            int button = input.MouseButton switch
+            {
+                MouseButton.Right => 2,
+                MouseButton.Middle => 1,
+                _ => 0,
+            };
+
+            if (kind == PointerInputKind.Down)
+            {
+                long now = Environment.TickCount64;
+                bool again = _clickCount > 0
+                    && now - _lastPressTicks <= DoubleClickMilliseconds
+                    && Math.Abs(point.X - _lastPressPoint.X) <= DoubleClickDistance
+                    && Math.Abs(point.Y - _lastPressPoint.Y) <= DoubleClickDistance;
+                _clickCount = again ? _clickCount + 1 : 1;
+                _lastPressTicks = now;
+                _lastPressPoint = point;
+            }
+
+            // Page coordinates: the point in the viewport, in CSS pixels, plus how far the page is scrolled.
+            float scrollY = _scrollY / _viewportZoom;
+            KeyboardModifierState modifiers = input.KeyModifiers;
+            try
+            {
+                PointerInputResult result = session.DispatchPointer(new PointerInput(kind, point.X, point.Y + scrollY)
+                {
+                    ScrollY = scrollY,
+                    Button = button,
+                    Buttons = _heldButtons,
+                    ClickCount = Math.Max(1, _clickCount),
+                    CtrlKey = modifiers.HasFlag(KeyboardModifierState.Control),
+                    ShiftKey = modifiers.HasFlag(KeyboardModifierState.Shift),
+                    AltKey = modifiers.HasFlag(KeyboardModifierState.Alt),
+                    MetaKey = modifiers.HasFlag(KeyboardModifierState.LeftWindows) || modifiers.HasFlag(KeyboardModifierState.RightWindows),
+                });
+                return result.DefaultPrevented;
+            }
+            catch (Exception ex)
+            {
+                // A page whose scripts fail on a click must not cost the user the window's own handling of it.
+                RenderLogger.LogWarning(LogCategory.JavaScript, "Browser.input", $"Delivering pointer input to the page failed: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        /// <summary>A button as <c>MouseEvent.buttons</c>' bit: 1 the main one, 2 the secondary, 4 the middle.</summary>
+        private static int ButtonMask(MouseButton button) => button switch
+        {
+            MouseButton.Right => 2,
+            MouseButton.Middle => 4,
+            _ => 1,
+        };
 
         private bool BeginFormEdit(PointF viewportPoint)
         {
@@ -2395,9 +2614,26 @@ internal sealed class BrowserApp : IDisposable
             return true;
         }
 
+        /// <remarks>
+        /// The page's scripts hear a move first: the boundary events of what the pointer left and
+        /// reached, then <c>pointermove</c> and <c>mousemove</c>. What the page changed since the window
+        /// last showed it -- in those handlers, or in a press's that began editing a field -- is shown
+        /// straight away, unless a button is held, since parsing the page again during a press loses
+        /// the press the container is holding (see <see cref="HandlePointerButton"/>). The page is asked
+        /// whether anything changed rather than serialized after every move.
+        /// </remarks>
         private bool HandlePointerMove(UiInputEvent input)
         {
-            _container.HandleMouseMove(ToLocalPoint(input.Position), false, false);
+            PointF point = ToLocalPoint(input.Position);
+            if (_interactiveSession is { } session && _lastMovePoint != point)
+            {
+                _lastMovePoint = point;
+                DeliverPointer(input, point, PointerInputKind.Move);
+                if (_heldButtons == 0 && session.RenderVersion != _appliedRenderVersion)
+                    ApplyPageDocument(session.CurrentHtml());
+            }
+
+            _container.HandleMouseMove(point, false, false);
             InvalidateRenderedContent();
             return true;
         }
