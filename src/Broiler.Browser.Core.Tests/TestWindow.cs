@@ -67,6 +67,15 @@ internal sealed class TestWindow : IDisposable
     /// <summary>Where the page is drawn in the window.</summary>
     public BRect PageArea => _app.PageArea;
 
+    /// <summary>The controls the window draws over the page's own.</summary>
+    public IReadOnlyList<UiElement> HostedControls => _app.HostedControls;
+
+    /// <summary>Answers the window's file dialog in its place: the path chosen, or null for a cancelled one.</summary>
+    public Func<HtmlFilePickEventArgs, string?>? ChooseFile
+    {
+        set => _app.ChooseFile = value;
+    }
+
     /// <summary>The address the window shows.</summary>
     public string Address => _app.AddressText;
 

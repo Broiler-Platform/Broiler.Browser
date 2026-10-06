@@ -159,8 +159,17 @@ user has left it wrong.
   replays on the entry list it builds from the serialised document. Enter submits as the form's default
   button, as in Chromium. A `method="dialog"` form closes its dialog and loads nothing. A frame's form
   that targets the page arrives with no form index and the URL the bridge built from its entries, and
-  is loaded as it is. A choice in a select the window draws for the page's (`HtmlFormControlHost`) is
-  the page's select's too (`SelectOptionByUser`), with its `input` and `change`.
+  is loaded as it is -- a `post` with the body the bridge encoded (`NavigationRequest.Body`). A choice in
+  a select the window draws for the page's (`HtmlFormControlHost`) is the page's select's too
+  (`SelectOptionByUser`), with its `input` and `change` -- every option chosen in a multiple select's
+  list (`SelectOptionsByUser`). A file chosen in the window's picker is the page's input's
+  (`SetFilesByUser`: its name, the type its extension gives, its time and its bytes), with `input` and
+  `change`, and a picker closed without one is its `cancel`; the window still reads the files from the
+  disk for its own submission.
+- **Only a link or a form's button goes anywhere.** A click the renderer reports on a button that
+  submits no form -- one in no form, a reset or a plain button -- is the page's alone: the renderer
+  resolves such a button to the page's own URL, and following that loaded the page again under every
+  click on a page's script-driven buttons.
 - **Scrolling is shared.** The window follows the page's own scroll -- `scrollTo`, `scrollIntoView`, a
   script's fragment navigation (`ViewportScroll`) -- and tells the page where the user scrolled
   (`ScrollViewportTo`), so its `scrollY` and its geometry answer for what is on screen. The page hears

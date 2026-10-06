@@ -262,6 +262,9 @@ internal sealed partial class BrowserApp : IDisposable
     /// <summary>Where the window draws the page, in window coordinates.</summary>
     internal BRect PageArea => _viewport.Bounds;
 
+    /// <summary>The controls the window draws over the page's selects, check boxes, radio buttons and file inputs.</summary>
+    internal IReadOnlyList<UiElement> HostedControls => _viewport.HostedControls;
+
     /// <summary>The address the window shows.</summary>
     internal string AddressText => _address.Text;
 
@@ -1345,9 +1348,12 @@ internal sealed partial class BrowserApp : IDisposable
         PageRequest? request;
         if (navigation.Kind != NavigationKind.FormSubmit || navigation.FormIndex < 0)
         {
-            // A javascript: URL's string is the document itself; a frame's form the bridge encoded is a
-            // GET of the URL it built, its entries in it (DomBridge/FrameSubmission.cs).
-            request = PageRequest.ForUrl(navigation.Url) with { InlineDocument = navigation.Document };
+            // A javascript: URL's string is the document itself; a frame's form the bridge encoded is a request
+            // for the URL it built -- a GET with its entries in it, or a POST of the body it encoded
+            // (DomBridge/FrameSubmission.cs).
+            request = navigation.Body is { } body
+                ? new PageRequest(navigation.Url, PageRequest.Post, navigation.BodyContentType) { BinaryBody = body }
+                : PageRequest.ForUrl(navigation.Url) with { InlineDocument = navigation.Document };
         }
         else
         {
@@ -1703,6 +1709,12 @@ internal sealed partial class BrowserApp : IDisposable
         if (_isShuttingDown)
             return;
 
+        if (ChooseFile is { } choose)
+        {
+            CompleteFilePick(e, choose(e));
+            return;
+        }
+
         StandardFileDialog dialog = new()
         {
             Mode = UiFileDialogMode.Open,
@@ -1713,13 +1725,10 @@ internal sealed partial class BrowserApp : IDisposable
 
         dialog.ResultCompleted += (_, result) =>
         {
-            if (result.Result.Kind == UiDialogResultKind.Accepted &&
-                !string.IsNullOrWhiteSpace(result.Result.Value))
-            {
-                _viewport.RecordPickedFile(e.ControlId, e.ControlName, result.Result.Value, e.AllowsMultiple);
-            }
-
-            _host.RequestInvalidate();
+            CompleteFilePick(e, result.Result.Kind == UiDialogResultKind.Accepted &&
+                                !string.IsNullOrWhiteSpace(result.Result.Value)
+                ? result.Result.Value
+                : null);
         };
 
         dialog.ShowOpenModal(_rootWindow, GetDialogPlacement(FileDialogPreferredSize));
@@ -1727,6 +1736,27 @@ internal sealed partial class BrowserApp : IDisposable
     }
 
     private static readonly BSize FileDialogPreferredSize = new(560, 380);
+
+    /// <summary>
+    /// What the file dialog answered for <paramref name="pick"/>: the path chosen, which the window records for
+    /// its submission and the page's input takes with its events; or null for a dialog closed without one,
+    /// which the page's input hears as <c>cancel</c>.
+    /// </summary>
+    private void CompleteFilePick(HtmlFilePickEventArgs pick, string? path)
+    {
+        if (path is null)
+            _viewport.CancelFilePick(pick.FileInputIndex);
+        else
+            _viewport.RecordPickedFile(pick.ControlId, pick.ControlName, path, pick.AllowsMultiple, pick.FileInputIndex);
+
+        _host.RequestInvalidate();
+    }
+
+    /// <summary>
+    /// Stands in for the file dialog when set: answers the path chosen for a pick, or null for one the user
+    /// cancelled. The shell's own dialog when unset, as it always is outside a test.
+    /// </summary>
+    internal Func<HtmlFilePickEventArgs, string?>? ChooseFile { get; set; }
 
     private BRect GetDialogPlacement(BSize preferred)
     {
@@ -2341,15 +2371,24 @@ internal sealed partial class BrowserApp : IDisposable
             _controlHost.Changed += (_, _) => Invalidate(UiInvalidationKind.Render);
             _controlHost.FilePickRequested += (_, e) => FilePickRequested?.Invoke(this, e);
 
-            // The user's choice in a hosted select is the page's select's too, with its input and change.
+            // The user's choice in a hosted select is the page's select's too, with its input and change: the
+            // option of a drop-down, every option of a multiple select's list.
             _controlHost.OptionChosen += (_, e) =>
             {
                 if (_interactiveSession is { } page && page.SelectOptionByUser(e.SelectIndex, e.OptionIndex))
                     ShowPageIfChanged();
             };
+            _controlHost.OptionsChosen += (_, e) =>
+            {
+                if (_interactiveSession is { } page && page.SelectOptionsByUser(e.SelectIndex, e.OptionIndexes))
+                    ShowPageIfChanged();
+            };
         }
 
         public event EventHandler<BrowserLinkEventArgs>? LinkActivated;
+
+        /// <summary>The controls drawn over the page's own.</summary>
+        internal IReadOnlyList<UiElement> HostedControls => _controlHost.Controls;
 
         /// <summary>Raised when a hosted file control was activated; the shell shows the dialog.</summary>
         public event EventHandler<HtmlFilePickEventArgs>? FilePickRequested;
@@ -2357,9 +2396,10 @@ internal sealed partial class BrowserApp : IDisposable
         /// <summary>
         /// Records the file the shell's dialog returned and refreshes the control. A
         /// <c>multiple</c> input accumulates, so picking again adds to its selection
-        /// instead of replacing it — the dialog chooses one file at a time.
+        /// instead of replacing it — the dialog chooses one file at a time. The page's input
+        /// <paramref name="fileInputIndex"/> takes what the control holds now, with its input and change.
         /// </summary>
-        public void RecordPickedFile(string controlId, string controlName, string path, bool allowsMultiple)
+        public void RecordPickedFile(string controlId, string controlName, string path, bool allowsMultiple, int fileInputIndex = -1)
         {
             if (allowsMultiple)
                 _formState.AddSelectedFile(controlId, controlName, path);
@@ -2367,6 +2407,26 @@ internal sealed partial class BrowserApp : IDisposable
                 _formState.SetSelectedFile(controlId, controlName, path);
 
             _controlHost.RefreshFileLabels();
+
+            if (_interactiveSession is { } page && fileInputIndex >= 0)
+            {
+                List<ChosenFile> files = [];
+                foreach (string chosen in _formState.GetSelectedFiles(controlId, controlName))
+                {
+                    if (PageFiles.Read(chosen) is { } file)
+                        files.Add(file);
+                }
+
+                if (page.SetFilesByUser(fileInputIndex, files))
+                    ShowPageIfChanged();
+            }
+        }
+
+        /// <summary>The shell's dialog for the page's file input <paramref name="fileInputIndex"/> closed without a file: the input hears <c>cancel</c>.</summary>
+        public void CancelFilePick(int fileInputIndex)
+        {
+            if (_interactiveSession is { } page && fileInputIndex >= 0 && page.CancelFilePickByUser(fileInputIndex))
+                ShowPageIfChanged();
         }
 
         public string BaseUrl { get; private set; } = string.Empty;
@@ -3617,6 +3677,14 @@ internal sealed partial class BrowserApp : IDisposable
             // The renderer resolves a submit control to its form's action and nothing
             // more; serialize the form's fields so the submission actually carries them.
             PageRequest? submission = _formState.TryBuildSubmitRequest(GetPageHtml(), e.Attributes, e.Link);
+
+            // Only a link and a form's submit button go anywhere. A button that submits no form -- one in no
+            // form, a reset or a plain button -- came with the link the renderer resolves from no href, which
+            // is the page's own URL, and following it reloaded the page under every click on a page's
+            // script-driven buttons (measured: a popover's invoker reloaded the page it opened the popover in).
+            if (submission is null && !e.Attributes.ContainsKey("href"))
+                return;
+
             PageRequest request = (submission ?? PageRequest.ForUrl(e.Link)) with
             {
                 Initiator = DocumentContext,

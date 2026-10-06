@@ -547,7 +547,7 @@ internal static class HtmlFormSerializer
 
         bool multiple = select.HasAttribute("multiple");
         DomElement? first = null;
-        bool appended = false;
+        DomElement? last = null;
 
         foreach (DomElement option in Descendants(select))
         {
@@ -558,15 +558,16 @@ internal static class HtmlFormSerializer
             if (!option.HasAttribute("selected"))
                 continue;
 
-            Append(body, name, OptionValue(option));
-            appended = true;
-            if (!multiple)
-                return;
+            if (multiple)
+                Append(body, name, OptionValue(option));
+            last = option;
         }
 
-        // A single-select with nothing marked selected submits its first option.
-        if (!appended && !multiple && first is not null)
-            Append(body, name, OptionValue(first));
+        // A single-select is on the last option its markup marks, as the page's select is (HTML's
+        // selectedness setting algorithm; measured in Chromium) -- it submitted the first -- and with none
+        // marked on its first.
+        if (!multiple && (last ?? first) is { } chosen)
+            Append(body, name, OptionValue(chosen));
     }
 
     private static string OptionValue(DomElement option) =>

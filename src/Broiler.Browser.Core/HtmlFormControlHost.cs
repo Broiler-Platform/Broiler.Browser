@@ -95,6 +95,12 @@ internal sealed class HtmlFormControlHost
     /// </summary>
     public event EventHandler<HtmlOptionChosenEventArgs>? OptionChosen;
 
+    /// <summary>
+    /// Raised when the user changed the options chosen in a <c>&lt;select multiple&gt;</c>'s list, with every
+    /// option chosen now; the page's select takes them all.
+    /// </summary>
+    public event EventHandler<HtmlOptionsChosenEventArgs>? OptionsChosen;
+
     /// <summary>The controls hosted for the current page.</summary>
     public IReadOnlyList<UiElement> Controls => _hosted.ConvertAll(h => h.Control);
 
@@ -113,7 +119,10 @@ internal sealed class HtmlFormControlHost
         if (root is null)
             return;
 
+        // Each select and file input is the page's by its place among the page's selects or file inputs,
+        // counted in tree order as the page's bridge counts them.
         int selectIndex = -1;
+        int fileIndex = -1;
         foreach (DomElement element in Descendants(root))
         {
             if (_hosted.Count >= MaxHostedControls)
@@ -126,10 +135,12 @@ internal sealed class HtmlFormControlHost
             if (!isSelect && !isInput)
                 continue;
 
-            string type = element.GetAttribute("type") ?? string.Empty;
+            string type = (element.GetAttribute("type") ?? string.Empty).Trim();
             bool isRadio = isInput && string.Equals(type, "radio", StringComparison.OrdinalIgnoreCase);
             bool isCheckBox = isInput && string.Equals(type, "checkbox", StringComparison.OrdinalIgnoreCase);
             bool isFile = isInput && string.Equals(type, "file", StringComparison.OrdinalIgnoreCase);
+            if (isFile)
+                fileIndex++;
             if (!isSelect && !isRadio && !isCheckBox && !isFile)
                 continue;
 
@@ -137,7 +148,7 @@ internal sealed class HtmlFormControlHost
             if (id.Length == 0)
                 continue;
 
-            Add(element, id, isSelect, isRadio, isFile, selectIndex);
+            Add(element, id, isSelect, isRadio, isFile, isFile ? fileIndex : selectIndex);
         }
     }
 
@@ -196,15 +207,17 @@ internal sealed class HtmlFormControlHost
         }
     }
 
-    private void Add(DomElement element, string id, bool isSelect, bool isRadio, bool isFile, int selectIndex)
+    /// <param name="pageIndex">For a select, its place among the page's selects; for a file input, among its file inputs.</param>
+    private void Add(DomElement element, string id, bool isSelect, bool isRadio, bool isFile, int pageIndex)
     {
         string name = element.GetAttribute("name") ?? string.Empty;
         string value = element.GetAttribute("value") ?? string.Empty;
+        int selectIndex = pageIndex;
 
         UiElement control;
         if (isFile)
         {
-            control = CreateFilePicker(id, name, element.HasAttribute("multiple"));
+            control = CreateFilePicker(id, name, element.HasAttribute("multiple"), pageIndex);
         }
         else if (isSelect)
         {
@@ -310,7 +323,9 @@ internal sealed class HtmlFormControlHost
             // An option with no value attribute submits its text.
             string value = option.GetAttribute("value") ?? text;
 
-            if (option.HasAttribute("selected") && selected < 0)
+            // The last option the markup marks, as the page's select has it (HTML's selectedness setting
+            // algorithm; measured in Chromium): it started on the first.
+            if (option.HasAttribute("selected"))
                 selected = items.Count;
 
             values.Add(value);
@@ -357,7 +372,7 @@ internal sealed class HtmlFormControlHost
     /// Builds the button that stands in for an <c>&lt;input type="file"&gt;</c>. It
     /// shows the chosen file's name, or the usual prompt when nothing is chosen.
     /// </summary>
-    private UiElement CreateFilePicker(string id, string name, bool allowsMultiple)
+    private UiElement CreateFilePicker(string id, string name, bool allowsMultiple, int fileInputIndex)
     {
         StandardButton button = new()
         {
@@ -369,7 +384,7 @@ internal sealed class HtmlFormControlHost
         };
 
         button.Clicked += (_, _) =>
-            FilePickRequested?.Invoke(this, new HtmlFilePickEventArgs(id, name, allowsMultiple));
+            FilePickRequested?.Invoke(this, new HtmlFilePickEventArgs(id, name, allowsMultiple, fileInputIndex));
         _filePickers.Add(new FilePicker(id, name, allowsMultiple, button));
         return button;
     }
@@ -447,12 +462,15 @@ internal sealed class HtmlFormControlHost
         {
             _formState.SetSelectedValues(id, name, list.SelectedItemIds.Select(itemId => ValueAt(select, itemId)));
 
-            // The page's select keeps one selected option (HtmlBridge models no more): the first chosen.
-            if (list.SelectedItemIds.FirstOrDefault() is { } first &&
-                int.TryParse(first, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int option))
+            // The page's select takes the whole choice, every option the user has selected.
+            List<int> chosen = [];
+            foreach (string itemId in list.SelectedItemIds)
             {
-                OptionChosen?.Invoke(this, new HtmlOptionChosenEventArgs(selectIndex, option));
+                if (int.TryParse(itemId, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int option))
+                    chosen.Add(option);
             }
+
+            OptionsChosen?.Invoke(this, new HtmlOptionsChosenEventArgs(selectIndex, chosen));
 
             Changed?.Invoke(this, EventArgs.Empty);
         };
@@ -584,7 +602,7 @@ internal sealed class HtmlFormControlHost
 }
 
 /// <summary>Identifies the file control the user activated.</summary>
-internal sealed class HtmlFilePickEventArgs(string controlId, string controlName, bool allowsMultiple) : EventArgs
+internal sealed class HtmlFilePickEventArgs(string controlId, string controlName, bool allowsMultiple, int fileInputIndex = -1) : EventArgs
 {
     public string ControlId { get; } = controlId;
 
@@ -592,6 +610,17 @@ internal sealed class HtmlFilePickEventArgs(string controlId, string controlName
 
     /// <summary>Whether the control accepts more than one file, so picks accumulate.</summary>
     public bool AllowsMultiple { get; } = allowsMultiple;
+
+    /// <summary>The input's place among the page's file inputs, counted in tree order; -1 when unknown.</summary>
+    public int FileInputIndex { get; } = fileInputIndex;
+}
+
+/// <summary>The user chose exactly the options <see cref="OptionIndexes"/> of the page's multiple select <see cref="SelectIndex"/>, counted in tree order.</summary>
+internal sealed class HtmlOptionsChosenEventArgs(int selectIndex, IReadOnlyList<int> optionIndexes) : EventArgs
+{
+    public int SelectIndex { get; } = selectIndex;
+
+    public IReadOnlyList<int> OptionIndexes { get; } = optionIndexes;
 }
 
 /// <summary>The user chose option <see cref="OptionIndex"/> of the page's select <see cref="SelectIndex"/>, both counted in tree order.</summary>
