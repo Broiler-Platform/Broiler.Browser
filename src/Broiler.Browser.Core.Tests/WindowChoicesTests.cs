@@ -1,3 +1,4 @@
+using Broiler.UI.ComboBox.Standard;
 using Broiler.UI.ListView.Standard;
 using static Broiler.Browser.Core.Tests.LoopbackHttpServer;
 
@@ -97,6 +98,35 @@ public class WindowChoicesTests
         Assert.Contains("selectmarker input a+c change a+c", Painted(window));
         ClickPage(window, 220, 55);
         Assert.Equal("/result?m=a&m=c", Assert.Single(server.RequestsFor("/result")).Target);
+    }
+
+    /// <summary>
+    /// A select a page empties with <c>options.length = 0</c> and fills again with <c>add(new Option(text, value))</c>
+    /// -- the common way to do it -- shows the new options in the window's drop-down, on the one the page selected,
+    /// and submits it. <c>new Option</c> did not exist and <c>options.length = 0</c> removed nothing (measured in
+    /// Chromium).
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Select_The_Page_Fills_Again_Shows_Its_New_Options()
+    {
+        using var server = new LoopbackHttpServer();
+        server.Map("/result", Reply.Text("<!DOCTYPE html><html><body><p>resultmarker</p></body></html>"));
+        server.Map("/page", Reply.Text(
+            "<!DOCTYPE html><html><body style=\"margin: 0\">" +
+            "<form action=\"/result\"><select id=\"s\" name=\"s\" style=\"position: absolute; left: 0; top: 40px; width: 120px\">" +
+            "<option value=\"old1\">Old one</option><option value=\"old2\" selected>Old two</option></select>" +
+            "<button id=\"go\" style=\"position: absolute; left: 200px; top: 40px; width: 80px; height: 30px\">Go</button></form><script>" +
+            "var s = document.getElementById('s'); s.options.length = 0;" +
+            "s.add(new Option('New A', 'a')); s.add(new Option('New B', 'b', false, true)); s.add(new Option('New C', 'c'));" +
+            "</script></body></html>"));
+
+        using var window = new TestWindow(server.Url("/page"));
+        window.Settle();
+        var combo = window.HostedControls.OfType<StandardComboBox>().Single();
+
+        Assert.Equal(1, combo.SelectedIndex);
+        ClickPage(window, 220, 55);
+        Assert.Equal("/result?s=b", Assert.Single(server.RequestsFor("/result")).Target);
     }
 
     /// <summary>

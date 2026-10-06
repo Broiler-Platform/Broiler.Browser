@@ -149,8 +149,7 @@ public sealed class UserAgentHeaderTests : IDisposable
         {
             // HttpListener cannot report an OS-assigned port, so one is taken by binding a socket
             // and closing it.
-            var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
-            probe.Start();
+            var probe = LoopbackPorts.Start(IPAddress.Loopback);
             var port = ((IPEndPoint)probe.LocalEndpoint).Port;
             probe.Stop();
 
