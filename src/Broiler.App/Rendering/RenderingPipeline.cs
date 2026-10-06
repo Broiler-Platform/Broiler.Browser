@@ -1,4 +1,5 @@
 using Broiler.HtmlBridge;
+using Broiler.HtmlBridge.Net;
 using Broiler.HtmlBridge.Scripting;
 using Broiler.Net.Http;
 
@@ -74,6 +75,11 @@ public sealed class RenderingPipeline(
     /// </remarks>
     public async Task<LoadedPage> LoadAsync(PageRequest request, CancellationToken cancellationToken = default)
     {
+        // The navigation's start, which is the document's time origin: its performance timeline, and the
+        // fetches of its scripts below, are measured from here.
+        DocumentFetchTiming fetchTiming = DocumentFetchTiming.StartNavigation();
+        fetchTiming.MarkFetchStart();
+
         // A javascript: URL's string is the document itself, at the page's URL: nothing is fetched.
         PageLoadResult response = request.InlineDocument is { } inline
             ? new PageLoadResult
@@ -85,6 +91,7 @@ public sealed class RenderingPipeline(
             }
             : await pageLoader.LoadAsync(request, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
+        fetchTiming.MarkResponseEnd();
 
         string url = response.FinalUrl;
         DocumentRequestContext document = CreateDocumentContext(url);
@@ -102,7 +109,12 @@ public sealed class RenderingPipeline(
         // machinery when it binds imports (EngineModuleSupport.Available, gated inside ScriptEngine). The
         // string-rewriting EsModuleLinker fallback was retired, so the roots are the sole module input.
         var content = new PageContent(response.Html, executableScripts, url, result.DeferredScripts, result.ModuleRoots);
-        return new LoadedPage(response, document, content) { InheritedPolicy = request.InheritedPolicy };
+        return new LoadedPage(response, document, content)
+        {
+            InheritedPolicy = request.InheritedPolicy,
+            FetchTiming = fetchTiming,
+            ResourceTimings = result.ResourceTimings,
+        };
     }
 
     /// <summary>
@@ -120,10 +132,18 @@ public sealed class RenderingPipeline(
     /// the session's script checks are that policy's, or the one the document's markup declares, which the engine takes
     /// in its place.
     /// </param>
-    public InteractiveSession? ExecuteScriptsInteractive(PageContent content, ContentSecurityPolicy? inheritedPolicy = null)
+    /// <param name="page">
+    /// The page <paramref name="content"/> came from, when <see cref="LoadAsync"/> loaded it: its timeline is
+    /// measured from the navigation's start (<see cref="LoadedPage.FetchTiming"/>), and has the scripts fetched
+    /// for it (<see cref="LoadedPage.ResourceTimings"/>). Without one the engine starts the timeline itself.
+    /// </param>
+    public InteractiveSession? ExecuteScriptsInteractive(PageContent content, ContentSecurityPolicy? inheritedPolicy = null, LoadedPage? page = null)
     {
         var previous = scriptEngine.Csp;
         scriptEngine.Csp = inheritedPolicy ?? previous;
+        // The page's performance timeline starts at its navigation, and has the scripts fetched for it.
+        scriptEngine.DocumentFetchTiming = page?.FetchTiming;
+        scriptEngine.DocumentResourceTimings = page?.ResourceTimings ?? [];
         try
         {
             return scriptEngine.ExecuteInteractive(
@@ -164,6 +184,12 @@ public sealed class LoadedPage
 
     /// <summary>The policy a <c>javascript:</c> URL's document inherited from the one it replaced (<see cref="PageRequest.InheritedPolicy"/>).</summary>
     public ContentSecurityPolicy? InheritedPolicy { get; init; }
+
+    /// <summary>The navigation's start and the document fetch's measured phases: the document's time origin.</summary>
+    public DocumentFetchTiming? FetchTiming { get; init; }
+
+    /// <summary>The Resource Timing records of the scripts fetched for the document before it ran.</summary>
+    public IReadOnlyList<ResourceTimingRecord> ResourceTimings { get; init; } = [];
 
     /// <summary>
     /// The document's request context, from <see cref="FinalUrl"/>: the client of every request the

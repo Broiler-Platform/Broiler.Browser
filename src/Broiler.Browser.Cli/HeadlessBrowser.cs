@@ -160,7 +160,8 @@ internal sealed class HeadlessBrowser : IDisposable
         if (needsRealm && !hasScripts)
             content = new PageContent(content.Html, [string.Empty], content.Url, [], []);
 
-        InteractiveSession? session = _pipeline.ExecuteScriptsInteractive(content);
+        // The page's performance timeline starts at its navigation and has the scripts fetched for it.
+        InteractiveSession? session = _pipeline.ExecuteScriptsInteractive(content, page: page);
         return new ScriptedPage(
             session,
             session is null ? null : _bridges.Last,
