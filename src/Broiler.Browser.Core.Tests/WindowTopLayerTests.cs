@@ -3,7 +3,8 @@ using static Broiler.Browser.Core.Tests.LoopbackHttpServer;
 namespace Broiler.Browser.Core.Tests;
 
 /// <summary>
-/// The top layer and anchor positioning in the window, as Chromium draws them (measured): a modal dialog over a <c>rgba(0, 0, 0, 0.1)</c> backdrop that dims the page, above a
+/// The top layer and anchor positioning in the window, as Chromium draws them (measured): a modal dialog over a
+/// <c>rgba(0, 0, 0, 0.1)</c> backdrop that dims the page, above a
 /// <c>z-index: 2147483647</c> box and out of an ancestor's clip and transform; a popover under the button that
 /// opened it; and a popover or dialog of long text held inside the viewport.
 /// </summary>
