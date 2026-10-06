@@ -125,6 +125,41 @@ internal sealed class TestWindow : IDisposable
         return texts;
     }
 
+    /// <summary>
+    /// Every command of the last frame in the order it was drawn, a filled rectangle as its rectangle in the window
+    /// and its colour, a text run as its text: what paint order and a backdrop are read from.
+    /// </summary>
+    public List<(string? Text, BRect Rect, Broiler.Graphics.Color.BColor Color)> Painting()
+    {
+        var painting = new List<(string?, BRect, Broiler.Graphics.Color.BColor)>();
+        var transforms = new Stack<BMatrix3x2>();
+        var current = BMatrix3x2.Identity;
+        foreach (var command in _frame?.Commands ?? [])
+        {
+            switch (command)
+            {
+                case BRenderCommand.PushTransform push:
+                    transforms.Push(current);
+                    current = push.Transform * current;
+                    break;
+                case BRenderCommand.PopTransform when transforms.Count > 0:
+                    current = transforms.Pop();
+                    break;
+                case BRenderCommand.FillRect fill:
+                    var topLeft = current.Transform(new BPoint(fill.Rect.Left, fill.Rect.Top));
+                    var bottomRight = current.Transform(new BPoint(fill.Rect.Right, fill.Rect.Bottom));
+                    painting.Add((null, new BRect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y), fill.Color));
+                    break;
+                case BRenderCommand.DrawText text:
+                    var at = current.Transform(text.Origin);
+                    painting.Add((text.Text.Text, new BRect(at.X, at.Y, 0, 0), default));
+                    break;
+            }
+        }
+
+        return painting;
+    }
+
     /// <summary>Whether <paramref name="marker"/> was drawn inside the 600px-tall window.</summary>
     public bool IsInView(string marker) =>
         Texts().Any(t => t.Text.Contains(marker, StringComparison.Ordinal) && t.At.Y >= 0 && t.At.Y < 600);

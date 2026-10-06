@@ -215,6 +215,39 @@ public class WindowPageHistoryTests
         Assert.Single(server.RequestsFor("/page"));
     }
 
+    /// <summary>
+    /// A <c>javascript:</c> document keeps the policy of the page it replaced: under the page's
+    /// <c>script-src 'unsafe-inline'</c> its <c>data:</c> script is blocked and its <c>eval</c> is refused, and
+    /// with no policy both run (Chromium, measured). The window ran the new document
+    /// under no policy at all. Both halves: the policy decides what the document loads when its scripts are
+    /// gathered, and what they may evaluate while they run.
+    /// </summary>
+    /// <remarks>Chromium's refusal is an <c>EvalError</c>; the engine's is a plain <c>Error</c>, on every page
+    /// (ScriptEngine's eval stub), so the page here only asks whether it was refused.</remarks>
+    [Theory(Timeout = 600000)]
+    [InlineData("<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'unsafe-inline'\">", "datablockedmarker", "evalrefusedmarker")]
+    [InlineData("", "dataranmarker", "evalranmarker")]
+    public void A_JavaScript_Document_Keeps_The_Pages_Policy(string policy, string loaded, string evaluated)
+    {
+        using var server = new LoopbackHttpServer();
+        server.Map("/page", Reply.Text(
+            $"<!DOCTYPE html><html><head>{policy}</head><body style=\"margin: 0\">" +
+            $"<button id=\"go\" style=\"{Button}\">Go</button><script>" +
+            "document.getElementById('go').addEventListener('click', function () {" +
+            "  location.href = \"javascript:'<p>replaced</p><script src=\\\"data:text/javascript,window.dataRan=1\\\"><\\/script>" +
+            "<script>document.body.append(window.dataRan ? \\\"dataran\\\" + \\\"marker\\\" : \\\"datablocked\\\" + \\\"marker\\\");" +
+            " try { eval(\\\"1\\\"); document.body.append(\\\" evalran\\\" + \\\"marker\\\") } catch (e) { document.body.append(\\\" evalrefused\\\" + \\\"marker\\\") }<\\/script>'\"; });" +
+            "</script></body></html>"));
+
+        using var window = new TestWindow(server.Url("/page"));
+        window.Settle();
+        ClickPage(window, 20, 55);
+
+        Assert.Contains(loaded, Painted(window));
+        Assert.Contains(evaluated, Painted(window));
+        Assert.EndsWith("/page", window.Address);
+    }
+
     /// <summary>A page with no script at all submits its form when the user presses its submit button.</summary>
     [Fact(Timeout = 600000)]
     public void A_Page_Without_Scripts_Submits_Its_Form()

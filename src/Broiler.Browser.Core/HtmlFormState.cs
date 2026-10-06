@@ -28,6 +28,19 @@ internal sealed class HtmlFormState
     /// <summary>Chosen file paths by control key, for file inputs the user has picked for.</summary>
     private readonly Dictionary<string, List<string>> _selectedFiles = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Whether the page's scripting session holds its controls' state: what its selects have selected and its
+    /// checkboxes' and radios' checkedness, which the session reflects into the markup the window draws from
+    /// and which the page's own submission sends. The window's record of the user's choices then does not
+    /// outrank the markup.
+    /// </summary>
+    /// <remarks>
+    /// It did: a page that answered the user's choice in a select by choosing another option was drawn with,
+    /// and submitted, the option the user had chosen. Without a session -- a page with no script and no form --
+    /// nothing else remembers what the user chose, and the record still does.
+    /// </remarks>
+    public bool PageHoldsState { get; set; }
+
     /// <summary>Forgets per-page state. Called when the page is replaced.</summary>
     public void Reset()
     {
@@ -42,7 +55,7 @@ internal sealed class HtmlFormState
 
     /// <summary>The recorded state of a checkbox or radio, or <c>null</c> if untouched.</summary>
     public bool? GetChecked(string id, string name, string value) =>
-        _checkedState.TryGetValue(ControlKey(id, name, value), out bool state) ? state : null;
+        !PageHoldsState && _checkedState.TryGetValue(ControlKey(id, name, value), out bool state) ? state : null;
 
     /// <summary>Records the option a hosted single-choice <c>&lt;select&gt;</c> now has selected.</summary>
     public void SetSelectedValue(string id, string name, string value) =>
@@ -65,7 +78,7 @@ internal sealed class HtmlFormState
     /// has not touched it and the markup still decides.
     /// </summary>
     public IReadOnlyList<string>? GetSelectedValues(string id, string name) =>
-        _selectedValues.TryGetValue(ControlKey(id, name, string.Empty), out List<string>? values) ? values : null;
+        !PageHoldsState && _selectedValues.TryGetValue(ControlKey(id, name, string.Empty), out List<string>? values) ? values : null;
 
     /// <summary>Records the single file chosen for an <c>&lt;input type="file"&gt;</c>.</summary>
     public void SetSelectedFile(string id, string name, string path) =>

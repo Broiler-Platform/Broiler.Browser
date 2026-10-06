@@ -45,6 +45,11 @@ namespace Broiler.Browser;
 /// renderer has no API to write a <c>checked</c> attribute or a selected option back,
 /// and form submission layers this state over the markup anyway.
 /// </para>
+/// <para>
+/// A page with a scripting session holds its controls' state itself and reflects it into the markup the
+/// window draws (<see cref="HtmlFormState.PageHoldsState"/>), and its scripts change it after the controls are
+/// hosted: <see cref="Sync"/> brings them into line with each new rendering of the page.
+/// </para>
 /// </remarks>
 internal sealed class HtmlFormControlHost
 {
@@ -71,6 +76,12 @@ internal sealed class HtmlFormControlHost
     private readonly Dictionary<string, UiRadioGroupScope> _radioGroups = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<ToggleIdentity>> _radioMembers = new(StringComparer.Ordinal);
     private readonly List<FilePicker> _filePickers = [];
+
+    /// <summary>
+    /// Set while <see cref="Sync"/> sets the controls to the page's state, so a control changed to show what the
+    /// page did does not report it back as the user's choice.
+    /// </summary>
+    private bool _syncing;
 
     public HtmlFormControlHost(UiElement owner, HtmlFormState formState)
     {
@@ -119,14 +130,78 @@ internal sealed class HtmlFormControlHost
         if (root is null)
             return;
 
+        foreach (ControlSite site in FindControls(root))
+            Add(site);
+    }
+
+    /// <summary>
+    /// Brings the hosted controls into line with <paramref name="pageHtml"/>, a later rendering of the page:
+    /// the option a select shows, the options a multiple select's list has selected, whether a checkbox or a
+    /// radio button is checked. When the page still has the same controls, with the same options, they are
+    /// kept -- a drop-down the user has open stays open -- and set to the page's state; when it has others,
+    /// they are hosted again.
+    /// </summary>
+    /// <remarks>
+    /// The controls were hosted once per page, so what the page's scripts did after that was never shown: a
+    /// page that answered the user's choice of an option by choosing another went on showing the user's, and
+    /// a box a script ticked stayed empty. Setting a control here does not tell the page the user chose it.
+    /// A file control's label is the window's record of what the user picked; the markup carries no files.
+    /// </remarks>
+    public void Sync(string pageHtml)
+    {
+        // A page with nothing hosted and nothing to host costs no parse.
+        if (string.IsNullOrEmpty(pageHtml) ||
+            (_hosted.Count == 0 &&
+             pageHtml.IndexOf("<select", StringComparison.OrdinalIgnoreCase) < 0 &&
+             pageHtml.IndexOf("<input", StringComparison.OrdinalIgnoreCase) < 0))
+        {
+            return;
+        }
+
+        DomElement? root = TryParse(pageHtml);
+        if (root is null)
+            return;
+
+        List<ControlSite> sites = [.. FindControls(root)];
+        bool same = sites.Count == _hosted.Count;
+        for (int index = 0; same && index < sites.Count; index++)
+            same = string.Equals(Shape(sites[index]), _hosted[index].Shape, StringComparison.Ordinal);
+
+        if (!same)
+        {
+            Clear();
+            foreach (ControlSite site in sites)
+                Add(site);
+            return;
+        }
+
+        _syncing = true;
+        try
+        {
+            for (int index = 0; index < sites.Count; index++)
+                _hosted[index].Apply(sites[index].Element);
+        }
+        finally
+        {
+            _syncing = false;
+        }
+    }
+
+    /// <summary>
+    /// The page's controls to host, in tree order, up to <see cref="MaxHostedControls"/>: its selects, and its
+    /// checkboxes, radio buttons and file inputs, each with an id.
+    /// </summary>
+    private static IEnumerable<ControlSite> FindControls(DomElement root)
+    {
         // Each select and file input is the page's by its place among the page's selects or file inputs,
         // counted in tree order as the page's bridge counts them.
+        int count = 0;
         int selectIndex = -1;
         int fileIndex = -1;
         foreach (DomElement element in Descendants(root))
         {
-            if (_hosted.Count >= MaxHostedControls)
-                break;
+            if (count >= MaxHostedControls)
+                yield break;
 
             bool isSelect = string.Equals(element.TagName, "select", StringComparison.OrdinalIgnoreCase);
             if (isSelect)
@@ -148,8 +223,35 @@ internal sealed class HtmlFormControlHost
             if (id.Length == 0)
                 continue;
 
-            Add(element, id, isSelect, isRadio, isFile, isFile ? fileIndex : selectIndex);
+            count++;
+            yield return new ControlSite(element, id, isSelect, isRadio, isFile, isFile ? fileIndex : selectIndex);
         }
+    }
+
+    /// <summary>
+    /// What makes a hosted control the same one in a later rendering of the page: its kind, id, name, value,
+    /// <c>multiple</c> and place among the page's selects or file inputs, and a select's options.
+    /// </summary>
+    private static string Shape(ControlSite site)
+    {
+        DomElement element = site.Element;
+        System.Text.StringBuilder shape = new();
+        shape.Append(site.IsFile ? 'f' : site.IsSelect ? 's' : site.IsRadio ? 'r' : 'c')
+            .Append('\u0001').Append(site.Id)
+            .Append('\u0001').Append(element.GetAttribute("name") ?? string.Empty)
+            .Append('\u0001').Append(element.GetAttribute("value") ?? string.Empty)
+            .Append('\u0001').Append(element.HasAttribute("multiple") ? '1' : '0')
+            .Append('\u0001').Append(site.PageIndex);
+        if (site.IsSelect)
+        {
+            foreach (DomElement option in Options(element))
+            {
+                shape.Append('\u0002').Append(option.GetAttribute("value") ?? "\u0003")
+                    .Append('\u0001').Append((option.TextContent ?? string.Empty).Trim());
+            }
+        }
+
+        return shape.ToString();
     }
 
     /// <summary>Removes every hosted control. Called when the page is replaced.</summary>
@@ -207,38 +309,75 @@ internal sealed class HtmlFormControlHost
         }
     }
 
-    /// <param name="pageIndex">For a select, its place among the page's selects; for a file input, among its file inputs.</param>
-    private void Add(DomElement element, string id, bool isSelect, bool isRadio, bool isFile, int pageIndex)
+    private void Add(ControlSite site)
     {
+        DomElement element = site.Element;
+        string id = site.Id;
         string name = element.GetAttribute("name") ?? string.Empty;
         string value = element.GetAttribute("value") ?? string.Empty;
-        int selectIndex = pageIndex;
 
         UiElement control;
-        if (isFile)
+        Action<DomElement> apply;
+        if (site.IsFile)
         {
-            control = CreateFilePicker(id, name, element.HasAttribute("multiple"), pageIndex);
+            control = CreateFilePicker(id, name, element.HasAttribute("multiple"), site.PageIndex);
+            apply = static _ => { };
         }
-        else if (isSelect)
+        else if (site.IsSelect && element.HasAttribute("multiple"))
         {
-            control = element.HasAttribute("multiple")
-                ? CreateListView(element, id, name, selectIndex)
-                : CreateComboBox(element, id, name, selectIndex);
+            StandardListView list = CreateListView(element, id, name, site.PageIndex);
+            control = list;
+            apply = markup =>
+            {
+                List<string> shown = ShownOptions(markup, id, name);
+                if (!list.SelectedItemIds.ToHashSet(StringComparer.Ordinal).SetEquals(shown))
+                    list.SetSelectedItems(shown);
+            };
+        }
+        else if (site.IsSelect)
+        {
+            StandardComboBox combo = CreateComboBox(element, id, name, site.PageIndex);
+            control = combo;
+            apply = markup =>
+            {
+                int shown = ShownOption(markup, id, name);
+                if (shown >= 0 && combo.SelectedIndex != shown)
+                    combo.SelectIndex(shown);
+            };
+        }
+        else if (site.IsRadio)
+        {
+            StandardRadioButton radio = CreateRadio(id, name, value, IsChecked(element, id, name, value));
+            control = radio;
+            apply = markup =>
+            {
+                bool isChecked = IsChecked(markup, id, name, value);
+                if (radio.IsChecked != isChecked)
+                    radio.IsChecked = isChecked;
+            };
         }
         else
         {
-            bool isChecked = _formState.GetChecked(id, name, value) ?? element.HasAttribute("checked");
-            control = isRadio
-                ? CreateRadio(id, name, value, isChecked)
-                : CreateCheckBox(id, name, value, isChecked);
+            StandardCheckBox box = CreateCheckBox(id, name, value, IsChecked(element, id, name, value));
+            control = box;
+            apply = markup =>
+            {
+                bool isChecked = IsChecked(markup, id, name, value);
+                if (box.IsChecked != isChecked)
+                    box.IsChecked = isChecked;
+            };
         }
 
         control.Visibility = UiVisibility.Collapsed;
         _owner.AddChild(control);
-        _hosted.Add(new HostedToggle(id, control));
+        _hosted.Add(new HostedToggle(id, control, Shape(site), apply));
     }
 
-    private UiElement CreateCheckBox(string id, string name, string value, bool isChecked)
+    /// <summary>Whether a checkbox or radio button shows checked: as the user left it on a page that keeps no state of its own, else as the markup has it.</summary>
+    private bool IsChecked(DomElement element, string id, string name, string value) =>
+        _formState.GetChecked(id, name, value) ?? element.HasAttribute("checked");
+
+    private StandardCheckBox CreateCheckBox(string id, string name, string value, bool isChecked)
     {
         StandardCheckBox box = new()
         {
@@ -251,6 +390,9 @@ internal sealed class HtmlFormControlHost
 
         box.CheckStateChanged += (_, _) =>
         {
+            if (_syncing)
+                return;
+
             _formState.SetChecked(id, name, value, box.CheckState == UiCheckState.Checked);
             Changed?.Invoke(this, EventArgs.Empty);
         };
@@ -258,7 +400,7 @@ internal sealed class HtmlFormControlHost
         return box;
     }
 
-    private UiElement CreateRadio(string id, string name, string value, bool isChecked)
+    private StandardRadioButton CreateRadio(string id, string name, string value, bool isChecked)
     {
         if (!_radioGroups.TryGetValue(name, out UiRadioGroupScope? scope))
         {
@@ -287,6 +429,9 @@ internal sealed class HtmlFormControlHost
 
         radio.CheckedChanged += (_, _) =>
         {
+            if (_syncing)
+                return;
+
             // A radio group is single-choice, and the markup's `checked` on a sibling
             // would otherwise still be submitted. Selecting one records the whole
             // group, so the untouched siblings are explicitly unchecked rather than
@@ -308,41 +453,22 @@ internal sealed class HtmlFormControlHost
     /// selection the page declares (or the first option, which is what a single-select
     /// with nothing marked shows and submits).
     /// </summary>
-    private UiElement CreateComboBox(DomElement select, string id, string name, int selectIndex)
+    private StandardComboBox CreateComboBox(DomElement select, string id, string name, int selectIndex)
     {
         List<UiComboBoxItem> items = [];
         List<string> values = [];
-        int selected = -1;
 
-        foreach (DomElement option in Descendants(select))
+        foreach (DomElement option in Options(select))
         {
-            if (!string.Equals(option.TagName, "option", StringComparison.OrdinalIgnoreCase))
-                continue;
-
             string text = (option.TextContent ?? string.Empty).Trim();
             // An option with no value attribute submits its text.
             string value = option.GetAttribute("value") ?? text;
-
-            // The last option the markup marks, as the page's select has it (HTML's selectedness setting
-            // algorithm; measured in Chromium): it started on the first.
-            if (option.HasAttribute("selected"))
-                selected = items.Count;
 
             values.Add(value);
             items.Add(new UiComboBoxItem(value, text));
         }
 
-        if (selected < 0 && items.Count > 0)
-            selected = 0;
-
-        // A selection the user already made on this page outranks the markup.
-        string? recorded = _formState.GetSelectedValue(id, name);
-        if (recorded is not null)
-        {
-            int index = values.IndexOf(recorded);
-            if (index >= 0)
-                selected = index;
-        }
+        int selected = ShownOption(select, id, name);
 
         StandardComboBox combo = new()
         {
@@ -355,6 +481,9 @@ internal sealed class HtmlFormControlHost
 
         combo.SelectionChanged += (_, _) =>
         {
+            if (_syncing)
+                return;
+
             int index = combo.SelectedIndex;
             if (index >= 0 && index < values.Count)
             {
@@ -367,6 +496,66 @@ internal sealed class HtmlFormControlHost
 
         return combo;
     }
+
+    /// <summary>
+    /// The option a drop-down shows: the last option the markup marks, as the page's select has it (HTML's
+    /// selectedness setting algorithm; measured in Chromium), or the first. On a page that keeps no state of its
+    /// own, the option the user chose outranks the markup.
+    /// </summary>
+    private int ShownOption(DomElement select, string id, string name)
+    {
+        List<string> values = [];
+        int selected = -1;
+        foreach (DomElement option in Options(select))
+        {
+            if (option.HasAttribute("selected"))
+                selected = values.Count;
+
+            values.Add(option.GetAttribute("value") ?? (option.TextContent ?? string.Empty).Trim());
+        }
+
+        if (selected < 0 && values.Count > 0)
+            selected = 0;
+
+        string? recorded = _formState.GetSelectedValue(id, name);
+        if (recorded is not null)
+        {
+            int index = values.IndexOf(recorded);
+            if (index >= 0)
+                selected = index;
+        }
+
+        return selected;
+    }
+
+    /// <summary>
+    /// The options a multiple select's list has selected, as item ids: every option the markup marks or, on a
+    /// page that keeps no state of its own, the ones the user chose.
+    /// </summary>
+    private List<string> ShownOptions(DomElement select, string id, string name)
+    {
+        IReadOnlyList<string>? recorded = _formState.GetSelectedValues(id, name);
+        if (recorded is not null)
+        {
+            return [.. recorded.Select(value => IndexOfValue(select, value)).Where(index => index >= 0)
+                .Select(index => index.ToString(System.Globalization.CultureInfo.InvariantCulture))];
+        }
+
+        List<string> marked = [];
+        int position = 0;
+        foreach (DomElement option in Options(select))
+        {
+            if (option.HasAttribute("selected"))
+                marked.Add(position.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            position++;
+        }
+
+        return marked;
+    }
+
+    /// <summary>A select's options, in tree order.</summary>
+    private static IEnumerable<DomElement> Options(DomElement select) =>
+        Descendants(select).Where(static element => string.Equals(element.TagName, "option", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Builds the button that stands in for an <c>&lt;input type="file"&gt;</c>. It
@@ -423,24 +612,17 @@ internal sealed class HtmlFormControlHost
     /// Unlike a single-choice select there is no fallback to the first option: a
     /// multi-select with nothing marked genuinely has nothing selected.
     /// </remarks>
-    private UiElement CreateListView(DomElement select, string id, string name, int selectIndex)
+    private StandardListView CreateListView(DomElement select, string id, string name, int selectIndex)
     {
         List<UiListItem> items = [];
-        List<string> markupSelection = [];
 
-        foreach (DomElement option in Descendants(select))
+        foreach (DomElement option in Options(select))
         {
-            if (!string.Equals(option.TagName, "option", StringComparison.OrdinalIgnoreCase))
-                continue;
-
             string text = (option.TextContent ?? string.Empty).Trim();
-            string value = option.GetAttribute("value") ?? text;
 
             // Options can repeat a value; the list needs unique ids, so index them.
             string itemId = items.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
             items.Add(new UiListItem(itemId, text));
-            if (option.HasAttribute("selected"))
-                markupSelection.Add(itemId);
         }
 
         StandardListView list = new()
@@ -450,16 +632,13 @@ internal sealed class HtmlFormControlHost
             CornerRadius = 0,
         };
         list.SetItems(items);
-
-        // A selection the user already made on this page outranks the markup.
-        IReadOnlyList<string>? recorded = _formState.GetSelectedValues(id, name);
-        list.SetSelectedItems(recorded is null
-            ? markupSelection
-            : [.. recorded.Select(value => IndexOfValue(select, value)).Where(index => index >= 0)
-                .Select(index => index.ToString(System.Globalization.CultureInfo.InvariantCulture))]);
+        list.SetSelectedItems(ShownOptions(select, id, name));
 
         list.SelectionChanged += (_, _) =>
         {
+            if (_syncing)
+                return;
+
             _formState.SetSelectedValues(id, name, list.SelectedItemIds.Select(itemId => ValueAt(select, itemId)));
 
             // The page's select takes the whole choice, every option the user has selected.
@@ -592,7 +771,13 @@ internal sealed class HtmlFormControlHost
         }
     }
 
-    private sealed record HostedToggle(string ElementId, UiElement Control);
+    /// <param name="Shape">What makes it the same control in a later rendering of the page (<see cref="Shape(ControlSite)"/>).</param>
+    /// <param name="Apply">Sets it to the state an element of a later rendering has.</param>
+    private sealed record HostedToggle(string ElementId, UiElement Control, string Shape, Action<DomElement> Apply);
+
+    /// <summary>A control of the page to host.</summary>
+    /// <param name="PageIndex">For a select, its place among the page's selects; for a file input, among its file inputs.</param>
+    private readonly record struct ControlSite(DomElement Element, string Id, bool IsSelect, bool IsRadio, bool IsFile, int PageIndex);
 
     /// <summary>Identifies a toggle for <see cref="HtmlFormState"/>.</summary>
     private sealed record ToggleIdentity(string Id, string Name, string Value);

@@ -90,7 +90,8 @@ public sealed class RenderingPipeline(
         DocumentRequestContext document = CreateDocumentContext(url);
         ScriptFetchContext? fetch = network is null ? null : new ScriptFetchContext(network, document, cancellationToken);
 
-        var result = ScriptExtractionService.ExtractAll(response.Html, url, deliveredPolicy: null, fetch);
+        // A javascript: URL's document is bound by the policy of the one it replaced, as by one it was delivered.
+        var result = ScriptExtractionService.ExtractAll(response.Html, url, deliveredPolicy: request.InheritedPolicy, fetch);
         cancellationToken.ThrowIfCancellationRequested();
 
         var executableScripts = result.AsyncScripts.Count == 0
@@ -101,7 +102,7 @@ public sealed class RenderingPipeline(
         // machinery when it binds imports (EngineModuleSupport.Available, gated inside ScriptEngine). The
         // string-rewriting EsModuleLinker fallback was retired, so the roots are the sole module input.
         var content = new PageContent(response.Html, executableScripts, url, result.DeferredScripts, result.ModuleRoots);
-        return new LoadedPage(response, document, content);
+        return new LoadedPage(response, document, content) { InheritedPolicy = request.InheritedPolicy };
     }
 
     /// <summary>
@@ -114,10 +115,24 @@ public sealed class RenderingPipeline(
     /// Returns <c>null</c> when the page has no scripts.
     /// The caller must dispose the session when finished.
     /// </summary>
-    public InteractiveSession? ExecuteScriptsInteractive(PageContent content)
+    /// <param name="inheritedPolicy">
+    /// For a <c>javascript:</c> URL's document, the policy of the one it replaced (<see cref="LoadedPage.InheritedPolicy"/>):
+    /// the session's script checks are that policy's, or the one the document's markup declares, which the engine takes
+    /// in its place.
+    /// </param>
+    public InteractiveSession? ExecuteScriptsInteractive(PageContent content, ContentSecurityPolicy? inheritedPolicy = null)
     {
-        return scriptEngine.ExecuteInteractive(
-            content.Scripts, content.DeferredScripts, content.Html, content.Url, content.ModuleRoots);
+        var previous = scriptEngine.Csp;
+        scriptEngine.Csp = inheritedPolicy ?? previous;
+        try
+        {
+            return scriptEngine.ExecuteInteractive(
+                content.Scripts, content.DeferredScripts, content.Html, content.Url, content.ModuleRoots);
+        }
+        finally
+        {
+            scriptEngine.Csp = previous;
+        }
     }
 
     /// <summary>
@@ -146,6 +161,9 @@ public sealed class LoadedPage
 
     /// <summary>What the page load returned.</summary>
     public PageLoadResult Response { get; }
+
+    /// <summary>The policy a <c>javascript:</c> URL's document inherited from the one it replaced (<see cref="PageRequest.InheritedPolicy"/>).</summary>
+    public ContentSecurityPolicy? InheritedPolicy { get; init; }
 
     /// <summary>
     /// The document's request context, from <see cref="FinalUrl"/>: the client of every request the

@@ -78,6 +78,14 @@ public sealed record PageRequest(
     public string? InlineDocument { get; init; }
 
     /// <summary>
+    /// The Content-Security-Policy an <see cref="InlineDocument"/> is bound by besides any its markup declares: the
+    /// policy of the document a <c>javascript:</c> URL replaced, which HTML hands the new one (a clone of its policy
+    /// container). Chromium, measured: the replaced page's <c>&lt;meta&gt;</c> policy refuses in the new one what it
+    /// refused there.
+    /// </summary>
+    public Broiler.HtmlBridge.Scripting.ContentSecurityPolicy? InheritedPolicy { get; init; }
+
+    /// <summary>
     /// Where the window was scrolled, in CSS pixels, when it last left this entry of its history: what going
     /// back or forward to it restores, as Chromium does.
     /// </summary>

@@ -1105,7 +1105,7 @@ internal sealed partial class BrowserApp : IDisposable
             InteractiveSession? session = null;
             try
             {
-                session = pipeline.ExecuteScriptsInteractive(WithRealmForInlineHandlers(content));
+                session = pipeline.ExecuteScriptsInteractive(WithRealmForInlineHandlers(content), page.InheritedPolicy);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (session is not null)
@@ -1346,14 +1346,28 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         PageRequest? request;
-        if (navigation.Kind != NavigationKind.FormSubmit || navigation.FormIndex < 0)
+        if (navigation.Kind == NavigationKind.FormSubmit && navigation.Submission is { } submission)
         {
-            // A javascript: URL's string is the document itself; a frame's form the bridge encoded is a request
-            // for the URL it built -- a GET with its entries in it, or a POST of the body it encoded
-            // (DomBridge/FrameSubmission.cs).
+            // The page's own form, as the page encoded it from what the form holds: the files its inputs have, its
+            // selects' options, its checkboxes, what a script changed after the user (NavigationRequest.Submission).
+            // Built again here from the markup and the window's record of the user's choices, it sent the files
+            // read from disk where the user picked them and the option the user chose, whatever the page did since.
+            request = submission.Body is { } submitted
+                ? new PageRequest(submission.Url, PageRequest.Post, submission.BodyContentType) { BinaryBody = submitted }
+                : PageRequest.ForUrl(submission.Url);
+        }
+        else if (navigation.Kind != NavigationKind.FormSubmit || navigation.FormIndex < 0)
+        {
+            // A javascript: URL's string is the document itself, under the policy of the document it replaces; a
+            // frame's form the bridge encoded is a request for the URL it built -- a GET with its entries in it, or
+            // a POST of the body it encoded (DomBridge/FrameSubmission.cs).
             request = navigation.Body is { } body
                 ? new PageRequest(navigation.Url, PageRequest.Post, navigation.BodyContentType) { BinaryBody = body }
-                : PageRequest.ForUrl(navigation.Url) with { InlineDocument = navigation.Document };
+                : PageRequest.ForUrl(navigation.Url) with
+                {
+                    InlineDocument = navigation.Document,
+                    InheritedPolicy = navigation.Document is null ? null : navigation.InheritedPolicy,
+                };
         }
         else
         {
@@ -1632,7 +1646,7 @@ internal sealed partial class BrowserApp : IDisposable
             && _historyIndex < _history.Count)
         {
             // A javascript: URL's document keeps the entry its URL's: reloading it fetches the URL.
-            _history[_historyIndex] = loaded with { InlineDocument = null };
+            _history[_historyIndex] = loaded with { InlineDocument = null, InheritedPolicy = null };
         }
 
         SetUrlText(result.NormalisedUrl);
@@ -2262,6 +2276,9 @@ internal sealed partial class BrowserApp : IDisposable
         private readonly HtmlFormState _formState = new();
         private readonly HtmlFormControlHost _controlHost;
         private bool _controlsDirty = true;
+
+        /// <summary>The page's scripts changed its document since the hosted controls were last set to it.</summary>
+        private bool _controlsNeedSync;
         private HtmlContainer _container = CreateContentContainer(WelcomePage, string.Empty);
         private HtmlGraphicsRenderList? _renderList;
 
@@ -2466,6 +2483,7 @@ internal sealed partial class BrowserApp : IDisposable
             _container = container;
             _container.LinkClicked += OnLinkClicked;
             _interactiveSession = interactiveSession;
+            _formState.PageHoldsState = interactiveSession is not null;
             _lastAppliedHtml = documentHtml;
             _appliedRenderVersion = interactiveSession?.RenderVersion ?? 0;
             BaseUrl = baseUrl ?? string.Empty;
@@ -2517,6 +2535,7 @@ internal sealed partial class BrowserApp : IDisposable
                 _suppressNavigation = false;
             }
 
+            _controlsNeedSync = true;
             MarkLayoutDirty();
         }
 
@@ -2562,6 +2581,7 @@ internal sealed partial class BrowserApp : IDisposable
         {
             _interactiveSession?.Dispose();
             _interactiveSession = null;
+            _formState.PageHoldsState = false;
         }
 
         public void ReleaseGraphicsResources()
@@ -2617,6 +2637,10 @@ internal sealed partial class BrowserApp : IDisposable
                 DocumentContext = document,
                 VisitedLinkPredicate = visited,
                 TargetFragment = targetFragment,
+                // The scripting bridge leaves a box placed by position-area, anchor() or position-try to the
+                // renderer, and names a popover's implicit anchor; without this, such a box was drawn where a
+                // box with no anchor goes.
+                PlacesAnchoredBoxes = true,
             };
 
             // Before the parse, which resolves the document's media queries against it
@@ -2684,17 +2708,25 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         /// <summary>
-        /// Discovers the page's checkbox, radio and select controls once per page. The parse is
-        /// the expensive half, so it is deferred to the first render after the page
-        /// changed rather than repeated per layout.
+        /// Discovers the page's checkbox, radio and select controls once per page, and sets them to what the
+        /// page's scripts did to them since. The parse is the expensive half, so it is deferred to the first
+        /// render after the page changed rather than repeated per layout.
         /// </summary>
         private void RebuildHostedControlsIfNeeded()
         {
-            if (!_controlsDirty)
+            if (_controlsDirty)
+            {
+                _controlsDirty = false;
+                _controlsNeedSync = false;
+                _controlHost.Rebuild(GetPageHtml());
                 return;
+            }
 
-            _controlsDirty = false;
-            _controlHost.Rebuild(GetPageHtml());
+            if (_controlsNeedSync)
+            {
+                _controlsNeedSync = false;
+                _controlHost.Sync(GetPageHtml());
+            }
         }
 
         protected override bool OnInput(UiInputEvent input)

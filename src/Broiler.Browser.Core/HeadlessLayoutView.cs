@@ -45,14 +45,13 @@ namespace Broiler.Browser;
 /// command line and moved here when the window took it up.
 /// </para>
 /// <para>
-/// <b>What it does not do.</b> The Broiler.HTML copy switched on the layout engine's native
-/// anchor-positioning pass around each layout and handed it the document's <c>@position-try</c>
-/// rules. Both go through <c>Broiler.Layout.Engine.NativeAnchorPlacement</c>, which is internal to
-/// Broiler.Layout, and the package grants its internals to <c>Broiler.Cli.Tests</c>, not to
-/// <c>Broiler.Browser.Core</c>. So a script's geometry for an anchor-positioned box is its static
-/// placement, not the resolved one. That copy also put the bridge's visual-viewport scale into its
-/// snapshot key, which this one cannot read either; while the bridge bypasses the cache on every call
-/// that makes no difference.
+/// <b>It places anchored boxes</b>, as the window's drawing does: Broiler.HTML's
+/// <c>PlacesAnchoredBoxes</c> runs the layout engine's anchor placement with the document's
+/// <c>@position-try</c> rules, so a script's geometry for a box placed by <c>position-area</c> is where it
+/// is drawn. The Broiler.HTML copy reached the engine's switch directly; this one could not -- it is
+/// internal to Broiler.Layout -- and gave every anchored box its static placement until Broiler.HTML
+/// exposed it. That copy also put the bridge's visual-viewport scale into its snapshot key, which this
+/// one cannot read; while the bridge bypasses the cache on every call that makes no difference.
 /// </para>
 /// </remarks>
 internal sealed class HeadlessLayoutView : ILayoutView
@@ -61,6 +60,7 @@ internal sealed class HeadlessLayoutView : ILayoutView
     {
         AvoidAsyncImagesLoading = true,
         AvoidImagesLateLoading = true,
+        PlacesAnchoredBoxes = true,
     };
 
     private readonly Func<Uri, DocumentRequestContext> _documents;
