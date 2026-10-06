@@ -90,6 +90,60 @@ changed the document:
 Re-parsing costs a full parse and layout, so it is compared against the last applied HTML first.
 When the bounded question goes false, the tick stops; the session stays until the page is left.
 
+## Keys, typed text, and the controls the window hosts
+
+Input meant for the page reaches its scripts before the window acts on it
+(`BrowserViewport.TryDispatchThroughPage`):
+
+- **A key while the page has focus** — the viewport's, or a control the window hosts over the page.
+  The page hears `keydown` first (`InteractiveSession.DispatchKey`); a key it cancels goes no
+  further and types nothing, and a key it acted on itself — Tab moving focus, Enter submitting a
+  form or following a link, Space clicking a button — is not handled again. Anything else goes on
+  to the window: the field editor edits, the viewport scrolls.
+- **Typed text.** With the field editor open, the editor takes the text in first and the page is
+  told what the field now holds (`DispatchText` with `EditedValue`), hearing `keypress`,
+  `beforeinput` and `input`; a change the page cancels is undone in the editor. A deletion or a
+  paste the editor makes reaches the page the same way (`DispatchEdit`). Without the editor — a
+  field in a frame — the page puts the text in the field itself.
+- **The field editor follows the page's focus.** It opens on a text field of the page that a press,
+  Tab or a script focused, and closes once the page's focus leaves it. `InteractiveSession.FocusVersion`
+  says when to look, since asking where the focused field is lays the page out.
+- **A press, a release or a move over a hosted control** — the field editor, a checkbox — which the
+  viewport never sees. The release of a press on a text field went to the editor, so the page had
+  no `click` for it. A point on a list a control has open outside itself is not on the page, and is
+  not delivered.
+
+- **The field's selection and composition.** The page hears the selection the user makes in the
+  editor — a drag, Shift and an arrow, a click that placed the caret — through `DispatchSelection`,
+  and an input method's composition through `DispatchComposition`. The editor follows what the page's
+  scripts did to the field — a mask that reformatted its value, `setSelectionRange`, a Tab that
+  selected it all — when `InteractiveSession.FieldVersion` moves. A key an input method takes reaches
+  the page as `Process`, its `keyCode` 229.
+
+What the page changed is shown when its `RenderVersion` moved, as after a click — and that includes
+hover and focus: the page the window is handed carries each element's `:hover`, `:active` and focus
+state (`data-broiler-user-action`), and its target and the controls the user has interacted with
+(`data-broiler-state`), which the renderer's selectors match, so a `:hover` rule applies as the
+pointer crosses into its element and a field outlined only when `:user-invalid` is outlined once the
+user has left it wrong.
+
+## The page's own form activation, fragments and history
+
+- **A click on a submit or reset button is the page's.** It submitted nothing: the bridge left a
+  button's activation to the window, and the renderer's link click, which the window submits a form
+  from, never reaches a submit button -- on a page without scripts either, which is still the case.
+  The page now validates and submits the form, or resets it, and says so
+  (`PointerInputResult.Handled`); the window then does nothing of its own for the click.
+- **A link into the page** scrolls to the fragment as before, and the page hears it as its own
+  fragment navigation (`InteractiveSession.NavigateToFragment`): `location.hash`, `hashchange` and
+  `:target` follow. A page with no scripts has the renderer find the target
+  (`HtmlContainer.TargetFragment`) and style the document again without parsing it
+  (`RestyleDocument`), so what the user typed stays.
+- **History.** The window remembers every page it has shown, fragment included, for as long as it is
+  open, and writes it nowhere. The renderer asks it about each link (`VisitedLinkPredicate`), so a
+  link to one of them takes its `:visited` colours — only colours, as in a browser, and never where
+  a page's scripts could read them.
+
 ## The shape of the bug, if it comes back
 
 A window that stops repainting while a page loads, and recovers when the page's script happens

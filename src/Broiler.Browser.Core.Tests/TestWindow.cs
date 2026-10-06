@@ -4,7 +4,9 @@ using Broiler.Graphics.RenderList;
 using Broiler.Graphics.Rendering;
 using Broiler.Graphics.Text;
 using Broiler.Input;
+using Broiler.Input.Keyboard;
 using Broiler.Input.Mouse;
+using Broiler.Input.Text;
 using Broiler.UI;
 
 namespace Broiler.Browser.Core.Tests;
@@ -117,6 +119,49 @@ internal sealed class TestWindow : IDisposable
             InputPoint.ClientDeviceIndependentPixels(x, y),
             MouseButtons.None,
             InputEventSource.Synthetic)));
+
+    /// <summary>
+    /// Presses and releases the key the keyboard layer names <paramref name="name"/> (<c>KeyA</c>,
+    /// <c>Enter</c>, <c>Tab</c>), whose Windows virtual-key code is <paramref name="virtualKey"/>,
+    /// typing <paramref name="text"/> in between when the key types something.
+    /// </summary>
+    public void Key(string name, int virtualKey, string? text = null, bool shift = false)
+    {
+        KeyboardModifierState modifiers = shift ? KeyboardModifierState.Shift | KeyboardModifierState.LeftShift : KeyboardModifierState.None;
+        _app.Dispatch(KeyEvent(name, virtualKey, KeyboardKeyTransition.Down, modifiers));
+        if (text is not null)
+            _app.Dispatch(UiInputEvent.FromKeyboardText(new KeyboardTextEvent(NextHeader("test-keyboard"), text)));
+        _app.Dispatch(KeyEvent(name, virtualKey, KeyboardKeyTransition.Up, modifiers));
+    }
+
+    /// <summary>Types <paramref name="text"/>, a letter key at a time, as the keyboard layer reports each.</summary>
+    public void Type(string text)
+    {
+        foreach (char character in text)
+        {
+            string name = char.IsAsciiDigit(character) ? "Digit" + character : "Key" + char.ToUpperInvariant(character);
+            Key(name, char.ToUpperInvariant(character), character.ToString());
+        }
+    }
+
+    /// <summary>Delivers a step of an input method's composition, as the text layer reports it.</summary>
+    public void Compose(TextCompositionState state, string text) =>
+        _app.Dispatch(UiInputEvent.FromTextComposition(new TextCompositionEvent(NextHeader("test-keyboard"), text, state)));
+
+    private UiInputEvent KeyEvent(string name, int virtualKey, KeyboardKeyTransition transition, KeyboardModifierState modifiers) =>
+        UiInputEvent.FromKeyboardKey(new KeyboardKeyEvent(
+            NextHeader("test-keyboard"),
+            KeyboardKey.FromName(name),
+            transition,
+            modifiers,
+            virtualKey,
+            ScanCode: 0,
+            RepeatCount: 1,
+            IsExtended: false,
+            WasDown: false));
+
+    private InputEventHeader NextHeader(string device) =>
+        new(InputDeviceId.FromOpaqueValue(device), new InputTimestamp(++_sequence, TimeSpan.TicksPerSecond, "test"), _sequence);
 
     public void Click(double x, double y)
     {
