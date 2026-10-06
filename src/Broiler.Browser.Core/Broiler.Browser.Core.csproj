@@ -33,7 +33,7 @@
     eng/Broiler.ConfigurationNames.targets.
   -->
   <ItemGroup Condition="'$(BroilerJavaScriptEngine)' == 'Vm'">
-    <PackageReference Include="Broiler.HtmlBridge.Scripting.Vm" Version="0.1.0-preview.14" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting.Vm" Version="0.1.0-preview.16" />
   </ItemGroup>
 
   <ItemGroup>
@@ -67,21 +67,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.15" />
-    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.15" />
-    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.14" />
-    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.14" />
+    <PackageReference Include="Broiler.HTML.Graphics" Version="0.1.0-preview.16" />
+    <PackageReference Include="Broiler.HTML.Image" Version="0.1.0-preview.16" />
+    <PackageReference Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.16" />
+    <PackageReference Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.16" />
     <PackageReference Include="Broiler.Net" Version="0.1.0-preview.2" />
     <PackageReference Include="Broiler.Input.Keyboard" Version="0.1.0-preview.5" />
     <PackageReference Include="Broiler.Input.Mouse" Version="0.1.0-preview.5" />
     <PackageReference Include="Broiler.Input.Touch" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.17" />
-    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.17" />
-    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.17" />
-    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.17" />
-    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.17" />
-    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.17" />
-    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.17" />
+    <PackageReference Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.18" />
+    <PackageReference Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.18" />
+    <PackageReference Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.18" />
+    <PackageReference Include="Broiler.UI.FileDialog.Standard" Version="0.1.0-preview.18" />
+    <PackageReference Include="Broiler.UI.Label.Standard" Version="0.1.0-preview.18" />
+    <PackageReference Include="Broiler.UI.RadioButton.Standard" Version="0.1.0-preview.18" />
+    <PackageReference Include="Broiler.UI.Window.Standard" Version="0.1.0-preview.18" />
   </ItemGroup>
 
   <!--
@@ -100,9 +100,9 @@
     LayoutDiagnostics), and what it diagnoses has to be what the window runs.
   -->
   <ItemGroup>
-    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.10" />
+    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.11" />
     <PackageReference Include="Broiler.Dom.Html" Version="0.1.0-preview.13" />
-    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.14" />
+    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.15" />
   </ItemGroup>
 
 </Project>
