@@ -1105,7 +1105,7 @@ internal sealed partial class BrowserApp : IDisposable
             InteractiveSession? session = null;
             try
             {
-                session = pipeline.ExecuteScriptsInteractive(WithRealmForInlineHandlers(content), page.InheritedPolicy);
+                session = pipeline.ExecuteScriptsInteractive(WithRealmForInlineHandlers(content), page.InheritedPolicy, page);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (session is not null)
