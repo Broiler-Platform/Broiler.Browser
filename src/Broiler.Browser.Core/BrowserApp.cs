@@ -69,6 +69,9 @@ internal sealed partial class BrowserApp : IDisposable
     // The run of history entries that are the document on screen's: the one it was loaded at, and those
     // its fragment navigations and pushState added. Back and forward among them are the page's to make
     // (BrowserViewport.TraverseHistory); anywhere else loads a document.
+    // Where a back or forward to another document puts the scroll once that document has loaded.
+    private float? _pendingScrollRestore;
+
     private int _documentFirstEntry = -1;
     private int _documentLastEntry = -1;
     private bool _isPageBusy;
@@ -300,7 +303,7 @@ internal sealed partial class BrowserApp : IDisposable
             return;
 
         if (_viewport.TakePendingNavigation() is { } requested
-            && !(requested.IsRepeatable
+            && !(requested.IsRepeatable && requested.InlineDocument is null
                 && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
         {
             NavigateTo(requested);
@@ -366,7 +369,7 @@ internal sealed partial class BrowserApp : IDisposable
             return;
 
         if (_viewport.TakePendingNavigation() is { } requested
-            && !(requested.IsRepeatable
+            && !(requested.IsRepeatable && requested.InlineDocument is null
                 && string.Equals(requested.Url, CurrentHistoryUrl(), StringComparison.OrdinalIgnoreCase)))
         {
             NavigateTo(requested);
@@ -470,6 +473,15 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         request = request with { Url = NormalizeInput(request.Url) };
+        _pendingScrollRestore = null;
+
+        // A javascript: URL's string is the page's document at its URL, shown in place of the one on
+        // screen, whose history entry it keeps (HTML "navigate to a javascript: URL").
+        if (request.InlineDocument is not null)
+        {
+            LoadUrl(request);
+            return;
+        }
 
         // A link to the fragment the page is already at is no new entry, as it is none in a browser.
         if (FragmentWithinCurrentDocument(request) is { } sameFragment &&
@@ -480,6 +492,7 @@ internal sealed partial class BrowserApp : IDisposable
             return;
         }
 
+        RememberScroll();
         if (_historyIndex < _history.Count - 1)
             _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1);
 
@@ -535,6 +548,7 @@ internal sealed partial class BrowserApp : IDisposable
             switch (change.Kind)
             {
                 case HistoryChangeKind.Push:
+                    RememberScroll();
                     if (_historyIndex < _history.Count - 1)
                         _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1);
                     _history.Add(PageRequest.ForUrl(change.Url) with { Initiator = _viewport.DocumentContext });
@@ -566,6 +580,13 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         return false;
+    }
+
+    /// <summary>The current entry of the window's history keeps where the view is scrolled, which going back to it restores.</summary>
+    private void RememberScroll()
+    {
+        if (_historyIndex >= 0 && _historyIndex < _history.Count)
+            _history[_historyIndex] = _history[_historyIndex] with { LeftAtScrollY = _viewport.ScrollY };
     }
 
     /// <summary>What follows the <c>#</c> of <paramref name="url"/>, or null when it has none.</summary>
@@ -611,16 +632,18 @@ internal sealed partial class BrowserApp : IDisposable
         if (target < 0 || target >= _history.Count)
             return;
 
+        RememberScroll();
+
         // An entry of the page on screen -- one its pushState or a fragment made -- is the page's to go
         // to: it moves its URL and state and hears popstate, and nothing loads.
         if (target >= _documentFirstEntry && target <= _documentLastEntry && _viewport.TraverseHistory(delta))
         {
+            // The page puts the scroll back where the entry was left, as Chromium does, rather than at
+            // its fragment (DomBridge/SessionHistory.cs).
             _historyIndex = target;
             SetUrlText(_history[target].Url);
             UpdateNavigationButtons();
             UpdateStarButton();
-            if (FragmentOf(_history[target].Url) is { Length: > 0 } entryFragment)
-                _viewport.ScrollToFragment(entryFragment);
             AfterPageInput();
             _host.RequestInvalidate();
             return;
@@ -636,9 +659,13 @@ internal sealed partial class BrowserApp : IDisposable
         {
             _historyIndex = target;
             ShowFragment(request.Url, fragment);
+            if (request.LeftAtScrollY is { } left)
+                _viewport.RestoreScroll(left);
             return;
         }
 
+        // Another document: once it has loaded, the scroll goes back where the entry was left.
+        _pendingScrollRestore = request.LeftAtScrollY;
         if (!request.IsRepeatable)
         {
             // Re-issuing a submission can charge a card twice. Ask first, and only
@@ -1170,7 +1197,9 @@ internal sealed partial class BrowserApp : IDisposable
     /// <paramref name="content"/>, given a realm when it has no scripts of its own but still has script
     /// to run: the event handler attributes the user's input fires -- an <c>onclick</c>, an
     /// <c>onmouseenter</c>, an <c>onfocus</c> -- or frames, whose own scripts run only in a page that
-    /// has one. Without a session nothing the user does reaches either.
+    /// has one. Without a session nothing the user does reaches either. A form gets one too: a press on
+    /// its submit button submits through the page (the renderer reports no submit control as a link),
+    /// so on a page with no script at all clicking one did nothing.
     /// </summary>
     internal static Broiler.HtmlBridge.Scripting.PageContent WithRealmForInlineHandlers(Broiler.HtmlBridge.Scripting.PageContent content) =>
         content.Scripts.Count == 0 && content.DeferredScripts.Count == 0 && content.ModuleRoots.Count == 0 &&
@@ -1179,7 +1208,7 @@ internal sealed partial class BrowserApp : IDisposable
             : content;
 
     [System.Text.RegularExpressions.GeneratedRegex(
-        @"<[^>]*\son(?:click|dblclick|auxclick|contextmenu|mouse[a-z]+|pointer[a-z]+|focus(?:in|out)?|blur|change|input)\s*=|<i?frame[\s>]",
+        @"<[^>]*\son(?:click|dblclick|auxclick|contextmenu|mouse[a-z]+|pointer[a-z]+|focus(?:in|out)?|blur|change|input)\s*=|<i?frame[\s>]|<form[\s>]",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex ScriptWithoutScripts();
 
@@ -1240,6 +1269,7 @@ internal sealed partial class BrowserApp : IDisposable
         // assign/replace it is a page re-stating where it is, and following it would fetch the same
         // bytes to run the same script to ask again.
         if (navigation.Kind is not (NavigationKind.Reload or NavigationKind.FormSubmit)
+            && navigation.Document is null
             && string.Equals(navigation.Url, currentUrl, StringComparison.OrdinalIgnoreCase))
         {
             RenderLogger.LogDebug(LogCategory.JavaScript, "Browser.navigation",
@@ -1313,9 +1343,11 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         PageRequest? request;
-        if (navigation.Kind != NavigationKind.FormSubmit)
+        if (navigation.Kind != NavigationKind.FormSubmit || navigation.FormIndex < 0)
         {
-            request = PageRequest.ForUrl(navigation.Url);
+            // A javascript: URL's string is the document itself; a frame's form the bridge encoded is a
+            // GET of the URL it built, its entries in it (DomBridge/FrameSubmission.cs).
+            request = PageRequest.ForUrl(navigation.Url) with { InlineDocument = navigation.Document };
         }
         else
         {
@@ -1593,7 +1625,8 @@ internal sealed partial class BrowserApp : IDisposable
             && _historyIndex >= 0
             && _historyIndex < _history.Count)
         {
-            _history[_historyIndex] = loaded;
+            // A javascript: URL's document keeps the entry its URL's: reloading it fetches the URL.
+            _history[_historyIndex] = loaded with { InlineDocument = null };
         }
 
         SetUrlText(result.NormalisedUrl);
@@ -1610,6 +1643,14 @@ internal sealed partial class BrowserApp : IDisposable
         // navigation started with carries the fragment when the loaded URL lost it on the way.
         if ((FragmentOf(result.NormalisedUrl) ?? FragmentOf(startedAt)) is { } fragment)
             _viewport.ScrollToFragment(fragment);
+
+        // Back or forward to this document: where its entry was left, as Chromium restores it, fragment
+        // or not.
+        if (_pendingScrollRestore is { } restore)
+        {
+            _pendingScrollRestore = null;
+            _viewport.RestoreScroll(restore);
+        }
 
         if (_viewport.HasPendingWork)
         {
@@ -2299,6 +2340,13 @@ internal sealed partial class BrowserApp : IDisposable
             _controlHost = new HtmlFormControlHost(this, _formState);
             _controlHost.Changed += (_, _) => Invalidate(UiInvalidationKind.Render);
             _controlHost.FilePickRequested += (_, e) => FilePickRequested?.Invoke(this, e);
+
+            // The user's choice in a hosted select is the page's select's too, with its input and change.
+            _controlHost.OptionChosen += (_, e) =>
+            {
+                if (_interactiveSession is { } page && page.SelectOptionByUser(e.SelectIndex, e.OptionIndex))
+                    ShowPageIfChanged();
+            };
         }
 
         public event EventHandler<BrowserLinkEventArgs>? LinkActivated;
@@ -3512,6 +3560,12 @@ internal sealed partial class BrowserApp : IDisposable
             _viewScrollReportedSinceTaken = false;
             return reported;
         }
+
+        /// <summary>Where the view is scrolled, in CSS pixels.</summary>
+        public float ScrollY => _scrollY / _viewportZoom;
+
+        /// <summary>Scrolls the view to <paramref name="y"/> CSS pixels, where a history entry was left; the page hears it.</summary>
+        public void RestoreScroll(float y) => SetScroll(y * _viewportZoom);
 
         private void SetScroll(float value)
         {

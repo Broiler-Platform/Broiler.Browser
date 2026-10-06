@@ -131,9 +131,10 @@ user has left it wrong.
 
 - **A click on a submit or reset button is the page's.** It submitted nothing: the bridge left a
   button's activation to the window, and the renderer's link click, which the window submits a form
-  from, never reaches a submit button -- on a page without scripts either, which is still the case.
-  The page now validates and submits the form, or resets it, and says so
-  (`PointerInputResult.Handled`); the window then does nothing of its own for the click.
+  from, never reaches a submit button. The page now validates and submits the form, or resets it, and
+  says so (`PointerInputResult.Handled`); the window then does nothing of its own for the click. A page
+  with no script at all gets a realm for this when it has a form, as it does for event handler
+  attributes and frames, so its submit buttons submit too.
 - **A link into the page** scrolls to the fragment as before, and the page hears it as its own
   fragment navigation (`InteractiveSession.NavigateToFragment`): `location.hash`, `hashchange` and
   `:target` follow. A page with no scripts has the renderer find the target
@@ -144,13 +145,22 @@ user has left it wrong.
   after every input and every step): the address moves and back is enabled. Back and forward between
   the page's entries are the page's traversals (`TraverseHistory`) -- it hears `popstate` and nothing
   loads -- and its `history.length` counts the window's entries around its own (`SetSessionHistory`).
-  A `history.back()` past the page's first entry is the window's to make.
+  A `history.back()` past the page's first entry is the window's to make. A frame's entries are the
+  window's too, at the page's address, so its back button goes back through what a frame did. Back or
+  forward to another page puts the view where the user left it (`PageRequest.LeftAtScrollY`), once that
+  page has loaded; within the page's own entries the page restores it itself.
 - **A `javascript:` URL** -- a link, the address bar -- runs its script in the page on screen
-  (`RunJavaScriptUrl`) if the page's policy allows inline script. It loaded an error page before.
+  (`RunJavaScriptUrl`) if the page's policy allows inline script. It loaded an error page before. A
+  string the script answers is the page's new document (`NavigationRequest.Document`), shown at the
+  page's URL without a fetch and without a history entry of its own (`PageRequest.InlineDocument`); a
+  reload fetches the URL again.
 - **A submission names its button.** The page's request carries its submitter (`SubmitterIndex`, an
   image button's point) and what its `formdata` listeners changed (`FormDataEdits`), which the window
   replays on the entry list it builds from the serialised document. Enter submits as the form's default
-  button, as in Chromium. A `method="dialog"` form closes its dialog and loads nothing.
+  button, as in Chromium. A `method="dialog"` form closes its dialog and loads nothing. A frame's form
+  that targets the page arrives with no form index and the URL the bridge built from its entries, and
+  is loaded as it is. A choice in a select the window draws for the page's (`HtmlFormControlHost`) is
+  the page's select's too (`SelectOptionByUser`), with its `input` and `change`.
 - **Scrolling is shared.** The window follows the page's own scroll -- `scrollTo`, `scrollIntoView`, a
   script's fragment navigation (`ViewportScroll`) -- and tells the page where the user scrolled
   (`ScrollViewportTo`), so its `scrollY` and its geometry answer for what is on screen. The page hears

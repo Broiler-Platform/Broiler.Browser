@@ -74,7 +74,16 @@ public sealed class RenderingPipeline(
     /// </remarks>
     public async Task<LoadedPage> LoadAsync(PageRequest request, CancellationToken cancellationToken = default)
     {
-        PageLoadResult response = await pageLoader.LoadAsync(request, cancellationToken).ConfigureAwait(false);
+        // A javascript: URL's string is the document itself, at the page's URL: nothing is fetched.
+        PageLoadResult response = request.InlineDocument is { } inline
+            ? new PageLoadResult
+            {
+                FinalUrl = request.Url,
+                Html = inline,
+                Method = request.Method,
+                RedirectChain = Uri.TryCreate(request.Url, UriKind.Absolute, out Uri? at) ? [at] : [],
+            }
+            : await pageLoader.LoadAsync(request, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
         string url = response.FinalUrl;

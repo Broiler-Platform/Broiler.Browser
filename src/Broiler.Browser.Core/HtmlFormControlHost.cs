@@ -89,6 +89,12 @@ internal sealed class HtmlFormControlHost
     /// </summary>
     public event EventHandler<HtmlFilePickEventArgs>? FilePickRequested;
 
+    /// <summary>
+    /// Raised when the user chose an option of a hosted select: which select of the page, and which option of
+    /// it, both counted in tree order, so the host can tell the page's select.
+    /// </summary>
+    public event EventHandler<HtmlOptionChosenEventArgs>? OptionChosen;
+
     /// <summary>The controls hosted for the current page.</summary>
     public IReadOnlyList<UiElement> Controls => _hosted.ConvertAll(h => h.Control);
 
@@ -107,12 +113,15 @@ internal sealed class HtmlFormControlHost
         if (root is null)
             return;
 
+        int selectIndex = -1;
         foreach (DomElement element in Descendants(root))
         {
             if (_hosted.Count >= MaxHostedControls)
                 break;
 
             bool isSelect = string.Equals(element.TagName, "select", StringComparison.OrdinalIgnoreCase);
+            if (isSelect)
+                selectIndex++;
             bool isInput = string.Equals(element.TagName, "input", StringComparison.OrdinalIgnoreCase);
             if (!isSelect && !isInput)
                 continue;
@@ -128,7 +137,7 @@ internal sealed class HtmlFormControlHost
             if (id.Length == 0)
                 continue;
 
-            Add(element, id, isSelect, isRadio, isFile);
+            Add(element, id, isSelect, isRadio, isFile, selectIndex);
         }
     }
 
@@ -187,7 +196,7 @@ internal sealed class HtmlFormControlHost
         }
     }
 
-    private void Add(DomElement element, string id, bool isSelect, bool isRadio, bool isFile)
+    private void Add(DomElement element, string id, bool isSelect, bool isRadio, bool isFile, int selectIndex)
     {
         string name = element.GetAttribute("name") ?? string.Empty;
         string value = element.GetAttribute("value") ?? string.Empty;
@@ -200,8 +209,8 @@ internal sealed class HtmlFormControlHost
         else if (isSelect)
         {
             control = element.HasAttribute("multiple")
-                ? CreateListView(element, id, name)
-                : CreateComboBox(element, id, name);
+                ? CreateListView(element, id, name, selectIndex)
+                : CreateComboBox(element, id, name, selectIndex);
         }
         else
         {
@@ -286,7 +295,7 @@ internal sealed class HtmlFormControlHost
     /// selection the page declares (or the first option, which is what a single-select
     /// with nothing marked shows and submits).
     /// </summary>
-    private UiElement CreateComboBox(DomElement select, string id, string name)
+    private UiElement CreateComboBox(DomElement select, string id, string name, int selectIndex)
     {
         List<UiComboBoxItem> items = [];
         List<string> values = [];
@@ -333,7 +342,10 @@ internal sealed class HtmlFormControlHost
         {
             int index = combo.SelectedIndex;
             if (index >= 0 && index < values.Count)
+            {
                 _formState.SetSelectedValue(id, name, values[index]);
+                OptionChosen?.Invoke(this, new HtmlOptionChosenEventArgs(selectIndex, index));
+            }
 
             Changed?.Invoke(this, EventArgs.Empty);
         };
@@ -396,7 +408,7 @@ internal sealed class HtmlFormControlHost
     /// Unlike a single-choice select there is no fallback to the first option: a
     /// multi-select with nothing marked genuinely has nothing selected.
     /// </remarks>
-    private UiElement CreateListView(DomElement select, string id, string name)
+    private UiElement CreateListView(DomElement select, string id, string name, int selectIndex)
     {
         List<UiListItem> items = [];
         List<string> markupSelection = [];
@@ -434,6 +446,14 @@ internal sealed class HtmlFormControlHost
         list.SelectionChanged += (_, _) =>
         {
             _formState.SetSelectedValues(id, name, list.SelectedItemIds.Select(itemId => ValueAt(select, itemId)));
+
+            // The page's select keeps one selected option (HtmlBridge models no more): the first chosen.
+            if (list.SelectedItemIds.FirstOrDefault() is { } first &&
+                int.TryParse(first, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int option))
+            {
+                OptionChosen?.Invoke(this, new HtmlOptionChosenEventArgs(selectIndex, option));
+            }
+
             Changed?.Invoke(this, EventArgs.Empty);
         };
 
@@ -572,4 +592,12 @@ internal sealed class HtmlFilePickEventArgs(string controlId, string controlName
 
     /// <summary>Whether the control accepts more than one file, so picks accumulate.</summary>
     public bool AllowsMultiple { get; } = allowsMultiple;
+}
+
+/// <summary>The user chose option <see cref="OptionIndex"/> of the page's select <see cref="SelectIndex"/>, both counted in tree order.</summary>
+internal sealed class HtmlOptionChosenEventArgs(int selectIndex, int optionIndex) : EventArgs
+{
+    public int SelectIndex { get; } = selectIndex;
+
+    public int OptionIndex { get; } = optionIndex;
 }

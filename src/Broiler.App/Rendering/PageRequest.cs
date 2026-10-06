@@ -70,6 +70,19 @@ public sealed record PageRequest(
     /// </remarks>
     public SameSiteStatus? RecordedSameSite { get; init; }
 
+    /// <summary>
+    /// A document to show at <see cref="Url"/> without fetching anything: what a <c>javascript:</c> URL's
+    /// script answered, which replaces the page's document at its URL (HTML "navigate to a javascript:
+    /// URL").
+    /// </summary>
+    public string? InlineDocument { get; init; }
+
+    /// <summary>
+    /// Where the window was scrolled, in CSS pixels, when it last left this entry of its history: what going
+    /// back or forward to it restores, as Chromium does.
+    /// </summary>
+    public float? LeftAtScrollY { get; init; }
+
     /// <summary>Whether this request has anything to send.</summary>
     public bool HasBody => BinaryBody is not null || Body is not null;
 
