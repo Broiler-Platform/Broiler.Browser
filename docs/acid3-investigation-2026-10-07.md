@@ -1,10 +1,11 @@
 # Why Acid3 scores 91/100
 
-**Status:** the five causes of the nine failures are fixed in pull requests upstream, awaiting
-review and a package release: Broiler-Platform/Broiler.DOM#31 (cause 1), Broiler-Platform/Broiler.HtmlBridge#22
-(causes 2, 4 and 5) and Broiler-Platform/Broiler.CSS#66 (cause 3). Assemblies built from those three
-branches, in place of the packaged ones, score 100/100. The red "YOU SHOULD NOT SEE THIS AT ALL" is
-fixed in this repository. The other rendering defects are open. Investigated on 2026-10-07 from a
+**Status:** the nine failures are fixed and released: Broiler-Platform/Broiler.DOM#31,
+Broiler-Platform/Broiler.HtmlBridge#22 and Broiler-Platform/Broiler.CSS#66, and Acid3 scores 100/100.
+Of the rendering defects, the red "YOU SHOULD NOT SEE THIS AT ALL" is fixed in this repository, and
+the 500px score (Broiler-Platform/Broiler.CSS#68), test 28's "FAIL" (Broiler-Platform/Broiler.CSS#67)
+and the object fallback "FAIL" (Broiler-Platform/Broiler.Layout#132, Broiler-Platform/Broiler.HtmlBridge#23)
+are fixed and released. The red corner square is the one still open. Investigated on 2026-10-07 from a
 window screenshot that showed `91/100` drawn five times too large, a red square in the body's
 top-right corner, a red "YOU SHOULD NOT SEE THIS AT ALL" and a "FAIL" above the heading.
 **Components:** Broiler.DOM, Broiler.HtmlBridge, Broiler.CSS, Broiler.HTML, Broiler.Layout,
@@ -197,11 +198,11 @@ None of these costs a point; each makes the page differ from the reference rende
 
 | What shows | Cause | Where the fix goes |
 | --- | --- | --- |
-| The score at 500px | `inherit` takes the parent's specified `5em`, not its computed 100px | Broiler.CSS, Broiler.HTML |
+| The score at 500px | `inherit` takes the parent's specified `5em`, not its computed 100px | Broiler.CSS — fixed, Broiler-Platform/Broiler.CSS#68 |
 | A red square top right | `::after` text sits on the positioned box, not in a child, so it is laid out in the flow | Broiler.HTML |
-| "FAIL" above the heading | An `<object>` whose data loaded still renders its fallback | Broiler.HtmlBridge, Broiler.Layout, Broiler.HTML |
+| "FAIL" above the heading | An `<object>` whose data loaded still renders its fallback | Broiler.HtmlBridge, Broiler.Layout — fixed, Broiler-Platform/Broiler.HtmlBridge#23, Broiler-Platform/Broiler.Layout#132 |
 | A red "YOU SHOULD NOT SEE THIS AT ALL" | A frame's navigation is not recorded for `:visited` | Broiler.Browser — fixed |
-| Test 28's "FAIL", below the first screen | Selector parsing drops an escaped space: `#\ ` matches nothing | Broiler.CSS |
+| Test 28's "FAIL", below the first screen | Selector parsing drops an escaped space: `#\ ` matches nothing | Broiler.CSS — fixed, Broiler-Platform/Broiler.CSS#67 |
 | A red heading, `--capture-image` only | `HtmlRender` applies a stylesheet served as `text/html` | Broiler.HTML |
 
 ### The score is drawn at 500px
