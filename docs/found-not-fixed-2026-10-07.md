@@ -66,7 +66,7 @@ button is hosted disabled, so it is drawn greyed and takes no click.
 
 | # | Gap | Where the fix goes |
 | --- | --- | --- |
-| 1 | A reCAPTCHA page takes 77–89 s to load, where Chromium takes about 4 s | Broiler.JS |
+| 1 | A reCAPTCHA page takes 77–95 s to load, where Chromium takes about 4 s | Broiler.JS |
 | 2 | Web fonts are measured but not drawn | Broiler.Graphics, Broiler.HTML.Graphics |
 | 3 | Glyphs this machine's fonts lack come from Unifont, and a variation selector is drawn | Broiler.Graphics |
 | 4 | A hover that changes the page re-parses and lays out the whole of it | Broiler.Browser, Broiler.HTML |
@@ -78,10 +78,11 @@ button is hosted disabled, so it is drawn greyed and takes no click.
 | 10 | A quirks-mode form has no 1em bottom margin | Broiler.HTML |
 | 11 | A disabled `<select>` and a multiple select's list are not greyed | Broiler.HTML, Broiler.Browser |
 
-## 1. A reCAPTCHA page takes 77–89 s to load
+## 1. A reCAPTCHA page takes 77–95 s to load
 
-recaptcha-demo.appspot.com's v2 checkbox, v2 invisible and v3 demos, and google.com/recaptcha/api2/demo,
-settle in 77–89 s in the window and in about 4 s in Chromium; the demos' index, which loads reCAPTCHA
+recaptcha-demo.appspot.com's v2 checkbox, explicit render, v2 invisible, v3 and Content Security Policy
+demos, and google.com/recaptcha/api2/demo,
+settle in 77–95 s in the window and in about 4 s in Chromium; the demos' index, which loads reCAPTCHA
 v3 in the background, settles in 11–14 s. The widget is drawn well before the window says it is done.
 A profile of a load puts the time in running reCAPTCHA's scripts: its web worker
 (`api2/webworker.js`) ran for about 33 s, nearly all of it in function calls, and compiling scripts
