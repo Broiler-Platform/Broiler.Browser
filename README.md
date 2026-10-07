@@ -153,7 +153,8 @@ the manifest too: `"folders": false` lists its projects at the root instead of u
 - **Android head** — a separate job, since it pays for the `android` workload. It runs the two
   graph checks for its own solution, which the other job cannot evaluate without the workload.
 - **Publish** — `Release-Windows` and `Release-Linux`, the runtime-identifier-pinned
-  configurations, self-contained and single-file as the release ships them. They are
+  configurations, in both variants the release ships: self-contained single-file and
+  framework-dependent. They are
   project-level builds by necessity: no solution declares them, so a solution-level build with
   either fails `MSB4126`.
 
@@ -168,14 +169,18 @@ workflow*). Each run picks the next preview version, builds every head with it, 
 
 | Asset | Contents |
 |---|---|
-| `Broiler.Browser-<version>-win-x64.zip` | `Broiler.Browser.Windows.exe` |
-| `Broiler.Browser-<version>-linux-x64.zip` | `Broiler.Browser.Linux`, recorded executable |
+| `Broiler.Browser-<version>-win-x64-self-contained.zip` | `Broiler.Browser.Windows.exe` |
+| `Broiler.Browser-<version>-win-x64-framework-dependent.zip` | the publish folder: `Broiler.Browser.Windows.exe` and its assemblies, no runtime |
+| `Broiler.Browser-<version>-linux-x64-self-contained.zip` | `Broiler.Browser.Linux`, recorded executable |
+| `Broiler.Browser-<version>-linux-x64-framework-dependent.zip` | the publish folder: `Broiler.Browser.Linux` (recorded executable) and its assemblies, no runtime |
 | `Broiler.Browser-<version>.aab` | the Android app bundle (arm64 + x86_64), for Google Play |
 | `Broiler.Browser-<version>-arm64.apk` | the Android APK, for sideloading |
 
-The desktop executables are self-contained single files: the .NET runtime and every assembly in
-one file, nothing to install. They are not NativeAOT, as Broiler.Writer's are, because Broiler.JS
-does not start under NativeAOT.
+The self-contained desktop executables are single files: the .NET runtime and every assembly in
+one file, nothing to install. The framework-dependent variants are the same heads published with
+`--self-contained false`: a folder without the runtime, much smaller, that needs the .NET 10
+runtime installed. Neither is NativeAOT, as Broiler.Writer's are, because Broiler.JS does not
+start under NativeAOT.
 
 The release optimizations are set in the head projects, so CI and a publish from Visual Studio get
 them too:
