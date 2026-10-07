@@ -1,9 +1,10 @@
 # Fixes waiting on component releases, and gaps found while making them
 
-**Status:** the fixes are on unmerged component branches; the gaps are open, not fixed. Found on
+**Status:** the fixes are in open component pull requests; the gaps are open, not fixed. Found on
 2026-10-07 while making html5test's hover fast, delivering scroll the way Chromium does, and bringing
-Google's reCAPTCHA demos level with Chromium: recaptcha-demo.appspot.com (the index, the v2 checkbox,
-v2 invisible and v3 demos) and google.com/recaptcha/api2/demo.
+Google's reCAPTCHA demos level with Chromium: recaptcha-demo.appspot.com (its index and its v2
+checkbox, explicit render, v2 invisible, v3 and Content Security Policy demos) and
+google.com/recaptcha/api2/demo.
 **Components:** Broiler.CSS, Broiler.HtmlBridge, Broiler.Layout, Broiler.HTML, Broiler.JS,
 Broiler.Graphics, Broiler.Browser.
 **Affects:** the Broiler.Browser window.
@@ -12,14 +13,17 @@ Chromium's behaviour was measured unless an item says otherwise.
 
 ## What the window needs to take
 
-The component fixes are on each repository's `claude/charming-fermi-a98xil` branch. This repository
-can only take published packages, so they reach the window through releases, in this order:
+The component fixes are in Broiler-Platform/Broiler.CSS#64, Broiler-Platform/Broiler.HtmlBridge#19,
+Broiler-Platform/Broiler.Layout#129 and Broiler-Platform/Broiler.HTML#242. This repository can only take
+published packages, so they reach the window through releases, in this order:
 
-1. **Broiler.CSS 0.1.0-preview.12**, Broiler.CSS and Broiler.CSS.Dom.
-2. **Broiler.HtmlBridge 0.1.0-preview.17**, which pins Broiler.CSS.Dom 0.1.0-preview.12, and
-   **Broiler.Layout 0.1.0-preview.16**.
-3. **Broiler.HTML 0.1.0-preview.17**. It builds against Broiler.Layout 0.1.0-preview.15 as it stands,
-   and gets the fieldset legend's new place from 0.1.0-preview.16 at run time.
+1. **Broiler.CSS 0.1.0-preview.12**, Broiler.CSS and Broiler.CSS.Dom (Broiler.CSS#64).
+2. **Broiler.HtmlBridge 0.1.0-preview.17** (Broiler.HtmlBridge#19, a draft until step 1 is published,
+   because it pins Broiler.CSS.Dom 0.1.0-preview.12), and **Broiler.Layout 0.1.0-preview.16**
+   (Broiler.Layout#129).
+3. **Broiler.HTML 0.1.0-preview.17** (Broiler.HTML#242). It builds against Broiler.Layout
+   0.1.0-preview.15 as it stands, and gets the fieldset legend's new place from 0.1.0-preview.16 at run
+   time.
 4. This repository, taking all four.
 
 With every fixed assembly put in place of the published one, this repository's suites pass in Release
