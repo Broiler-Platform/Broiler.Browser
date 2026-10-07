@@ -122,7 +122,8 @@ internal sealed partial class BrowserApp : IDisposable
         PageRequest? initialRequest = null)
     {
         _profile = profile;
-        _network = wrapNetwork?.Invoke(profile.Network) ?? profile.Network;
+        // Outermost, so a frame's navigation is noted for :visited whatever the host wrapped around it.
+        _network = new FrameVisitTransport(wrapNetwork?.Invoke(profile.Network) ?? profile.Network, NoteVisited);
         _ownsProfile = ownsProfile;
         _favorites = new FavoritesManager(profile.FavoritesPath);
         _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -611,7 +612,8 @@ internal sealed partial class BrowserApp : IDisposable
     }
 
     /// <summary>
-    /// The pages this window has shown, by URL, fragment included: what <c>:visited</c> asks of a link.
+    /// The pages this window and its pages' frames have shown, by URL, fragment included: what
+    /// <c>:visited</c> asks of a link. Frames are noted by <see cref="FrameVisitTransport"/>.
     /// Kept for as long as the window is open and never written anywhere, so it is a history of this
     /// session alone. Read by page loads on worker threads, so a concurrent set.
     /// </summary>

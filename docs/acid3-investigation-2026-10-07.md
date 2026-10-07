@@ -1,8 +1,12 @@
 # Why Acid3 scores 91/100
 
-**Status:** open, not fixed. Investigated on 2026-10-07 from a window screenshot that showed
-`91/100` drawn five times too large, a red square in the body's top-right corner, a red
-"YOU SHOULD NOT SEE THIS AT ALL" and a "FAIL" above the heading.
+**Status:** the five causes of the nine failures are fixed in pull requests upstream, awaiting
+review and a package release: Broiler-Platform/Broiler.DOM#31 (cause 1), Broiler-Platform/Broiler.HtmlBridge#22
+(causes 2, 4 and 5) and Broiler-Platform/Broiler.CSS#66 (cause 3). Assemblies built from those three
+branches, in place of the packaged ones, score 100/100. The red "YOU SHOULD NOT SEE THIS AT ALL" is
+fixed in this repository. The other rendering defects are open. Investigated on 2026-10-07 from a
+window screenshot that showed `91/100` drawn five times too large, a red square in the body's
+top-right corner, a red "YOU SHOULD NOT SEE THIS AT ALL" and a "FAIL" above the heading.
 **Components:** Broiler.DOM, Broiler.HtmlBridge, Broiler.CSS, Broiler.HTML, Broiler.Layout,
 Broiler.JS, Broiler.Browser.
 **Affects:** the Broiler.Browser window and `Broiler.Cli`, which run Acid3 the same way and both
@@ -44,16 +48,18 @@ the sixth, ECMAScript, turns purple.
 
 | # | Cause | Tests | Where the fix goes | Verified |
 | --- | --- | --- | --- | --- |
-| 1 | The TreeWalker departs from the DOM Standard's algorithms | 01, 06 | Broiler.DOM | Prototype: both pass |
-| 2 | `table.tBodies`, `.rows` and `.cells` throw | 29, 49, 50, 51 | Broiler.HtmlBridge | Prototype: all four pass |
-| 3 | The root element matches `:first-child` | 35 | Broiler.CSS | Prototype: passes |
-| 4 | A computed style keeps `:checked` from before a `click()` | 43 | Broiler.HtmlBridge | Prototype: passes |
-| 5 | A script in an XHTML frame served as `text/xml` does not run | 80 | Broiler.HtmlBridge | Prototype: passes |
+| 1 | The TreeWalker departs from the DOM Standard's algorithms | 01, 06 | Broiler.DOM | Broiler-Platform/Broiler.DOM#31 |
+| 2 | `table.tBodies`, `.rows` and `.cells` throw | 29, 49, 50, 51 | Broiler.HtmlBridge | Broiler-Platform/Broiler.HtmlBridge#22 |
+| 3 | The root element matches `:first-child` | 35 | Broiler.CSS | Broiler-Platform/Broiler.CSS#66 |
+| 4 | A computed style keeps `:checked` from before a `click()` | 43 | Broiler.HtmlBridge | Broiler-Platform/Broiler.HtmlBridge#22 |
+| 5 | A script in an XHTML frame served as `text/xml` does not run | 80 | Broiler.HtmlBridge | Broiler-Platform/Broiler.HtmlBridge#22 |
 
-Each prototype was built from the upstream repository's `main` and dropped into a copy of the command
-line's output folder in place of the packaged assembly. With the prototypes for 1 and 2 Acid3 scores
-97/100; with 1 to 4, 99/100; with all five, 100/100. Three of the five are a line or two each; the
-TreeWalker is a transcription of the standard.
+Each fix was first tried as a prototype built from the upstream repository's `main` and dropped
+into a copy of the command line's output folder in place of the packaged assembly: with 1 and 2
+Acid3 scored 97/100, with 1 to 4 99/100, and with all five 100/100. The pull requests carry the
+fixes with tests that fail without them, and the same check against assemblies built from the three
+pull-request branches scores 100/100. Once their packages are published, this repository takes them
+in `Directory.Packages.props`.
 
 ### 1. The TreeWalker departs from the DOM Standard's algorithms (tests 01 and 06)
 
@@ -194,7 +200,7 @@ None of these costs a point; each makes the page differ from the reference rende
 | The score at 500px | `inherit` takes the parent's specified `5em`, not its computed 100px | Broiler.CSS, Broiler.HTML |
 | A red square top right | `::after` text sits on the positioned box, not in a child, so it is laid out in the flow | Broiler.HTML |
 | "FAIL" above the heading | An `<object>` whose data loaded still renders its fallback | Broiler.HtmlBridge, Broiler.Layout, Broiler.HTML |
-| A red "YOU SHOULD NOT SEE THIS AT ALL" | A frame's navigation is not recorded for `:visited` | Broiler.Browser |
+| A red "YOU SHOULD NOT SEE THIS AT ALL" | A frame's navigation is not recorded for `:visited` | Broiler.Browser — fixed |
 | Test 28's "FAIL", below the first screen | Selector parsing drops an escaped space: `#\ ` matches nothing | Broiler.CSS |
 | A red heading, `--capture-image` only | `HtmlRender` applies a stylesheet served as `text/html` | Broiler.HTML |
 
@@ -282,11 +288,11 @@ so it is white on white. Scripts are not meant to see this — `matches(':visite
 computed colour are what visited-link privacy requires, and what Broiler answers — but the paint is.
 
 Broiler.HTML asks the host whether a link is visited, and this repository answers from
-`BrowserApp._visitedUrls` (`src/Broiler.Browser.Core/BrowserApp.cs:618`). Only top-level navigations
-write to it (`NoteVisited`): a frame navigation goes through Broiler.HtmlBridge's fetch on the
-profile's network and is never noted. Noting a successful navigation response whose destination is a
-frame or an object, at the transport the window gives the bridge, would paint the link white on the
-next repaint. `Broiler.Cli --analyze` cannot show this either way: its render
+`BrowserApp._visitedUrls`. Only top-level navigations wrote to it (`NoteVisited`): a frame navigation
+goes through Broiler.HtmlBridge's fetch on the profile's network and was never noted. **Fixed here:**
+`FrameVisitTransport` wraps the window's network and notes every URL of a nested navigation's
+response (a frame or an object, any status, the whole redirect chain), so the link is painted white
+on the next repaint. `WindowFrameTests` covers it, with Acid3's own sequence. `Broiler.Cli --analyze` cannot show this either way: its render
 (`Analysis/RenderProbe.cs:147`) sets no visited-link check, so it paints every link `:link`.
 
 ### Test 28's "FAIL", further down the page
