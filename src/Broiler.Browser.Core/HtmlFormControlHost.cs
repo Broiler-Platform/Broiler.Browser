@@ -369,9 +369,9 @@ internal sealed class HtmlFormControlHost
             };
         }
 
-        // A disabled control takes no input: the hosted one is disabled with it, and follows the page's
-        // scripts as they disable it or enable it again. It was always enabled, so the disabled radios
-        // of reCAPTCHA's demo form could be ticked.
+        // A disabled control takes no input and is drawn so: the hosted one is disabled with it, and
+        // follows the page's scripts as they disable it or enable it again. It was always enabled, so
+        // the disabled radios of reCAPTCHA's demo form were drawn live and could be ticked.
         SetEnabled(control, !IsActuallyDisabled(element));
         control.Visibility = UiVisibility.Collapsed;
         _owner.AddChild(control);
@@ -384,13 +384,15 @@ internal sealed class HtmlFormControlHost
 
     /// <summary>
     /// Enables or disables a hosted control. A multiple select's list has no disabled state to show,
-    /// and stays as it is. So does a checkbox, for now: Broiler.UI 0.1.0-preview.18 draws a disabled
-    /// checked box's tick white on white, and a box the page has checked would look unchecked.
+    /// and stays as it is.
     /// </summary>
     private static void SetEnabled(UiElement control, bool enabled)
     {
         switch (control)
         {
+            case UiCheckBox box:
+                box.IsEnabled = enabled;
+                break;
             case UiRadioButton radio:
                 radio.IsEnabled = enabled;
                 break;

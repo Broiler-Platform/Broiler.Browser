@@ -213,8 +213,8 @@ public class HtmlFormControlHostTests
 
     /// <summary>
     /// A disabled control is hosted disabled: one with a <c>disabled</c> attribute, and one in a disabled
-    /// fieldset, except in the fieldset's first legend (HTML §4.10.18.5). A checkbox is not, yet: Broiler.UI
-    /// draws a disabled checked box's tick white on white, so it would look unchecked.
+    /// fieldset, except in the fieldset's first legend (HTML §4.10.18.5). A disabled checked checkbox is,
+    /// too, now that Broiler.UI draws its tick over the disabled colour.
     /// </summary>
     [Fact(Timeout = 600000)]
     public void DisabledControlsAreHostedDisabled()
@@ -225,7 +225,7 @@ public class HtmlFormControlHostTests
 
         host.Rebuild(container.GetHtml());
 
-        Assert.Equal([false, true, true, false, false, true], host.Controls.Select(IsEnabled));
+        Assert.Equal([false, true, true, false, false, false], host.Controls.Select(IsEnabled));
     }
 
     private static bool IsEnabled(UiElement control) => control switch
