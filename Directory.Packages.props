@@ -14,14 +14,14 @@
     <BroilerHostingVersion>0.1.0-preview.8</BroilerHostingVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Broiler.HTML.Graphics" Version="$(BroilerHtmlVersion)" />
-    <PackageVersion Include="Broiler.HTML.Image" Version="$(BroilerHtmlVersion)" />
-    <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="$(BroilerHtmlBridgeVersion)" />
-    <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="$(BroilerHtmlBridgeVersion)" />
+    <PackageVersion Include="Broiler.HTML.Graphics" Version="0.1.0-preview.20" />
+    <PackageVersion Include="Broiler.HTML.Image" Version="0.1.0-preview.20" />
+    <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.19" />
+    <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.19" />
     <PackageVersion Include="Broiler.HtmlBridge.Scripting.Vm" Version="$(BroilerHtmlBridgeVersion)" />
-    <PackageVersion Include="Broiler.CSS.Dom" Version="0.1.0-preview.12" />
-    <PackageVersion Include="Broiler.Dom.Html" Version="0.1.0-preview.13" />
-    <PackageVersion Include="Broiler.Layout" Version="0.1.0-preview.17" />
+    <PackageVersion Include="Broiler.CSS.Dom" Version="0.1.0-preview.13" />
+    <PackageVersion Include="Broiler.Dom.Html" Version="0.1.0-preview.14" />
+    <PackageVersion Include="Broiler.Layout" Version="0.1.0-preview.18" />
     <PackageVersion Include="Broiler.Net" Version="0.1.0-preview.2" />
     <PackageVersion Include="Broiler.Hosting.Windows" Version="$(BroilerHostingVersion)" />
     <PackageVersion Include="Broiler.Hosting.Linux" Version="$(BroilerHostingVersion)" />
