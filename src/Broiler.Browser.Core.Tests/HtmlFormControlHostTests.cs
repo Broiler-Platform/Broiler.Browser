@@ -205,14 +205,16 @@ public class HtmlFormControlHostTests
     private const string DisabledPage =
         "<html><body style='margin:0'><form action='/s'>" +
         "<input type='radio' name='c' value='x' disabled>" +
-        "<input type='checkbox' name='a' value='1'>" +
-        "<fieldset disabled><legend><input type='checkbox' name='l' value='1'></legend>" +
-        "<input type='checkbox' name='f' value='1'><select name='s'><option>o</option></select></fieldset>" +
+        "<input type='radio' name='a' value='1'>" +
+        "<fieldset disabled><legend><input type='radio' name='l' value='1'></legend>" +
+        "<input type='radio' name='f' value='1'><select name='s'><option>o</option></select></fieldset>" +
+        "<input type='checkbox' name='k' value='1' checked disabled>" +
         "</form></body></html>";
 
     /// <summary>
     /// A disabled control is hosted disabled: one with a <c>disabled</c> attribute, and one in a disabled
-    /// fieldset, except in the fieldset's first legend (HTML §4.10.18.5).
+    /// fieldset, except in the fieldset's first legend (HTML §4.10.18.5). A checkbox is not, yet: Broiler.UI
+    /// draws a disabled checked box's tick white on white, so it would look unchecked.
     /// </summary>
     [Fact(Timeout = 600000)]
     public void DisabledControlsAreHostedDisabled()
@@ -223,7 +225,7 @@ public class HtmlFormControlHostTests
 
         host.Rebuild(container.GetHtml());
 
-        Assert.Equal([false, true, true, false, false], host.Controls.Select(IsEnabled));
+        Assert.Equal([false, true, true, false, false, true], host.Controls.Select(IsEnabled));
     }
 
     private static bool IsEnabled(UiElement control) => control switch

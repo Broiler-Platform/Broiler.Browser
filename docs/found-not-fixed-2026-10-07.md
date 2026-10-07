@@ -49,10 +49,11 @@ What they change, measured in the window:
   are drawn as Chromium draws them apart from the items below: links underlined, the form framed by
   its fieldset with the legend in its border, a "Submit" button as wide as its text, the index's
   bullets beside its headings and the sources link in 13px monospace, and the api2 demo's two radios
-  alike, greyed out with the fields, as the page has them disabled.
+  alike and its fields greyed, as the page has them disabled.
 
-This repository's own part is `HtmlFormControlHost`: a disabled checkbox, radio, drop-down or file
-button is hosted disabled, so it is drawn greyed and takes no click.
+This repository's own part is `HtmlFormControlHost`: a disabled radio, drop-down or file button is
+hosted disabled, so it takes no click, and the drop-down and the button are drawn greyed. A checkbox
+stays enabled for now, and a disabled radio is not drawn grey: item 13.
 
 ## Gaps found and not fixed
 
@@ -70,6 +71,7 @@ button is hosted disabled, so it is drawn greyed and takes no click.
 | 10 | A quirks-mode form has no 1em bottom margin | Broiler.HTML |
 | 11 | A disabled `<select>` and a multiple select's list are not greyed | Broiler.HTML, Broiler.Browser |
 | 12 | Restyling a page with links can crash the window | Broiler.HTML (Broiler-Platform/Broiler.HTML#243) |
+| 13 | Disabled checkboxes and radios are not drawn grey, and a checkbox is hosted enabled | Broiler.UI, Broiler.Browser |
 
 ## 1. A reCAPTCHA page takes 77–95 s to load
 
@@ -157,3 +159,14 @@ plain dictionary, which their inserts corrupted. It needs a page big enough for 
 on several threads and a host that tells the renderer which links are visited, as the window does. It was
 already in Broiler.HTML 0.1.0-preview.16. Broiler-Platform/Broiler.HTML#243 keeps the answers in a
 concurrent map; the window takes it with Broiler.HTML's next release.
+
+## 13. Disabled checkboxes and radios are not drawn grey, and a checkbox is hosted enabled
+
+Chromium draws a disabled checkbox or radio grey: a checked box is rgb(209, 209, 209) with a pale tick,
+and a radio has a rgb(213, 213, 213) ring and a rgb(209, 209, 209) dot. Broiler.UI's standard radio
+button, disabled, greys its ring only slightly and keeps its blue dot, so a disabled radio looks enabled
+though it takes no click. Its standard checkbox, disabled, fills a checked box white and still draws the
+tick white, so a disabled checked box looks unchecked. The window therefore hosts a checkbox enabled
+whatever the page says, as it hosted every control before: it shows the page's tick, and the user can
+toggle a box the page has disabled. Once Broiler.UI draws both grey, the window can host a disabled
+checkbox disabled as it does the rest.
