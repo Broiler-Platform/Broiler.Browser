@@ -1,33 +1,20 @@
-# Fixes waiting on component releases, and gaps found while making them
+# Gaps found while making html5test's hover fast and reCAPTCHA level with Chromium
 
-**Status:** the fixes are in open component pull requests; the gaps are open, not fixed. Found on
-2026-10-07 while making html5test's hover fast, delivering scroll the way Chromium does, and bringing
-Google's reCAPTCHA demos level with Chromium: recaptcha-demo.appspot.com (its index and its v2
-checkbox, explicit render, v2 invisible, v3 and Content Security Policy demos) and
-google.com/recaptcha/api2/demo.
-**Components:** Broiler.CSS, Broiler.HtmlBridge, Broiler.Layout, Broiler.HTML, Broiler.JS,
-Broiler.Graphics, Broiler.Browser.
+**Status:** open, not fixed. Found on 2026-10-07 while making html5test's hover fast, delivering
+scroll the way Chromium does, and bringing Google's reCAPTCHA demos level with Chromium:
+recaptcha-demo.appspot.com (its index and its v2 checkbox, explicit render, v2 invisible, v3 and
+Content Security Policy demos) and google.com/recaptcha/api2/demo.
+**Components:** Broiler.JS, Broiler.Graphics, Broiler.HTML, Broiler.Layout, Broiler.CSS.Dom,
+Broiler.Browser.
 **Affects:** the Broiler.Browser window.
 
-Chromium's behaviour was measured unless an item says otherwise.
+The work that found these landed as Broiler-Platform/Broiler.CSS#64, Broiler-Platform/Broiler.HtmlBridge#19,
+Broiler-Platform/Broiler.Layout#129, Broiler-Platform/Broiler.HTML#242 and this repository's change that
+takes their packages: Broiler.CSS and Broiler.CSS.Dom 0.1.0-preview.12, Broiler.HtmlBridge
+0.1.0-preview.17, Broiler.Layout 0.1.0-preview.16 and Broiler.HTML 0.1.0-preview.17. Chromium's
+behaviour was measured unless an item says otherwise.
 
-## What the window needs to take
-
-The component fixes are in Broiler-Platform/Broiler.CSS#64, Broiler-Platform/Broiler.HtmlBridge#19,
-Broiler-Platform/Broiler.Layout#129 and Broiler-Platform/Broiler.HTML#242. This repository can only take
-published packages, so they reach the window through releases, in this order:
-
-1. **Broiler.CSS 0.1.0-preview.12**, Broiler.CSS and Broiler.CSS.Dom (Broiler.CSS#64).
-2. **Broiler.HtmlBridge 0.1.0-preview.17** (Broiler.HtmlBridge#19, a draft until step 1 is published,
-   because it pins Broiler.CSS.Dom 0.1.0-preview.12), and **Broiler.Layout 0.1.0-preview.16**
-   (Broiler.Layout#129).
-3. **Broiler.HTML 0.1.0-preview.17** (Broiler.HTML#242). It builds against Broiler.Layout
-   0.1.0-preview.15 as it stands, and gets the fieldset legend's new place from 0.1.0-preview.16 at run
-   time.
-4. This repository, taking all four.
-
-With every fixed assembly put in place of the published one, this repository's suites pass in Release
-(Broiler.Browser.Core.Tests 314, Broiler.Cli.Tests 218), so taking the packages needs no change here.
+## What the window takes
 
 | Component | Commit | What it fixes |
 | --- | --- | --- |
@@ -51,8 +38,9 @@ With every fixed assembly put in place of the published one, this repository's s
 What they change, measured in the window:
 
 - **html5test's hover.** The first move after the page loads took about 5 s and each change of hovered
-  table row about 2.3 s, with 3.4 s more for the next move. The first move now takes about 1.3 s, a row
-  change 0.4–0.7 s, and a move within a row about 25 ms. What remains is item 4 below.
+  table row about 2.3 s, with 3.4 s more for the next move. With the published packages the first move
+  takes 1.7–2.0 s, a row change 0.4–0.8 s, and a move within a row 17–35 ms. What remains is item 4
+  below.
 - **Scroll.** `<body onscroll>` fires, and so does a bubbling scroll listener on the document; the
   "Known gaps" entries for both in Broiler.HtmlBridge's `docs/html-control.md` are gone. A narrower
   one is there instead: where an `on…` handler runs among its target's listeners, so a parser-set
@@ -81,6 +69,7 @@ button is hosted disabled, so it is drawn greyed and takes no click.
 | 9 | Scripts read 16px for monospace text drawn at 13px | Broiler.CSS.Dom |
 | 10 | A quirks-mode form has no 1em bottom margin | Broiler.HTML |
 | 11 | A disabled `<select>` and a multiple select's list are not greyed | Broiler.HTML, Broiler.Browser |
+| 12 | Restyling a page with links can crash the window | Broiler.HTML (Broiler-Platform/Broiler.HTML#243) |
 
 ## 1. A reCAPTCHA page takes 77–95 s to load
 
@@ -157,3 +146,14 @@ in one mode alone.
 
 Chromium draws a disabled select at 0.7 opacity with grey text. The default sheet now greys disabled
 fields and buttons, not selects, and the window's multiple-select list has no disabled state to show.
+
+## 12. Restyling a page with links can crash the window
+
+Moving the pointer over html5test.com crashed the window in one of four runs, while a hover restyled the
+page: Broiler.HTML's `RendererSelectorState` threw "Operations that change non-concurrent collections
+must have exclusive access". Broiler.HTML resolves a page's styles on several threads before it lays the
+page out, each asks whether the links it styles are visited, and the selector state kept the answers in a
+plain dictionary, which their inserts corrupted. It needs a page big enough for the styles to be resolved
+on several threads and a host that tells the renderer which links are visited, as the window does. It was
+already in Broiler.HTML 0.1.0-preview.16. Broiler-Platform/Broiler.HTML#243 keeps the answers in a
+concurrent map; the window takes it with Broiler.HTML's next release.
