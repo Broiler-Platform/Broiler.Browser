@@ -1,13 +1,14 @@
 # Why Acid3 scores 91/100
 
-**Status:** the nine failures are fixed and released: Broiler-Platform/Broiler.DOM#31,
-Broiler-Platform/Broiler.HtmlBridge#22 and Broiler-Platform/Broiler.CSS#66, and Acid3 scores 100/100.
-Of the rendering defects, the red "YOU SHOULD NOT SEE THIS AT ALL" is fixed in this repository, and
-the 500px score (Broiler-Platform/Broiler.CSS#68), test 28's "FAIL" (Broiler-Platform/Broiler.CSS#67)
-and the object fallback "FAIL" (Broiler-Platform/Broiler.Layout#132, Broiler-Platform/Broiler.HtmlBridge#23)
-are fixed and released. The red corner square is the one still open. Investigated on 2026-10-07 from a
-window screenshot that showed `91/100` drawn five times too large, a red square in the body's
-top-right corner, a red "YOU SHOULD NOT SEE THIS AT ALL" and a "FAIL" above the heading.
+**Status:** fixed and released. The nine failures were fixed by Broiler-Platform/Broiler.DOM#31,
+Broiler-Platform/Broiler.HtmlBridge#22 and Broiler-Platform/Broiler.CSS#66, and Acid3 scores 100/100. The
+rendering defects were fixed by this repository (the red "YOU SHOULD NOT SEE THIS AT ALL"),
+Broiler-Platform/Broiler.CSS#68 (the 500px score), Broiler-Platform/Broiler.CSS#67 (test 28's "FAIL"),
+Broiler-Platform/Broiler.Layout#132 with Broiler-Platform/Broiler.HtmlBridge#23 (the object fallback
+"FAIL") and Broiler-Platform/Broiler.HTML#246 (the red corner square). What still differs from the
+reference is listed under "Still open" at the end. Investigated on 2026-10-07 from a window screenshot
+that showed `91/100` drawn five times too large, a red square in the body's top-right corner, a red
+"YOU SHOULD NOT SEE THIS AT ALL" and a "FAIL" above the heading.
 **Components:** Broiler.DOM, Broiler.HtmlBridge, Broiler.CSS, Broiler.HTML, Broiler.Layout,
 Broiler.JS, Broiler.Browser.
 **Affects:** the Broiler.Browser window and `Broiler.Cli`, which run Acid3 the same way and both
@@ -199,7 +200,7 @@ None of these costs a point; each makes the page differ from the reference rende
 | What shows | Cause | Where the fix goes |
 | --- | --- | --- |
 | The score at 500px | `inherit` takes the parent's specified `5em`, not its computed 100px | Broiler.CSS — fixed, Broiler-Platform/Broiler.CSS#68 |
-| A red square top right | `::after` text sits on the positioned box, not in a child, so it is laid out in the flow | Broiler.HTML |
+| A red square top right | `::after` text sits on the positioned box, not in a child, so it is laid out in the flow | Broiler.HTML — fixed, Broiler-Platform/Broiler.HTML#246 |
 | "FAIL" above the heading | An `<object>` whose data loaded still renders its fallback | Broiler.HtmlBridge, Broiler.Layout — fixed, Broiler-Platform/Broiler.HtmlBridge#23, Broiler-Platform/Broiler.Layout#132 |
 | A red "YOU SHOULD NOT SEE THIS AT ALL" | A frame's navigation is not recorded for `:visited` | Broiler.Browser — fixed |
 | Test 28's "FAIL", below the first screen | Selector parsing drops an escaped space: `#\ ` matches nothing | Broiler.CSS — fixed, Broiler-Platform/Broiler.CSS#67 |
@@ -346,3 +347,16 @@ A function expression costs Broiler.JS about 200 µs each time it is evaluated, 
 compile per evaluation rather than a closure over code compiled once; and a DOM mutation costs
 hundreds of microseconds, more the more nodes the page has made, even on a node outside the
 document. Both are speed work in Broiler.JS and Broiler.DOM or Broiler.HtmlBridge, not correctness.
+
+## Still open
+
+- **The corner square is fuchsia with a white "X", not solid white.** The `::after` box is now
+  placed and painted, but web fonts are measured and not drawn (item 2 of
+  `found-not-fixed-2026-10-07.md`), so AcidAhemTest's full-em "X" is drawn in an installed face.
+- **An absolutely positioned box's words are also laid out in its parent's line.** Broiler.Layout
+  places the text of a positioned inline box (`map::after` here, or a real
+  `<span style="position:absolute">`) in its parent's line as well as at its offsets, which makes that
+  line taller: on Acid3 the instructions paragraph sits about 9px lower than the reference.
+- **The score sits a little higher than the reference's.** "100/100" is drawn about 35px above the
+  reference's top of 230px.
+- **Timing**, as above.
