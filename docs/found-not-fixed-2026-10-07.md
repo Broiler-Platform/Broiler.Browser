@@ -9,9 +9,9 @@ Broiler.Browser.
 **Affects:** the Broiler.Browser window.
 
 The work that found these landed as Broiler-Platform/Broiler.CSS#64, Broiler-Platform/Broiler.HtmlBridge#19,
-Broiler-Platform/Broiler.Layout#129, Broiler-Platform/Broiler.HTML#242 and this repository's change that
-takes their packages: Broiler.CSS and Broiler.CSS.Dom 0.1.0-preview.12, Broiler.HtmlBridge
-0.1.0-preview.17, Broiler.Layout 0.1.0-preview.16 and Broiler.HTML 0.1.0-preview.17. Chromium's
+Broiler-Platform/Broiler.Layout#129, Broiler-Platform/Broiler.HTML#242 and #243, and this repository's
+change that takes their packages: Broiler.CSS and Broiler.CSS.Dom 0.1.0-preview.12, Broiler.HtmlBridge
+0.1.0-preview.17, Broiler.Layout 0.1.0-preview.16 and Broiler.HTML 0.1.0-preview.18. Chromium's
 behaviour was measured unless an item says otherwise.
 
 ## What the window takes
@@ -34,6 +34,7 @@ behaviour was measured unless an item says otherwise.
 | Broiler.HTML | efea421 | A fieldset has its groove, padding and legend gap, and a form or fieldset no block margins |
 | Broiler.HTML | 9a004ef | A natively drawn checkbox or radio drops the page's padding, and is 13px square inside Chromium's margins |
 | Broiler.HTML | 2c2f49b | Disabled fields and buttons are greyed out |
+| Broiler.HTML | 20d3338 | The renderer's `:visited` answers are safe on the threads that resolve a page's styles: restyling a page with links crashed the window in one run in four over html5test |
 
 What they change, measured in the window:
 
@@ -53,7 +54,7 @@ What they change, measured in the window:
 
 This repository's own part is `HtmlFormControlHost`: a disabled radio, drop-down or file button is
 hosted disabled, so it takes no click, and the drop-down and the button are drawn greyed. A checkbox
-stays enabled for now, and a disabled radio is not drawn grey: item 13.
+stays enabled for now, and a disabled radio is not drawn grey: item 12.
 
 ## Gaps found and not fixed
 
@@ -70,8 +71,7 @@ stays enabled for now, and a disabled radio is not drawn grey: item 13.
 | 9 | Scripts read 16px for monospace text drawn at 13px | Broiler.CSS.Dom |
 | 10 | A quirks-mode form has no 1em bottom margin | Broiler.HTML |
 | 11 | A disabled `<select>` and a multiple select's list are not greyed | Broiler.HTML, Broiler.Browser |
-| 12 | Restyling a page with links can crash the window | Broiler.HTML (Broiler-Platform/Broiler.HTML#243) |
-| 13 | Disabled checkboxes and radios are not drawn grey, and a checkbox is hosted enabled | Broiler.UI, Broiler.Browser |
+| 12 | Disabled checkboxes and radios are not drawn grey, and a checkbox is hosted enabled | Broiler.UI (Broiler-Platform/Broiler.UI#86), Broiler.Browser |
 
 ## 1. A reCAPTCHA page takes 77–95 s to load
 
@@ -149,18 +149,7 @@ in one mode alone.
 Chromium draws a disabled select at 0.7 opacity with grey text. The default sheet now greys disabled
 fields and buttons, not selects, and the window's multiple-select list has no disabled state to show.
 
-## 12. Restyling a page with links can crash the window
-
-Moving the pointer over html5test.com crashed the window in one of four runs, while a hover restyled the
-page: Broiler.HTML's `RendererSelectorState` threw "Operations that change non-concurrent collections
-must have exclusive access". Broiler.HTML resolves a page's styles on several threads before it lays the
-page out, each asks whether the links it styles are visited, and the selector state kept the answers in a
-plain dictionary, which their inserts corrupted. It needs a page big enough for the styles to be resolved
-on several threads and a host that tells the renderer which links are visited, as the window does. It was
-already in Broiler.HTML 0.1.0-preview.16. Broiler-Platform/Broiler.HTML#243 keeps the answers in a
-concurrent map; the window takes it with Broiler.HTML's next release.
-
-## 13. Disabled checkboxes and radios are not drawn grey, and a checkbox is hosted enabled
+## 12. Disabled checkboxes and radios are not drawn grey, and a checkbox is hosted enabled
 
 Chromium draws a disabled checkbox or radio grey: a checked box is rgb(209, 209, 209) with a pale tick,
 and a radio has a rgb(213, 213, 213) ring and a rgb(209, 209, 209) dot. Broiler.UI's standard radio
