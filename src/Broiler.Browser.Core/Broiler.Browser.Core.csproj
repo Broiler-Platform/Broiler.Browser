@@ -85,15 +85,21 @@
   </ItemGroup>
 
   <!--
-    THE PARSER, THE CASCADE AND THE LAYOUT ENGINE THE WINDOW RUNS ARE NAMED HERE.
+    THE PARSER, THE CASCADE, THE LAYOUT ENGINE AND THE RENDERER THE WINDOW RUNS ARE NAMED HERE.
 
-    None of the references above names Broiler.Dom.Html, Broiler.CSS.Dom or Broiler.Layout.
-    Broiler.HTML.* and Broiler.HtmlBridge.* bring them, and those packages declare only a minimum
-    version of each. NuGet takes the lowest version that satisfies every range, so without these
-    lines the window runs those minimums. A component's fix would reach it only once a package above
-    was republished to ask for it: the window parsed with Broiler.Dom.Html 0.1.0-preview.8 while
-    preview.9 to preview.11 were already published. Broiler.Dom and Broiler.CSS follow
-    Broiler.Dom.Html and Broiler.CSS.Dom, each of which requires its own version of them.
+    None of the references above names Broiler.Dom.Html, Broiler.CSS.Dom, Broiler.Layout or
+    Broiler.Graphics. Broiler.HTML.*, Broiler.HtmlBridge.* and Broiler.UI.* bring them, and those
+    packages declare only a minimum version of each. NuGet takes the lowest version that satisfies
+    every range, so without these lines the window runs those minimums. A component's fix would reach
+    it only once a package above was republished to ask for it: the window parsed with
+    Broiler.Dom.Html 0.1.0-preview.8 while preview.9 to preview.11 were already published. Broiler.Dom
+    and Broiler.CSS follow Broiler.Dom.Html and Broiler.CSS.Dom, each of which requires its own version
+    of them.
+
+    Broiler.Graphics is the window's render list, and the renderer the Android head, the command line
+    and the tests draw it with. The Linux and Windows heads name a backend of it, which asks for its
+    own version; nothing asked for the others, which drew with 0.1.0-preview.7 after preview.8 fixed
+    the order of nested transforms.
 
     src/Broiler.Browser.Cli names none of these versions itself. Its page analysis asks each of them
     for a diagnostic (HtmlParseOptions.ReportParseErrors, CssSelectorMatcher.DescribeGaps,
@@ -102,6 +108,7 @@
   <ItemGroup>
     <PackageReference Include="Broiler.CSS.Dom" />
     <PackageReference Include="Broiler.Dom.Html" />
+    <PackageReference Include="Broiler.Graphics" />
     <PackageReference Include="Broiler.Layout" />
   </ItemGroup>
 

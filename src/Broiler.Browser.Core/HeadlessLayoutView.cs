@@ -53,6 +53,13 @@ namespace Broiler.Browser;
 /// exposed it. That copy also put the bridge's visual-viewport scale into its snapshot key, which this
 /// one cannot read; while the bridge bypasses the cache on every call that makes no difference.
 /// </para>
+/// <para>
+/// <b>It decodes no image.</b> It lays the page out and never paints it, so it reads each image's size
+/// from the image's header (Broiler.HTML's <c>ImageSizesOnly</c>). It used to decode every image in
+/// every layout: reCAPTCHA's image challenge shows its picture in each of its 9 or 16 tiles, and a
+/// click on a tile, which lays the page out here three times, spent 0.7 to 1.5 s decoding it (measured
+/// 2026-10-07).
+/// </para>
 /// </remarks>
 internal sealed class HeadlessLayoutView : ILayoutView
 {
@@ -60,6 +67,7 @@ internal sealed class HeadlessLayoutView : ILayoutView
     {
         AvoidAsyncImagesLoading = true,
         AvoidImagesLateLoading = true,
+        ImageSizesOnly = true,
         PlacesAnchoredBoxes = true,
     };
 

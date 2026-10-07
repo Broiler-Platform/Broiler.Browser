@@ -1,6 +1,7 @@
 # reCAPTCHA's image challenge: what a click on a tile did, and what it costs
 
-**Status:** fixed in the components, not yet taken by the window; the gaps at the end are open.
+**Status:** fixed, in Broiler.HtmlBridge 0.1.0-preview.18, Broiler.Graphics 0.1.0-preview.8, Broiler.Layout
+0.1.0-preview.17 and Broiler.HTML 0.1.0-preview.19, which the window takes; the gaps at the end are open.
 Found on 2026-10-07 on recaptcha-demo.appspot.com's v2 checkbox demo, whose checkbox opens reCAPTCHA's
 image challenge.
 **Components:** Broiler.HtmlBridge, Broiler.Graphics, Broiler.Layout, Broiler.HTML, Broiler.Browser.
@@ -58,12 +59,13 @@ decoded every image though it reads only their sizes: the picture is in every ti
 a click, 0.7 to 1.5 s. The window's own containers parse the page again after each change, and decoded
 every image again though the cache had kept the bytes: 0.25 to 0.45 s more.
 
-## What the window has to take
+## What the window takes
 
-Once the components are published, the window takes their packages: Broiler.HtmlBridge, Broiler.Graphics
-with its backends, Broiler.Layout and Broiler.HTML. And `HeadlessLayoutView`, the container the bridge
-asks for geometry, sets `ImageSizesOnly = true`: it lays the page out and never paints it. The timings
-above were measured with that line added.
+The window takes the components' packages: Broiler.HtmlBridge 0.1.0-preview.18, Broiler.Graphics
+0.1.0-preview.8 with its backends, Broiler.Layout 0.1.0-preview.17 and Broiler.HTML 0.1.0-preview.19. And
+`HeadlessLayoutView`, the container the bridge asks for geometry, sets `ImageSizesOnly = true`: it lays the
+page out and never paints it. The timings above were measured with that line, against local builds of the
+code these packages were published from.
 
 ## Gaps found and not fixed
 
