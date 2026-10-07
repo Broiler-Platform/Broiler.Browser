@@ -84,6 +84,66 @@ public class WindowFrameTests
     }
 
     /// <summary>
+    /// A link to a document a frame has shown is painted as visited. Acid3's test 48 loads its link's
+    /// URL into an iframe whose <c>onload</c> takes the link's <c>pending</c> class away, and expects
+    /// <c>:visited</c> to paint it white on white; the window painted it with <c>:link</c>'s red.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void A_Link_To_A_Document_A_Frame_Showed_Is_Visited()
+    {
+        const string Page = """
+            <!DOCTYPE html><html><head><style>
+            a:link { color: rgb(200, 0, 0) }
+            a.pending, a:visited { color: rgb(0, 0, 200) }
+            </style></head><body style="margin: 0">
+            <a id="link" class="pending" href="/shown">linkmarker</a>
+            <iframe style="display: block; border: 0; width: 300px; height: 100px"></iframe>
+            <script>
+            var frame = document.querySelector('iframe');
+            frame.onload = function () { document.getElementById('link').removeAttribute('class'); };
+            frame.src = '/shown';
+            </script>
+            </body></html>
+            """;
+
+        using var server = new LoopbackHttpServer();
+        server
+            .Map("/page", Reply.Text(Page))
+            .Map("/shown", Reply.Text("<!DOCTYPE html><p>shown</p>"));
+        using var window = new TestWindow(server.Url("/page"));
+        window.Settle();
+
+        var (run, _) = window.Run("linkmarker");
+        Assert.Equal((0, 0, 200), (run.Color.R, run.Color.G, run.Color.B));
+    }
+
+    /// <summary>A link to a document no frame showed stays <c>:link</c>.</summary>
+    [Fact(Timeout = 600000)]
+    public void A_Link_To_A_Document_No_Frame_Showed_Is_Not_Visited()
+    {
+        const string Page = """
+            <!DOCTYPE html><html><head><style>
+            a:link { color: rgb(200, 0, 0) }
+            a:visited { color: rgb(0, 0, 200) }
+            </style></head><body style="margin: 0">
+            <a href="/elsewhere">linkmarker</a>
+            <iframe src="/shown" style="display: block; border: 0; width: 300px; height: 100px"></iframe>
+            <script>var frameDocument = document.querySelector('iframe').contentDocument;</script>
+            </body></html>
+            """;
+
+        using var server = new LoopbackHttpServer();
+        server
+            .Map("/page", Reply.Text(Page))
+            .Map("/shown", Reply.Text("<!DOCTYPE html><p>shown</p>"));
+        using var window = new TestWindow(server.Url("/page"));
+        window.Settle();
+
+        var (run, _) = window.Run("linkmarker");
+        Assert.Equal((200, 0, 0), (run.Color.R, run.Color.G, run.Color.B));
+    }
+
+    /// <summary>
     /// A web page's frame whose document has a <c>file:</c> URL is not painted: its document would
     /// load its stylesheets and images from the local file system.
     /// </summary>
