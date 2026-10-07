@@ -100,9 +100,9 @@
     LayoutDiagnostics), and what it diagnoses has to be what the window runs.
   -->
   <ItemGroup>
-    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.11" />
+    <PackageReference Include="Broiler.CSS.Dom" Version="0.1.0-preview.12" />
     <PackageReference Include="Broiler.Dom.Html" Version="0.1.0-preview.13" />
-    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.15" />
+    <PackageReference Include="Broiler.Layout" Version="0.1.0-preview.16" />
   </ItemGroup>
 
 </Project>
