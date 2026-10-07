@@ -5,11 +5,14 @@ using Broiler.Graphics.Geometry;
 using Broiler.HtmlBridge;
 using Broiler.UI;
 using Broiler.UI.Button.Standard;
+using Broiler.UI.CheckBox;
 using Broiler.UI.CheckBox.Standard;
+using Broiler.UI.ComboBox;
 using Broiler.UI.ComboBox.Standard;
 using Broiler.UI.ListView;
 using Broiler.UI.ListView.Standard;
 using Broiler.UI.Panel.Standard;
+using Broiler.UI.RadioButton;
 using Broiler.UI.RadioButton.Standard;
 using HtmlContainer = Broiler.HTML.Image.HtmlContainer;
 
@@ -197,6 +200,60 @@ public class HtmlFormControlHostTests
 
         Assert.Equal(1, host.Count);
         Assert.Single(owner.Children);
+    }
+
+    private const string DisabledPage =
+        "<html><body style='margin:0'><form action='/s'>" +
+        "<input type='radio' name='c' value='x' disabled>" +
+        "<input type='radio' name='a' value='1'>" +
+        "<fieldset disabled><legend><input type='radio' name='l' value='1'></legend>" +
+        "<input type='radio' name='f' value='1'><select name='s'><option>o</option></select></fieldset>" +
+        "<input type='checkbox' name='k' value='1' checked disabled>" +
+        "</form></body></html>";
+
+    /// <summary>
+    /// A disabled control is hosted disabled: one with a <c>disabled</c> attribute, and one in a disabled
+    /// fieldset, except in the fieldset's first legend (HTML §4.10.18.5). A disabled checked checkbox is,
+    /// too, now that Broiler.UI draws its tick over the disabled colour.
+    /// </summary>
+    [Fact(Timeout = 600000)]
+    public void DisabledControlsAreHostedDisabled()
+    {
+        using TestUiSession session = new();
+        using HtmlContainer container = LayOut(DisabledPage);
+        (HtmlFormControlHost host, _, _) = Create(session);
+
+        host.Rebuild(container.GetHtml());
+
+        Assert.Equal([false, true, true, false, false, false], host.Controls.Select(IsEnabled));
+    }
+
+    private static bool IsEnabled(UiElement control) => control switch
+    {
+        UiCheckBox box => box.IsEnabled,
+        UiRadioButton radio => radio.IsEnabled,
+        UiComboBox combo => combo.IsEnabled,
+        _ => true,
+    };
+
+    /// <summary>A control the page's scripts enable again is enabled again, and one they disable is disabled.</summary>
+    [Fact(Timeout = 600000)]
+    public void SyncFollowsThePageDisablingAndEnablingControls()
+    {
+        using TestUiSession session = new();
+        using HtmlContainer disabled = LayOut(DisabledPage);
+        using HtmlContainer changed = LayOut(DisabledPage
+            .Replace("value='x' disabled", "value='x'", StringComparison.Ordinal)
+            .Replace("name='a' value='1'", "name='a' value='1' disabled", StringComparison.Ordinal));
+        (HtmlFormControlHost host, _, _) = Create(session);
+        host.Rebuild(disabled.GetHtml());
+        List<UiElement> controls = [.. host.Controls];
+
+        host.Sync(changed.GetHtml());
+
+        Assert.Equal(controls, host.Controls);
+        Assert.True(IsEnabled(controls[0]));
+        Assert.False(IsEnabled(controls[1]));
     }
 
     [Fact(Timeout = 600000)]

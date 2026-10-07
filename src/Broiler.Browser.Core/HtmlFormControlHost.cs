@@ -8,6 +8,7 @@ using Broiler.Graphics.Text;
 using Broiler.HTML.Image;
 using Broiler.HtmlBridge;
 using Broiler.UI;
+using Broiler.UI.Button;
 using Broiler.UI.Button.Standard;
 using Broiler.UI.CheckBox;
 using Broiler.UI.CheckBox.Standard;
@@ -368,9 +369,74 @@ internal sealed class HtmlFormControlHost
             };
         }
 
+        // A disabled control takes no input and is drawn so: the hosted one is disabled with it, and
+        // follows the page's scripts as they disable it or enable it again. It was always enabled, so
+        // the disabled radios of reCAPTCHA's demo form were drawn live and could be ticked.
+        SetEnabled(control, !IsActuallyDisabled(element));
         control.Visibility = UiVisibility.Collapsed;
         _owner.AddChild(control);
-        _hosted.Add(new HostedToggle(id, control, Shape(site), apply));
+        _hosted.Add(new HostedToggle(id, control, Shape(site), markup =>
+        {
+            apply(markup);
+            SetEnabled(control, !IsActuallyDisabled(markup));
+        }));
+    }
+
+    /// <summary>
+    /// Enables or disables a hosted control. A multiple select's list has no disabled state to show,
+    /// and stays as it is.
+    /// </summary>
+    private static void SetEnabled(UiElement control, bool enabled)
+    {
+        switch (control)
+        {
+            case UiCheckBox box:
+                box.IsEnabled = enabled;
+                break;
+            case UiRadioButton radio:
+                radio.IsEnabled = enabled;
+                break;
+            case UiComboBox combo:
+                combo.IsEnabled = enabled;
+                break;
+            case UiButton button:
+                button.IsEnabled = enabled;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Whether a form control is disabled (HTML §4.10.18.5): it has a <c>disabled</c> attribute, or
+    /// is in a disabled <c>&lt;fieldset&gt;</c> and not in that fieldset's first <c>&lt;legend&gt;</c>.
+    /// </summary>
+    private static bool IsActuallyDisabled(DomElement element)
+    {
+        if (element.HasAttribute("disabled"))
+            return true;
+
+        DomNode child = element;
+        for (DomNode? node = element.ParentNode; node is DomElement ancestor; child = ancestor, node = ancestor.ParentNode)
+        {
+            if (string.Equals(ancestor.TagName, "fieldset", StringComparison.OrdinalIgnoreCase)
+                && ancestor.HasAttribute("disabled")
+                && !ReferenceEquals(child, FirstLegend(ancestor)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+
+        static DomElement? FirstLegend(DomElement fieldset)
+        {
+            foreach (DomNode node in fieldset.ChildNodes)
+            {
+                if (node is DomElement first && string.Equals(first.TagName, "legend", StringComparison.OrdinalIgnoreCase))
+                    return first;
+            }
+
+            return null;
+        }
     }
 
     /// <summary>Whether a checkbox or radio button shows checked: as the user left it on a page that keeps no state of its own, else as the markup has it.</summary>
