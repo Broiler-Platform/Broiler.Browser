@@ -214,14 +214,13 @@ the release, and can do so by hand from a run's downloaded artifacts.
 | Path | Contents |
 |---|---|
 | `src/Broiler.Browser.Windows` | Windows head — `WinExe`, Direct2D, Win32 input |
-| `src/Broiler.Browser.Linux` | Linux head — X11 clipboard and input coordination |
+| `src/Broiler.Browser.Linux` | Linux head — X11/GL window and render loop; clipboard and input coordination come from `Broiler.Hosting.Linux` |
 | `src/Broiler.Browser.Android` | Android head — activity, manifest, resources |
 | `src/Broiler.Browser.Core` | Shared browser chrome, palette, HTML form hosting |
 | `src/Broiler.Browser.Core.Tests` | xUnit suite for the shared chrome |
 | `src/Broiler.Browser.Cli` | `Broiler.Cli`, the headless command line — see [docs/command-line.md](docs/command-line.md) |
 | `src/Broiler.Browser.Cli.Tests` | xUnit suite for the command line |
-| `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites, per-platform clipboards. It has no project of its own; each head links the files it needs. |
-| `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
+| `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites. It has no project of its own; each head links the files it needs. The per-platform hosting utilities (clipboards, input coordinators, the Android view, canvas renderer and input connection) come from the `Broiler.Hosting.Windows`, `.Linux` and `.Android` packages. |
 | `eng/`, `scripts/` | Solution manifest, configuration mapping and generator; the release's version resolver, Android signing and draft-release scripts |
 
 *(Corrected 2026-09-08. Two rows here described `Broiler.VM.Profile.JavaScript` and

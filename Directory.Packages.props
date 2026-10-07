@@ -10,8 +10,8 @@
     <BroilerHtmlBridgeVersion>0.1.0-preview.17</BroilerHtmlBridgeVersion>
     <BroilerUiVersion>0.1.0-preview.19</BroilerUiVersion>
     <BroilerInputVersion>0.1.0-preview.5</BroilerInputVersion>
-    <BroilerInputAndroidVersion>0.1.0-preview.4</BroilerInputAndroidVersion>
-    <BroilerGraphicsLinuxVersion>0.1.0-preview.5</BroilerGraphicsLinuxVersion>
+    <BroilerGraphicsVersion>0.1.0-preview.7</BroilerGraphicsVersion>
+    <BroilerHostingVersion>0.1.0-preview.8</BroilerHostingVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Broiler.HTML.Graphics" Version="$(BroilerHtmlVersion)" />
@@ -23,10 +23,12 @@
     <PackageVersion Include="Broiler.Dom.Html" Version="0.1.0-preview.13" />
     <PackageVersion Include="Broiler.Layout" Version="0.1.0-preview.16" />
     <PackageVersion Include="Broiler.Net" Version="0.1.0-preview.2" />
-    <PackageVersion Include="Broiler.Graphics" Version="0.1.0-preview.4" />
-    <PackageVersion Include="Broiler.Graphics.Windows" Version="0.1.0-preview.7" />
-    <PackageVersion Include="Broiler.Graphics.Linux" Version="$(BroilerGraphicsLinuxVersion)" />
-    <PackageVersion Include="Broiler.Graphics.Linux.OpenGL" Version="$(BroilerGraphicsLinuxVersion)" />
+    <PackageVersion Include="Broiler.Hosting.Windows" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Hosting.Linux" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Hosting.Android" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Windows" Version="$(BroilerGraphicsVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Linux" Version="$(BroilerGraphicsVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Linux.OpenGL" Version="$(BroilerGraphicsVersion)" />
     <PackageVersion Include="Broiler.Input.Keyboard" Version="$(BroilerInputVersion)" />
     <PackageVersion Include="Broiler.Input.Mouse" Version="$(BroilerInputVersion)" />
     <PackageVersion Include="Broiler.Input.Touch" Version="$(BroilerInputVersion)" />
@@ -35,12 +37,6 @@
     <PackageVersion Include="Broiler.Input.Linux" Version="$(BroilerInputVersion)" />
     <PackageVersion Include="Broiler.Input.Keyboard.Linux" Version="$(BroilerInputVersion)" />
     <PackageVersion Include="Broiler.Input.Mouse.Linux" Version="$(BroilerInputVersion)" />
-    <PackageVersion Include="Broiler.Input.Android" Version="$(BroilerInputAndroidVersion)" />
-    <PackageVersion Include="Broiler.Input.Keyboard.Android" Version="$(BroilerInputAndroidVersion)" />
-    <PackageVersion Include="Broiler.Input.Pen.Android" Version="$(BroilerInputAndroidVersion)" />
-    <PackageVersion Include="Broiler.Input.Text.Android" Version="$(BroilerInputAndroidVersion)" />
-    <PackageVersion Include="Broiler.Input.Touch.Android" Version="$(BroilerInputAndroidVersion)" />
-    <PackageVersion Include="Broiler.UI" Version="0.1.0-preview.4" />
     <PackageVersion Include="Broiler.UI.Button.Standard" Version="$(BroilerUiVersion)" />
     <PackageVersion Include="Broiler.UI.CheckBox.Standard" Version="$(BroilerUiVersion)" />
     <PackageVersion Include="Broiler.UI.Dialog.Standard" Version="$(BroilerUiVersion)" />

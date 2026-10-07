@@ -167,8 +167,9 @@
       (BColor, BMatrix3x2, BPoint, BRect, BSize, BImageHandle,
       BResourceHandle), which is exactly the CS8073-capable shape, and
       Broiler.HTML and Broiler.UI each vendor a copy of them. All compile
-      clean today. And src/Broiler.App.Android holds a ReferenceEquals
-      call site, at AndroidBroilerView.cs:119.
+      clean today. (The ReferenceEquals call site that src/Broiler.App.Android
+      held, in AndroidBroilerView.cs, left with it for the Broiler.Hosting.Android
+      package.)
 
       Nor is the promotion novel: a large share of this graph's
       compilations already pass a bare /warnaserror+, so CS8073 has been
@@ -188,7 +189,7 @@
       check knows where to look. Broiler.UI/Broiler.Documents chains up
       to this file through Broiler.UI and appears in NO root solution:
       159 projects behind its own Broiler.Documents.slnx. And
-      src/Broiler.App.Android appears only in
+      src/Broiler.Browser.Android appears only in
       Broiler.Android.Browser.slnx, which CI builds at Release alone.
       Both rules reach it; only that one job proves it.
 

@@ -8,7 +8,7 @@ using Broiler.Graphics.Rendering;
 using Broiler.Graphics.RenderList;
 using Broiler.Graphics.Linux;
 using Broiler.Graphics.Linux.OpenGL;
-using Broiler.App;
+using Broiler.Hosting.Linux;
 
 namespace Broiler.Browser;
 
@@ -80,7 +80,11 @@ internal static class LinuxBrowserRunner
             canUseEvdev,
             Console.WriteLine,
             externalPointer: x11Window is not null,
-            applicationName: "Broiler Browser");
+            applicationName: "Broiler Browser")
+        {
+            // Hosting latches QuitRequested on Escape only when asked; the loop below polls it.
+            QuitOnEscape = true,
+        };
         await input.InitializeAsync(cancellationToken).ConfigureAwait(false);
 
         DateTimeOffset start = DateTimeOffset.UtcNow;
@@ -236,7 +240,7 @@ internal static class LinuxBrowserRunner
         Console.WriteLine("  artifact: " + backendPath);
     }
 
-    private static string InputSummary(LinuxWriterInputSnapshot input)
+    private static string InputSummary(LinuxInputSnapshot input)
     {
         if (!input.Enabled)
             return "disabled";
