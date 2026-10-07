@@ -189,24 +189,62 @@ the HTML path does; this path runs them in the parent's context, before registra
 
 None of these costs a point; each makes the page differ from the reference rendering.
 
+| What shows | Cause | Where the fix goes |
+| --- | --- | --- |
+| The score at 500px | `inherit` takes the parent's specified `5em`, not its computed 100px | Broiler.CSS, Broiler.HTML |
+| A red square top right | `::after` text sits on the positioned box, not in a child, so it is laid out in the flow | Broiler.HTML |
+| "FAIL" above the heading | An `<object>` whose data loaded still renders its fallback | Broiler.HtmlBridge, Broiler.Layout, Broiler.HTML |
+| A red "YOU SHOULD NOT SEE THIS AT ALL" | A frame's navigation is not recorded for `:visited` | Broiler.Browser |
+| Test 28's "FAIL", below the first screen | Selector parsing drops an escaped space: `#\ ` matches nothing | Broiler.CSS |
+| A red heading, `--capture-image` only | `HtmlRender` applies a stylesheet served as `text/html` | Broiler.HTML |
+
 ### The score is drawn at 500px
 
 `#result` is `font-size: 5em` of the root's 20px, 100px, and the reference draws "100/100" at
 100px. Its three spans match `* { font: inherit; }`. The renderer's computed styles give the paragraph
-75pt (100px) and each span 375pt (500px), so the spans inherit the paragraph's specified `5em` and
-resolve it again against the paragraph's 100px, where `inherit` takes the parent's computed value. The
-same happens under `#instructions` (`0.8em`): its span is 9.6pt where it should be 12pt. Their
-`font-family` also stays the literal `inherit`. Where the renderer's cascade does this is still
-being traced.
+75pt (100px) and each span 375pt (500px). The same happens under `#instructions` (`0.8em`): its span
+is 9.6pt where it should be 12pt. A plain `font-size: inherit` compounds the same way.
+
+`inherit` is meant to take the parent's computed value, but Broiler.CSS.Dom's `CssStyleEngine` hands
+the renderer the parent's specified one. `ComputeStyle` keeps a font size as written (`5em`) and the
+keyword `inherit` as written, and then `FoldInheritKeyword` (`CssStyleEngine.cs:606` and `652`)
+replaces a child's `inherit` with the parent's value from that map. So `#score` gets `5em`, and the
+renderer resolves it again against its parent's 100px. `#result`'s own `font-family: inherit` folds to
+the body's literal `inherit` in the same way, which is why every run below `<body>` is drawn in a
+fallback face rather than Arial; the analysis report counts 46 such runs.
+
+The renderer would get it right by itself. Broiler.Layout's `CssBoxProperties` font-size setter copies
+the parent box's computed size for `inherit`, and Broiler.HTML's `DomParser.InheritStyle` runs first,
+but it never sees an `inherit` because the engine has already folded it. The fix spans two packages
+that ship together: stop folding `inherit` for inherited properties in the engine, and resolve it
+against the parent box where Broiler.HTML's `SharedRendererCascade.ProjectCascadedStyle` projects the
+cascade, as `DomParser` already does for pseudo-elements. The quicker engine-only alternative is to
+drop an inherited property's `inherit` instead of copying it, so the renderer's own inheritance
+stands. Its catch is that a presentational hint such as `<font size>` would then beat an author's
+`inherit`.
 
 ### A red square in the body's top-right corner
 
 The body's background is a red 20×20 PNG at `99.8392283% 1px`. In a browser it is covered by
 `map::after { position: absolute; top: 18px; left: 638px; content: "X"; background: fuchsia;
 color: white; font: 20px/1 AcidAhemTest; }`, whose `@font-face` font draws "X" as a full-em square: a
-white 20px block. Broiler's fragment tree has the `::after` box at 638,18, but 0×0 and with no
-text, so nothing covers the square. Whether the generated content, the `@font-face` font or the
-box's size is at fault is still being traced.
+white 20px block. Broiler's fragment tree has the `::after` box at 638,18, but 0×0.
+
+The pseudo-element is generated, its font loads and is measured at a 20px advance, and its position
+is right. What goes wrong is where the generated text lives. Broiler.HTML's `CreatePseudoElementBox`
+puts it on the pseudo box itself (`pseudoBox.Text`, `DomParser.cs:586`), where a real element's text
+is an anonymous child box. Broiler.Layout places an absolutely positioned box's content only through
+its children. So the parent's line layout picks up the box's own words and draws them in the normal
+flow, white on white, at (57,828), where Acid3's display list shows "X". Meanwhile the positioned box
+has no children, ends up 0×0, and its fuchsia background covers nothing. A minimal page shows the
+same with Arial, outside `<map>`, and with `display: block`. A real `<span style="position:absolute">`
+is placed correctly, and so is an absolutely positioned `::after` whose `content: url(…)` makes a
+child box. A `float: right` `::after` with text paints nothing at all, for the same reason.
+
+The fix is to put the text in an anonymous inline child of the pseudo box, as
+`ApplySummaryDisclosureMarker` already does for a summary's marker. That covers the red. It will
+still not be the reference's solid white: web fonts are measured but drawn with an installed face
+(item 2 of `found-not-fixed-2026-10-07.md`), so the square will show a white "X" on fuchsia.
 
 ### "FAIL" above the heading
 
@@ -254,9 +292,24 @@ next repaint. `Broiler.Cli --analyze` cannot show this either way: its render
 ### Test 28's "FAIL", further down the page
 
 Test 28 appends `<div id=" ">FAIL</div>` to the body, which the rule `#\  { color: transparent; …
-position: fixed; … }` hides. Broiler draws it static and black at y=950, below the first screen, so
-the escaped-space ID selector does not match. Whether the tokenizer or the matcher is at fault is
-still being traced.
+position: fixed; … }` hides. Broiler draws it static and black at y=950, below the first screen.
+
+The matcher compares ids correctly; it is the parsing around it that drops the escaped space.
+Broiler.CSS's `CssParser` trims each rule's selector text (`CssParser.cs:117`), which deletes the
+space that `\` escapes. `#\ ` becomes `#\`, an empty id. The same plain `Trim()` is at
+`CssSelectorParser.cs:12`, `CssSelectorMatcher.cs:71` and `CssStyleEngine.cs:1129`. And both selector
+splitters, `CssSelectorMatcher.SplitPartsUncached` and `CssSelectorParser.SplitCompounds`, take an
+escaped space inside a selector for a descendant combinator. `#q\ r` is filed in the rule index under
+the type `r` and never reaches a `<div>`. `#\ `, `#\20 x` and `#a\ b` all fail to match; the same
+ids written without whitespace (`#\20{`, `#a\000020b{`) match. The fix is a trim that keeps
+whitespace escaped by a backslash, at all four sites, and splitters that copy an escape whole.
+
+That fix must not ship alone. Once the selector matches, the rule's second declaration,
+`color: hsla(0, 0, 0, 1)`, is invalid (hsla needs percentages), so `color: transparent` should
+stand. But `CssStyleEngine.Values.cs:573`'s colour check accepts anything that does not start with
+an unknown vendor prefix, so the engine takes the invalid colour and paints "FAIL" black at 40px in
+the top-left corner, in plain sight. Broiler.CSS's own `CssValueParser.TryParseColor` already rejects
+the value; the check should ask it, or `CssColor4.TryParse`, for functional colours.
 
 ### A red heading, in `--capture-image` only
 
