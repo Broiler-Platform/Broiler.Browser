@@ -36,14 +36,12 @@
     <TieredPGO>true</TieredPGO>
   </PropertyGroup>
 
-  <!-- The Win32 clipboard, shared with the other desktop heads. -->
+  <!-- Broiler.Hosting.Windows brings the Win32 clipboard shared with the other desktop heads. -->
   <ItemGroup>
-    <Compile Include="..\Broiler.App\WindowsClipboard.cs" Link="WindowsClipboard.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Broiler.Graphics.Windows" Version="0.1.0-preview.7" />
-    <PackageReference Include="Broiler.Input.Keyboard.Windows" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.Input.Mouse.Windows" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Hosting.Windows" />
+    <PackageReference Include="Broiler.Graphics.Windows" />
+    <PackageReference Include="Broiler.Input.Keyboard.Windows" />
+    <PackageReference Include="Broiler.Input.Mouse.Windows" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,52 @@
+<Project>
+  <!--
+    Central Package Management: every PackageReference under src/ names a package only, and its
+    version lives here. Packages a component publishes in lock-step share a family property; a
+    package pinned apart from its family keeps its own literal version.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <BroilerHtmlVersion>0.1.0-preview.18</BroilerHtmlVersion>
+    <BroilerHtmlBridgeVersion>0.1.0-preview.17</BroilerHtmlBridgeVersion>
+    <BroilerUiVersion>0.1.0-preview.19</BroilerUiVersion>
+    <BroilerInputVersion>0.1.0-preview.5</BroilerInputVersion>
+    <BroilerGraphicsVersion>0.1.0-preview.7</BroilerGraphicsVersion>
+    <BroilerHostingVersion>0.1.0-preview.8</BroilerHostingVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Broiler.HTML.Graphics" Version="$(BroilerHtmlVersion)" />
+    <PackageVersion Include="Broiler.HTML.Image" Version="$(BroilerHtmlVersion)" />
+    <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="$(BroilerHtmlBridgeVersion)" />
+    <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="$(BroilerHtmlBridgeVersion)" />
+    <PackageVersion Include="Broiler.HtmlBridge.Scripting.Vm" Version="$(BroilerHtmlBridgeVersion)" />
+    <PackageVersion Include="Broiler.CSS.Dom" Version="0.1.0-preview.12" />
+    <PackageVersion Include="Broiler.Dom.Html" Version="0.1.0-preview.13" />
+    <PackageVersion Include="Broiler.Layout" Version="0.1.0-preview.16" />
+    <PackageVersion Include="Broiler.Net" Version="0.1.0-preview.2" />
+    <PackageVersion Include="Broiler.Hosting.Windows" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Hosting.Linux" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Hosting.Android" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Windows" Version="$(BroilerGraphicsVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Linux" Version="$(BroilerGraphicsVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Linux.OpenGL" Version="$(BroilerGraphicsVersion)" />
+    <PackageVersion Include="Broiler.Input.Keyboard" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Mouse" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Touch" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Keyboard.Windows" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Mouse.Windows" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Linux" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Keyboard.Linux" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Mouse.Linux" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.UI.Button.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.CheckBox.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.Dialog.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.FileDialog.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.Label.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.Panel.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.RadioButton.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Broiler.UI.Window.Standard" Version="$(BroilerUiVersion)" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageVersion Include="xunit" Version="2.5.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+</Project>

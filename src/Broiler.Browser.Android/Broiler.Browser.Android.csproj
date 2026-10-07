@@ -65,8 +65,12 @@
     <TrimmerRootAssembly Include="Broiler.JavaScript.Expressions" RootMode="All" />
   </ItemGroup>
 
+  <!-- The view, canvas renderer and input coordinator the activity hosts the browser in. -->
   <ItemGroup>
-    <ProjectReference Include="..\Broiler.App.Android\Broiler.App.Android.csproj" />
+    <PackageReference Include="Broiler.Hosting.Android" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Broiler.Browser.Core\Broiler.Browser.Core.csproj" />
   </ItemGroup>
 

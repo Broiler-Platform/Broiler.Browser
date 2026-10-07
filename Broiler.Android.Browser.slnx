@@ -10,7 +10,6 @@
     <Project Path="src/Broiler.Browser.Android/Broiler.Browser.Android.csproj" />
   </Folder>
   <Folder Name="/Dependencies/src/">
-    <Project Path="src/Broiler.App.Android/Broiler.App.Android.csproj" />
     <Project Path="src/Broiler.Browser.Core/Broiler.Browser.Core.csproj" />
   </Folder>
 </Solution>

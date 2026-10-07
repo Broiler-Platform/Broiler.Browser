@@ -4,7 +4,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Views;
 using Android.Widget;
-using Broiler.App.Android;
+using Broiler.Hosting.Android;
 using Broiler.Graphics.Imaging;
 
 namespace Broiler.Browser.Android;

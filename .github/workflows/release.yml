@@ -1,17 +1,26 @@
 name: Release
 
-# Dispatch-only. Every run builds the Windows and Linux browser as self-contained single-file
-# executables and the Android browser as a release-signed app bundle and APK, stamps all of
-# them with the next preview version, attaches them to the run as artifacts, then drafts a
-# GitHub pre-release carrying them:
+# Dispatch-only. Every run builds the Windows and Linux browser twice - once as a
+# self-contained single-file executable and once framework-dependent - and the Android browser
+# as a release-signed app bundle and APK, stamps all of them with the next preview version,
+# attaches them to the run as artifacts, then drafts a GitHub pre-release carrying them:
 #
-#   Broiler.Browser-<version>-win-x64.zip     Broiler.Browser.Windows.exe
-#   Broiler.Browser-<version>-linux-x64.zip   Broiler.Browser.Linux
+#   Broiler.Browser-<version>-win-x64-self-contained.zip         Broiler.Browser.Windows.exe
+#   Broiler.Browser-<version>-win-x64-framework-dependent.zip    the publish folder
+#   Broiler.Browser-<version>-linux-x64-self-contained.zip       Broiler.Browser.Linux
+#   Broiler.Browser-<version>-linux-x64-framework-dependent.zip  the publish folder
 #   Broiler.Browser-<version>.aab             app bundle (arm64 + x86_64), attached as it is
 #   Broiler.Browser-<version>-arm64.apk       attached as it is
 #
-# This is Broiler.Writer's Publish workflow with one deliberate difference: the desktop
-# executables are single-file, not NativeAOT. Under NativeAOT the browser does not start.
+# The framework-dependent variant is the same head published with --self-contained false:
+# the application's own assemblies, its package dependencies and the apphost
+# (Broiler.Browser.Windows.exe / Broiler.Browser.Linux) in one folder, without the .NET
+# runtime, which has to be installed (.NET 10, Microsoft.NETCore.App). It is a fraction of the
+# self-contained executable's size and takes runtime servicing from the machine. There is no
+# framework-dependent Android variant: an Android package always carries its runtime.
+#
+# This is Broiler.Writer's Publish workflow with one deliberate difference: the
+# self-contained desktop executables are single-file, not NativeAOT. Under NativeAOT the browser does not start.
 # Broiler.JS builds its object model by reflecting over runtime members the AOT compiler
 # trims away: JSObjectBuilder's static constructor throws MethodAccessException for
 # JSObject.FastAddValue from a module initializer, before Main. That is the first failure,
@@ -22,9 +31,10 @@ name: Release
 # the same reflection.
 #
 # The optimizations live in the head projects, so this workflow, ci.yml's publish job and a
-# publish from Visual Studio all get them. The desktop executables are ReadyToRun (startup
+# publish from Visual Studio all get them. Both desktop variants are ReadyToRun (startup
 # on precompiled code; 31% less time to a finished page, 31 MB more executable) with tiered
-# compilation and dynamic PGO. The Android packages are AOT-compiled from the startup
+# compilation and dynamic PGO: the head turns ReadyToRun on for any release publish with a
+# runtime identifier, and the pinned configurations below carry one either way. The Android packages are AOT-compiled from the startup
 # profile and trimmed in partial mode, which AOT requires, with Broiler.JS kept whole (the
 # Android head roots the one assembly of it that claims to be trimmable and is not); the
 # collect step below fails a package without its AOT code.
@@ -94,9 +104,9 @@ jobs:
         run: node eng/resolve-preview-version.mjs
 
   build:
-    name: ${{ matrix.rid }} (single-file)
+    name: ${{ matrix.target.rid }} (${{ matrix.variant }})
     needs: version
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.target.os }}
     timeout-minutes: 60
 
     defaults:
@@ -106,14 +116,18 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        include:
+        # Every head in both variants: four jobs, four desktop assets.
+        variant: [self-contained, framework-dependent]
+        target:
           # The pinned configurations are the ones FolderProfile.pubxml names and they
-          # carry the runtime identifier a self-contained publish needs.
+          # carry the runtime identifier a self-contained publish needs (and the one that
+          # gives the framework-dependent publish its apphost and ReadyToRun).
           - os: windows-latest
             rid: win-x64
             project: src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj
             configuration: Release-Windows
             executable: Broiler.Browser.Windows.exe
+            assembly: Broiler.Browser.Windows
           # The Linux head is plain net10.0 and could be published from anywhere; publishing
           # it on Linux keeps the host that builds it the one it runs on.
           - os: ubuntu-latest
@@ -121,10 +135,12 @@ jobs:
             project: src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj
             configuration: Release-Linux
             executable: Broiler.Browser.Linux
+            assembly: Broiler.Browser.Linux
 
     env:
       VERSION: ${{ needs.version.outputs.version }}
-      OUT: artifacts/publish/${{ matrix.rid }}
+      VARIANT: ${{ matrix.variant }}
+      OUT: artifacts/publish/${{ matrix.target.rid }}-${{ matrix.variant }}
 
     steps:
       - name: Check out
@@ -133,42 +149,83 @@ jobs:
       - name: Set up
         uses: ./.github/actions/setup-broiler
 
-      # Self-contained and single-file: one executable carrying the .NET runtime and every
-      # assembly. IncludeNativeLibrariesForSelfExtract bundles any native library a package
-      # brings too, rather than leaving it beside the executable. ci.yml's publish job uses
-      # the same switches; ReadyToRun and tiered PGO come from the head project.
-      # BroilerBrowserVersion flows into Version, so the file version matches the artifact.
-      # ContinuousIntegrationBuild makes the build deterministic, with source paths in the
-      # symbols normalised rather than the runner's.
+      # self-contained: one executable carrying the .NET runtime and every assembly.
+      # IncludeNativeLibrariesForSelfExtract bundles any native library a package brings
+      # too, rather than leaving it beside the executable.
+      #
+      # framework-dependent: --self-contained false and not single-file, so the output is a
+      # folder - the apphost, the application's assemblies, its deps.json and
+      # runtimeconfig.json - that runs on an installed .NET 10 runtime.
+      #
+      # ci.yml's publish job uses the same switches; ReadyToRun and tiered PGO come from
+      # the head project. BroilerBrowserVersion flows into Version, so the file version
+      # matches the artifact. ContinuousIntegrationBuild makes the build deterministic, with
+      # source paths in the symbols normalised rather than the runner's.
       - name: Publish
         run: |
-          dotnet publish '${{ matrix.project }}' \
-            -c '${{ matrix.configuration }}' \
-            --self-contained \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
+          if [ "$VARIANT" = self-contained ]; then
+            mode=(--self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true)
+          else
+            mode=(--self-contained false)
+          fi
+          dotnet publish '${{ matrix.target.project }}' \
+            -c '${{ matrix.target.configuration }}' \
+            "${mode[@]}" \
             -p:ContinuousIntegrationBuild=true \
             -p:BroilerBrowserVersion="$VERSION" \
             -o "$OUT"
 
-      # The artifact is the executable alone. Symbols (.pdb, and Linux's detached .dbg) and
-      # XML docs are dead weight next to it; anything else would be a file the application
-      # needs, so shipping without it would be broken - fail rather than drop it.
-      - name: Check that the executable is the whole application
+      # Self-contained: the artifact is the executable alone. Symbols (.pdb, and Linux's
+      # detached .dbg) and XML docs are dead weight next to it; anything else would be a file
+      # the application needs, so shipping without it would be broken - fail rather than
+      # drop it.
+      #
+      # Framework-dependent: the artifact is the whole folder, less its symbols and the XML
+      # docs that sit beside an assembly of the same name. It must hold the apphost, the
+      # head's assembly, deps.json and a runtimeconfig.json naming Microsoft.NETCore.App,
+      # and it must not carry a runtime of its own - a coreclr or hostfxr in it means the
+      # publish came out self-contained after all.
+      - name: Check that the publish output is the whole application
+        env:
+          EXECUTABLE: ${{ matrix.target.executable }}
+          ASSEMBLY: ${{ matrix.target.assembly }}
         run: |
-          others=$(find "$OUT" -type f ! -name '${{ matrix.executable }}' \
-            ! -name '*.pdb' ! -name '*.dbg' ! -name '*.xml')
-          if [ ! -f "$OUT/${{ matrix.executable }}" ] || [ -n "$others" ]; then
-            echo "::error::Expected only ${{ matrix.executable }} in the publish output."
-            find "$OUT" -type f
-            exit 1
+          if [ "$VARIANT" = self-contained ]; then
+            others=$(find "$OUT" -type f ! -name "$EXECUTABLE" \
+              ! -name '*.pdb' ! -name '*.dbg' ! -name '*.xml')
+            if [ ! -f "$OUT/$EXECUTABLE" ] || [ -n "$others" ]; then
+              echo "::error::Expected only $EXECUTABLE in the publish output."
+              find "$OUT" -type f
+              exit 1
+            fi
+            exit 0
           fi
+
+          find "$OUT" -type f \( -name '*.pdb' -o -name '*.dbg' \) -delete
+          find "$OUT" -type f -name '*.xml' | while read -r doc; do
+            if [ -f "${doc%.xml}.dll" ]; then rm -f "$doc"; fi
+          done
+          status=0
+          for f in "$EXECUTABLE" "$ASSEMBLY.dll" "$ASSEMBLY.deps.json" "$ASSEMBLY.runtimeconfig.json"; do
+            [ -f "$OUT/$f" ] || { echo "::error::$f is missing from the framework-dependent publish output."; status=1; }
+          done
+          if [ -f "$OUT/$ASSEMBLY.runtimeconfig.json" ] && ! grep -q '"Microsoft.NETCore.App"' "$OUT/$ASSEMBLY.runtimeconfig.json"; then
+            echo "::error::$ASSEMBLY.runtimeconfig.json names no Microsoft.NETCore.App framework."
+            status=1
+          fi
+          bundled=$(find "$OUT" -type f \( -iname 'coreclr.dll' -o -iname 'libcoreclr.so' -o -iname 'hostfxr.dll' -o -iname 'libhostfxr.so' \))
+          if [ -n "$bundled" ]; then
+            echo "::error::The framework-dependent publish output carries a runtime: $bundled"
+            status=1
+          fi
+          if [ "$status" -ne 0 ]; then find "$OUT" -type f; exit 1; fi
+          echo "==> $(find "$OUT" -type f | wc -l) files, $(du -sh "$OUT" | cut -f1)"
 
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
-          name: broiler-browser-${{ matrix.rid }}-${{ env.VERSION }}
-          path: ${{ env.OUT }}/${{ matrix.executable }}
+          name: broiler-browser-${{ matrix.target.rid }}-${{ matrix.variant }}-${{ env.VERSION }}
+          path: ${{ matrix.variant == 'self-contained' && format('{0}/{1}', env.OUT, matrix.target.executable) || env.OUT }}
           if-no-files-found: error
 
   android:
@@ -379,7 +436,10 @@ jobs:
             echo "Commit tagged \`$TAG\`."
             echo
             echo "A draft pre-release **Broiler Browser $VERSION** was created with"
-            echo "\`Broiler.Browser-$VERSION-win-x64.zip\`, \`Broiler.Browser-$VERSION-linux-x64.zip\`,"
+            echo "\`Broiler.Browser-$VERSION-win-x64-self-contained.zip\`,"
+            echo "\`Broiler.Browser-$VERSION-win-x64-framework-dependent.zip\`,"
+            echo "\`Broiler.Browser-$VERSION-linux-x64-self-contained.zip\`,"
+            echo "\`Broiler.Browser-$VERSION-linux-x64-framework-dependent.zip\`,"
             echo "\`Broiler.Browser-$VERSION.aab\` and \`Broiler.Browser-$VERSION-arm64.apk\`."
             echo "Review it under Releases and publish it there."
           } >> "$GITHUB_STEP_SUMMARY"

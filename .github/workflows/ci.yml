@@ -375,11 +375,11 @@ jobs:
   # fails MSB4126 — so they are exercised here rather than in `build`, and this is
   # the path release.yml takes.
   #
-  # It publishes self-contained and single-file because that is what release.yml
-  # ships, so a change that breaks that mode fails a pull request rather than a
-  # release.
+  # It publishes both variants release.yml ships -- self-contained single-file and
+  # framework-dependent -- so a change that breaks either mode fails a pull request
+  # rather than a release.
   publish:
-    name: Publish ${{ matrix.rid }}
+    name: Publish ${{ matrix.rid }} (${{ matrix.variant }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 
@@ -390,13 +390,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        rid: [win-x64, linux-x64]
+        variant: [self-contained, framework-dependent]
         include:
-          - os: windows-latest
-            rid: win-x64
+          - rid: win-x64
+            os: windows-latest
             project: src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj
             configuration: Release-Windows
-          - os: ubuntu-latest
-            rid: linux-x64
+          - rid: linux-x64
+            os: ubuntu-latest
             project: src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj
             configuration: Release-Linux
 
@@ -408,8 +410,12 @@ jobs:
         uses: ./.github/actions/setup-broiler
 
       - name: Publish
+        env:
+          VARIANT: ${{ matrix.variant }}
         run: |
-          dotnet publish ${{ matrix.project }} -c ${{ matrix.configuration }} \
-            --self-contained \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true
+          if [ "$VARIANT" = self-contained ]; then
+            mode=(--self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true)
+          else
+            mode=(--self-contained false)
+          fi
+          dotnet publish ${{ matrix.project }} -c ${{ matrix.configuration }} "${mode[@]}"

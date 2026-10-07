@@ -153,7 +153,8 @@ the manifest too: `"folders": false` lists its projects at the root instead of u
 - **Android head** — a separate job, since it pays for the `android` workload. It runs the two
   graph checks for its own solution, which the other job cannot evaluate without the workload.
 - **Publish** — `Release-Windows` and `Release-Linux`, the runtime-identifier-pinned
-  configurations, self-contained and single-file as the release ships them. They are
+  configurations, in both variants the release ships: self-contained single-file and
+  framework-dependent. They are
   project-level builds by necessity: no solution declares them, so a solution-level build with
   either fails `MSB4126`.
 
@@ -168,14 +169,18 @@ workflow*). Each run picks the next preview version, builds every head with it, 
 
 | Asset | Contents |
 |---|---|
-| `Broiler.Browser-<version>-win-x64.zip` | `Broiler.Browser.Windows.exe` |
-| `Broiler.Browser-<version>-linux-x64.zip` | `Broiler.Browser.Linux`, recorded executable |
+| `Broiler.Browser-<version>-win-x64-self-contained.zip` | `Broiler.Browser.Windows.exe` |
+| `Broiler.Browser-<version>-win-x64-framework-dependent.zip` | the publish folder: `Broiler.Browser.Windows.exe` and its assemblies, no runtime |
+| `Broiler.Browser-<version>-linux-x64-self-contained.zip` | `Broiler.Browser.Linux`, recorded executable |
+| `Broiler.Browser-<version>-linux-x64-framework-dependent.zip` | the publish folder: `Broiler.Browser.Linux` (recorded executable) and its assemblies, no runtime |
 | `Broiler.Browser-<version>.aab` | the Android app bundle (arm64 + x86_64), for Google Play |
 | `Broiler.Browser-<version>-arm64.apk` | the Android APK, for sideloading |
 
-The desktop executables are self-contained single files: the .NET runtime and every assembly in
-one file, nothing to install. They are not NativeAOT, as Broiler.Writer's are, because Broiler.JS
-does not start under NativeAOT.
+The self-contained desktop executables are single files: the .NET runtime and every assembly in
+one file, nothing to install. The framework-dependent variants are the same heads published with
+`--self-contained false`: a folder without the runtime, much smaller, that needs the .NET 10
+runtime installed. Neither is NativeAOT, as Broiler.Writer's are, because Broiler.JS does not
+start under NativeAOT.
 
 The release optimizations are set in the head projects, so CI and a publish from Visual Studio get
 them too:
@@ -209,14 +214,13 @@ the release, and can do so by hand from a run's downloaded artifacts.
 | Path | Contents |
 |---|---|
 | `src/Broiler.Browser.Windows` | Windows head — `WinExe`, Direct2D, Win32 input |
-| `src/Broiler.Browser.Linux` | Linux head — X11 clipboard and input coordination |
+| `src/Broiler.Browser.Linux` | Linux head — X11/GL window and render loop; clipboard and input coordination come from `Broiler.Hosting.Linux` |
 | `src/Broiler.Browser.Android` | Android head — activity, manifest, resources |
 | `src/Broiler.Browser.Core` | Shared browser chrome, palette, HTML form hosting |
 | `src/Broiler.Browser.Core.Tests` | xUnit suite for the shared chrome |
 | `src/Broiler.Browser.Cli` | `Broiler.Cli`, the headless command line — see [docs/command-line.md](docs/command-line.md) |
 | `src/Broiler.Browser.Cli.Tests` | xUnit suite for the command line |
-| `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites, per-platform clipboards. It has no project of its own; each head links the files it needs. |
-| `src/Broiler.App.Android` | Android view, canvas renderer, input connection |
+| `src/Broiler.App` | Source-only directory shared by the heads — rendering pipeline, page loader, favorites. It has no project of its own; each head links the files it needs. The per-platform hosting utilities (clipboards, input coordinators, the Android view, canvas renderer and input connection) come from the `Broiler.Hosting.Windows`, `.Linux` and `.Android` packages. |
 | `eng/`, `scripts/` | Solution manifest, configuration mapping and generator; the release's version resolver, Android signing and draft-release scripts |
 
 *(Corrected 2026-09-08. Two rows here described `Broiler.VM.Profile.JavaScript` and
@@ -229,8 +233,9 @@ replaces them is the row above, which is a real directory this change added.)*
 ## Dependencies
 
 Every component below is a NuGet package from nuget.org, referenced from the projects under
-`src/`. The `Version` on each `PackageReference` there is a minimum, not necessarily the version a
-build gets: restore takes the lowest version nuget.org has at or above it, and several of those
+`src/`. Their versions are managed centrally in `Directory.Packages.props` (Central Package
+Management): a `PackageReference` names the package only. Each version there is a minimum, not
+necessarily the version a build gets: restore takes the lowest version nuget.org has at or above it, and several of those
 minimums name a preview nuget.org does not have, so restore resolves them upward and warns
 `NU1603` for each one. What a project actually restored is in its `obj/project.assets.json`.
 There are no submodules: the last ones — Broiler.HTML, Broiler.HtmlBridge, Broiler.JS,
