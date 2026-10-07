@@ -12,13 +12,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Broiler.Graphics" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Android" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Keyboard.Android" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Pen.Android" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Text.Android" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.Input.Touch.Android" Version="0.1.0-preview.4" />
-    <PackageReference Include="Broiler.UI" Version="0.1.0-preview.4" />
+    <PackageReference Include="Broiler.Graphics" />
+    <PackageReference Include="Broiler.Input.Android" />
+    <PackageReference Include="Broiler.Input.Keyboard.Android" />
+    <PackageReference Include="Broiler.Input.Pen.Android" />
+    <PackageReference Include="Broiler.Input.Text.Android" />
+    <PackageReference Include="Broiler.Input.Touch.Android" />
+    <PackageReference Include="Broiler.UI" />
   </ItemGroup>
 
 </Project>

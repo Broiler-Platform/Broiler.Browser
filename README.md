@@ -229,8 +229,9 @@ replaces them is the row above, which is a real directory this change added.)*
 ## Dependencies
 
 Every component below is a NuGet package from nuget.org, referenced from the projects under
-`src/`. The `Version` on each `PackageReference` there is a minimum, not necessarily the version a
-build gets: restore takes the lowest version nuget.org has at or above it, and several of those
+`src/`. Their versions are managed centrally in `Directory.Packages.props` (Central Package
+Management): a `PackageReference` names the package only. Each version there is a minimum, not
+necessarily the version a build gets: restore takes the lowest version nuget.org has at or above it, and several of those
 minimums name a preview nuget.org does not have, so restore resolves them upward and warns
 `NU1603` for each one. What a project actually restored is in its `obj/project.assets.json`.
 There are no submodules: the last ones — Broiler.HTML, Broiler.HtmlBridge, Broiler.JS,

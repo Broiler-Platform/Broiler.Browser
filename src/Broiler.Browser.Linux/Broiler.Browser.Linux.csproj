@@ -29,11 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Broiler.Graphics.Linux" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.Graphics.Linux.OpenGL" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.Input.Keyboard.Linux" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.Input.Linux" Version="0.1.0-preview.5" />
-    <PackageReference Include="Broiler.Input.Mouse.Linux" Version="0.1.0-preview.5" />
+    <PackageReference Include="Broiler.Graphics.Linux" />
+    <PackageReference Include="Broiler.Graphics.Linux.OpenGL" />
+    <PackageReference Include="Broiler.Input.Keyboard.Linux" />
+    <PackageReference Include="Broiler.Input.Linux" />
+    <PackageReference Include="Broiler.Input.Mouse.Linux" />
   </ItemGroup>
 
   <ItemGroup>
