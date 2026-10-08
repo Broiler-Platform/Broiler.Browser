@@ -30,7 +30,7 @@ internal static class RenderListReplay
                     target.DrawText(text.Text, text.Origin);
                     break;
                 case BRenderCommand.DrawImage image:
-                    target.DrawImage(image.Image, image.Source, image.Destination, image.Opacity);
+                    target.DrawImage(image.Image, image.Source, image.Destination, image.Opacity, image.Sampling);
                     break;
                 case BRenderCommand.PushClip clip:
                     target.PushClip(clip.Rect);

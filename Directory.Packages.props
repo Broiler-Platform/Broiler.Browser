@@ -10,12 +10,12 @@
     <BroilerHtmlBridgeVersion>0.1.0-preview.20</BroilerHtmlBridgeVersion>
     <BroilerUiVersion>0.1.0-preview.19</BroilerUiVersion>
     <BroilerInputVersion>0.1.0-preview.5</BroilerInputVersion>
-    <BroilerGraphicsVersion>0.1.0-preview.9</BroilerGraphicsVersion>
+    <BroilerGraphicsVersion>0.1.0-preview.11</BroilerGraphicsVersion>
     <BroilerHostingVersion>0.1.0-preview.8</BroilerHostingVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Broiler.HTML.Graphics" Version="0.1.0-preview.24" />
-    <PackageVersion Include="Broiler.HTML.Image" Version="0.1.0-preview.24" />
+    <PackageVersion Include="Broiler.HTML.Graphics" Version="0.1.0-preview.25" />
+    <PackageVersion Include="Broiler.HTML.Image" Version="0.1.0-preview.25" />
     <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.21" />
     <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.21" />
     <PackageVersion Include="Broiler.HtmlBridge.Scripting.Vm" Version="$(BroilerHtmlBridgeVersion)" />
