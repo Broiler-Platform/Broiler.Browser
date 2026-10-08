@@ -6,7 +6,7 @@
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <BroilerHtmlVersion>0.1.0-preview.22</BroilerHtmlVersion>
+    <BroilerHtmlVersion>0.1.0-preview.23</BroilerHtmlVersion>
     <BroilerHtmlBridgeVersion>0.1.0-preview.20</BroilerHtmlBridgeVersion>
     <BroilerUiVersion>0.1.0-preview.19</BroilerUiVersion>
     <BroilerInputVersion>0.1.0-preview.5</BroilerInputVersion>
@@ -19,7 +19,7 @@
     <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="$(BroilerHtmlBridgeVersion)" />
     <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="$(BroilerHtmlBridgeVersion)" />
     <PackageVersion Include="Broiler.HtmlBridge.Scripting.Vm" Version="$(BroilerHtmlBridgeVersion)" />
-    <PackageVersion Include="Broiler.CSS.Dom" Version="0.1.0-preview.15" />
+    <PackageVersion Include="Broiler.CSS.Dom" Version="0.1.0-preview.16" />
     <PackageVersion Include="Broiler.Dom.Html" Version="0.1.0-preview.14" />
     <PackageVersion Include="Broiler.Layout" Version="0.1.0-preview.20" />
     <PackageVersion Include="Broiler.Net" Version="0.1.0-preview.2" />
