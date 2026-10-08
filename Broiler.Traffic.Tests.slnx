@@ -1,0 +1,9 @@
+<Solution>
+  <!-- Generated from eng/solutions.json by scripts/update-solutions.ps1. -->
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Project Path="src/Broiler.Traffic.Tests/Broiler.Traffic.Tests.csproj" />
+  <Project Path="src/Broiler.Traffic/Broiler.Traffic.csproj" />
+</Solution>

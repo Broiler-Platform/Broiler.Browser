@@ -52,6 +52,10 @@ dotnet run --project src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj -c Relea
 
 See [docs/command-line.md](docs/command-line.md) for everything else it does.
 
+For Windows packet capture with TCP/UDP process attribution, hostname hints and
+JSON Lines output, see the standalone [Broiler.Traffic CLI](docs/traffic-cli.md).
+It uses the installed Wireshark/TShark and Npcap tools.
+
 Run the tests:
 
 ```bash
@@ -104,6 +108,7 @@ does not drag in another platform's backends.
 | `Broiler.Linux.Browser.slnx` | `src/Broiler.Browser.Linux` | 2 |
 | `Broiler.Android.Browser.slnx` | `src/Broiler.Browser.Android` | 3 |
 | `Broiler.Browser.Tests.slnx` | `src/Broiler.Browser.Core.Tests`, `src/Broiler.Browser.Cli.Tests` | 4 |
+| `Broiler.Traffic.Tests.slnx` | `src/Broiler.Traffic.Tests` | 2 |
 
 The components are packages, and a package is not a project a solution lists, so each solution
 holds only this repository's own projects. The Broiler.VM JavaScript profile and the script engine

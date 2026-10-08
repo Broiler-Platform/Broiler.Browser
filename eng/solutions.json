@@ -22,6 +22,15 @@
   ],
   "solutions": [
     {
+      "path": "Broiler.Traffic.Tests.slnx",
+      "description": "Standalone Windows traffic diagnostics CLI and its tests.",
+      "folders": false,
+      "roots": [
+        "src/Broiler.Traffic.Tests/Broiler.Traffic.Tests.csproj"
+      ],
+      "forbiddenProjectPatterns": []
+    },
+    {
       "path": "Broiler.Windows.Browser.slnx",
       "description": "Windows browser application and its transitive dependencies.",
       "configurations": [ "Debug", "Release", "Debug-VM", "Release-VM" ],

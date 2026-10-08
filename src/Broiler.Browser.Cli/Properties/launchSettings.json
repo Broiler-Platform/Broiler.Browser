@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Broiler.Browser.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "--capture-image https://www.google.com/recaptcha/api2/demo --output test.png"
+    }
+  }
+}
