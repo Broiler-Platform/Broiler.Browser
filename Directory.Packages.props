@@ -6,7 +6,7 @@
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <BroilerHtmlVersion>0.1.0-preview.21</BroilerHtmlVersion>
+    <BroilerHtmlVersion>0.1.0-preview.22</BroilerHtmlVersion>
     <BroilerHtmlBridgeVersion>0.1.0-preview.20</BroilerHtmlBridgeVersion>
     <BroilerUiVersion>0.1.0-preview.19</BroilerUiVersion>
     <BroilerInputVersion>0.1.0-preview.5</BroilerInputVersion>

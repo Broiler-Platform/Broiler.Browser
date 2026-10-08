@@ -5,8 +5,8 @@ Broiler-Platform/Broiler.HtmlBridge#22 and Broiler-Platform/Broiler.CSS#66, and 
 rendering defects were fixed by this repository (the red "YOU SHOULD NOT SEE THIS AT ALL"),
 Broiler-Platform/Broiler.CSS#68 (the 500px score), Broiler-Platform/Broiler.CSS#67 (test 28's "FAIL"),
 Broiler-Platform/Broiler.Layout#132 with Broiler-Platform/Broiler.HtmlBridge#23 (the object fallback
-"FAIL") and Broiler-Platform/Broiler.HTML#246 (the red corner square). What still differs from the
-reference is listed under "Still open" at the end. Investigated on 2026-10-07 from a window screenshot
+"FAIL") and Broiler-Platform/Broiler.HTML#246 (the red corner square). The last differences in
+position and colour are listed under "Fixed after the first release" at the end. Investigated on 2026-10-07 from a window screenshot
 that showed `91/100` drawn five times too large, a red square in the body's top-right corner, a red
 "YOU SHOULD NOT SEE THIS AT ALL" and a "FAIL" above the heading.
 **Components:** Broiler.DOM, Broiler.HtmlBridge, Broiler.CSS, Broiler.HTML, Broiler.Layout,
@@ -348,15 +348,36 @@ compile per evaluation rather than a closure over code compiled once; and a DOM 
 hundreds of microseconds, more the more nodes the page has made, even on a node outside the
 document. Both are speed work in Broiler.JS and Broiler.DOM or Broiler.HtmlBridge, not correctness.
 
+## Fixed after the first release
+
+Three differences from the reference remained after the packages above. They are fixed by
+Broiler-Platform/Broiler.Layout#133, Broiler-Platform/Broiler.Layout#134,
+Broiler-Platform/Broiler.CSS#69, Broiler-Platform/Broiler.Graphics#36 and
+Broiler-Platform/Broiler.HTML#247:
+
+- **The corner square was fuchsia with a white "X", not solid white.** Web fonts were measured
+  and not drawn, so AcidAhemTest's full-em "X" was drawn in an installed face. Broiler.Graphics now
+  carries a web font's program on the font (`BFontFace`) and draws its glyph outlines, in the raster
+  renderer and in Direct2D; Broiler.HTML hands the loaded font to the render list (Graphics#36,
+  HTML#247).
+- **The instructions paragraph sat about 9px low.** Two causes. Broiler.Layout laid out the text
+  of a positioned inline box (`map::after`) in its parent's line as well as at its offsets, which
+  made that line taller (Layout#133). And the default stylesheet's rule that hides
+  `input[type=hidden]` did not match Acid3's `<input type=HIDDEN>`: `type` is one of HTML's attributes whose value is matched
+  without regard to case, so the input was laid out as a text field (CSS#69, which also adds
+  Selectors 4's `i` and `s` flags). `#instructions` is now at 350px, as in the reference.
+- **The score sat about 35px high.** Two causes again. A block whose line height is 0 (the score's
+  buckets, `font: 0/0`) dropped its strut (CSS 2.1 §10.8), so the line ended at the bottom of the
+  lowest raised bucket and `#result`'s −219px margin landed it at 190 instead of 230 (Layout#134).
+  And glyphs were drawn about 13px high: the renderer put a run's baseline at 0.8 × the font size
+  wherever layout had placed it. A text run now carries the baseline layout computed
+  (`BTextRun.Baseline`) and is drawn standing on it (Graphics#36, HTML#247). The score's top is now
+  at 230px.
+
+The baseline fix also moves text on Acid1 and Acid2 by 1–2px, towards Chromium's rendering.
+
 ## Still open
 
-- **The corner square is fuchsia with a white "X", not solid white.** The `::after` box is now
-  placed and painted, but web fonts are measured and not drawn (item 2 of
-  `found-not-fixed-2026-10-07.md`), so AcidAhemTest's full-em "X" is drawn in an installed face.
-- **An absolutely positioned box's words are also laid out in its parent's line.** Broiler.Layout
-  places the text of a positioned inline box (`map::after` here, or a real
-  `<span style="position:absolute">`) in its parent's line as well as at its offsets, which makes that
-  line taller: on Acid3 the instructions paragraph sits about 9px lower than the reference.
-- **The score sits a little higher than the reference's.** "100/100" is drawn about 35px above the
-  reference's top of 230px.
+- **Web-font text ignores `font-feature-settings`, and gets no synthetic bold or italic.** A face
+  is drawn from its outlines as they are; Acid3 needs neither.
 - **Timing**, as above.
