@@ -101,7 +101,7 @@ internal sealed class CpuReplayRenderer(IBroilerRenderer backend) : IBroilerRend
                 case BRenderCommand.StrokeRoundedRect c: copy.StrokeRoundedRect(c.Rect, c.Color, c.RadiusX, c.RadiusY, c.Thickness); break;
                 case BRenderCommand.FillTriangle c: copy.FillTriangle(c.A, c.B, c.C, c.Color); break;
                 case BRenderCommand.DrawText c: copy.DrawText(c.Text, c.Origin); break;
-                case BRenderCommand.DrawImage c: copy.DrawImage(CpuImage(c.Image), c.Source, c.Destination, c.Opacity); break;
+                case BRenderCommand.DrawImage c: copy.DrawImage(CpuImage(c.Image), c.Source, c.Destination, c.Opacity, c.Sampling); break;
                 case BRenderCommand.PushClip c: copy.PushClip(c.Rect); break;
                 case BRenderCommand.PopClip: copy.PopClip(); break;
                 case BRenderCommand.PushTransform c: copy.PushTransform(c.Transform); break;
