@@ -23,6 +23,9 @@ internal static class RenderListReplay
                 case BRenderCommand.StrokeRoundedRect strokeRounded:
                     target.StrokeRoundedRect(strokeRounded.Rect, strokeRounded.Color, strokeRounded.RadiusX, strokeRounded.RadiusY, strokeRounded.Thickness);
                     break;
+                case BRenderCommand.FillTriangle triangle:
+                    target.FillTriangle(triangle.A, triangle.B, triangle.C, triangle.Color);
+                    break;
                 case BRenderCommand.DrawText text:
                     target.DrawText(text.Text, text.Origin);
                     break;
