@@ -1,8 +1,8 @@
 # Where Acid2 differs from its reference
 
-**Status:** three of four differences fixed, by Broiler-Platform/Broiler.CSS#70,
-Broiler-Platform/Broiler.HTML#248 and this repository's `RenderListReplay`. One remains, under
-"Still open".
+**Status:** three of four differences fixed and released, by Broiler-Platform/Broiler.CSS#70
+(Broiler.CSS 0.1.0-preview.16), Broiler-Platform/Broiler.HTML#248 (Broiler.HTML 0.1.0-preview.23)
+and this repository's `RenderListReplay`. One remains, under "Still open".
 **Components:** Broiler.CSS, Broiler.HTML, Broiler.Browser, Broiler.Layout.
 **Affects:** the Broiler.Browser window and `Broiler.Cli --analyze`, which draw the same way.
 
