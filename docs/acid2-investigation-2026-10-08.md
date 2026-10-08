@@ -2,7 +2,9 @@
 
 **Status:** three of four differences fixed and released, by Broiler-Platform/Broiler.CSS#70
 (Broiler.CSS 0.1.0-preview.16), Broiler-Platform/Broiler.HTML#248 (Broiler.HTML 0.1.0-preview.23)
-and this repository's `RenderListReplay`. One remains, under "Still open".
+and this repository's `RenderListReplay`. One remains, under "Still open". The orange dither the
+Windows window drew behind the eyes at 150% is fixed too, by Broiler.Graphics 0.1.0-preview.11 and
+Broiler.HTML 0.1.0-preview.25.
 **Components:** Broiler.CSS, Broiler.HTML, Broiler.Browser, Broiler.Layout.
 **Affects:** the Broiler.Browser window and `Broiler.Cli --analyze`, which draw the same way.
 
@@ -63,6 +65,32 @@ colour, then the other side's half over it as a triangle. Other corners keep the
 This also needed a fix here. `RenderListReplay` copies a page's render commands into the window's
 list and had no case for triangles, so it dropped them. Before that was fixed, the nose
 disappeared entirely.
+
+## Rows 3–4 in the Windows window: an orange dither behind the eyes
+
+At 150% display scaling, the Windows build drew the area behind the eyes as an orange dither. The
+Linux window and `Broiler.Cli` drew it solid yellow.
+
+The yellow there is two layers of a 2×2 checkerboard, yellow at two corners and transparent at the
+other two, tiled over red (`#eyes-b`, and the innermost `object`'s background shifted `1px 0`).
+The second layer is a pixel to the right of the first, so together they cover everything. Direct2D
+drew every image with linear interpolation. At 150% a 2px tile is 3 device pixels wide, so its
+middle pixel blended yellow with transparent, and the red showed through. The CPU renderer samples
+nearest-neighbour and covers only the pixels whose centres a tile covers, so it never showed this.
+
+- **Broiler.Graphics** (Broiler-Platform/Broiler.Graphics#37) gives `DrawImage` a `BImageSampling`.
+  Direct2D draws a `NearestNeighbor` image with nearest-neighbour interpolation and aliased edges,
+  as the CPU renderer does.
+- **Broiler.Graphics** (Broiler-Platform/Broiler.Graphics#38) keeps the four-parameter forms that
+  preview.10 had replaced. Without them, packages built against older versions threw
+  `MissingMethodException`.
+- **Broiler.HTML** (Broiler-Platform/Broiler.HTML#249) asks for nearest-neighbour sampling only
+  for a background tile drawn at its image's own size. A tile the page scales stays smooth.
+- **Here:** both replay paths, `RenderListReplay` and the Linux `CpuReplayRenderer`, now pass the
+  sampling on.
+
+A Direct2D test in Broiler.Graphics' Windows CI renders the eyes' two layers at 150%. It finds
+every device pixel yellow with nearest-neighbour sampling, and blended pixels with linear sampling.
 
 ## Still open
 
