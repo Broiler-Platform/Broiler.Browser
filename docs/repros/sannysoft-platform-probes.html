@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Sannysoft platform regressions</title>
+<style>body { font: 16px sans-serif; } pre { white-space: pre-wrap; }</style>
+<h1>Sannysoft reduced platform probes</h1>
+<p>Run with a 1280 by 900 viewport. This fixture makes no network requests.</p>
+<table><tr><td id="write-cell"><script>document.write('<span id="written-value">CELL_VALUE</span>');</script></td></tr></table>
+<pre id="results">Waiting for the 500 ms timer.</pre>
+<div id="inner-text-target"></div>
+<script>
+var probeResults = {
+  imageConstructor: {event: 'pending'},
+  imageElement: {event: 'pending'}
+};
+var png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
+var constructed = new Image();
+var element = document.createElement('img');
+document.getElementById('inner-text-target').innerText = 'INNER_TEXT_VALUE';
+function observe(image, result) {
+  image.onload = function () { result.event = 'load'; };
+  image.onerror = function () { result.event = 'error'; };
+  image.src = png;
+}
+observe(constructed, probeResults.imageConstructor);
+observe(element, probeResults.imageElement);
+document.body.appendChild(element);
+setTimeout(function () {
+  probeResults.timerFired = true;
+  probeResults.writeParent = document.getElementById('written-value').parentNode.id;
+  probeResults.writeParentTag = document.getElementById('written-value').parentNode.tagName;
+  probeResults.innerTextAfterAssignment = document.getElementById('inner-text-target').textContent;
+  probeResults.pluginArrayType = typeof PluginArray;
+  probeResults.pluginTag = Object.prototype.toString.call(navigator.plugins);
+  probeResults.pluginLength = navigator.plugins.length;
+  probeResults.mediaDevicesType = typeof navigator.mediaDevices;
+  probeResults.legacyGetUserMediaType = typeof navigator.getUserMedia;
+  probeResults.viewport = [innerWidth, innerHeight];
+  probeResults.screen = [screen.width, screen.height];
+  probeResults.screenPrototypeWidthType = typeof Object.getOwnPropertyDescriptor(Object.getPrototypeOf(screen), 'width');
+  probeResults.webglAvailable = document.createElement('canvas').getContext('webgl') !== null;
+  probeResults.imageConstructor.complete = constructed.complete;
+  probeResults.imageConstructor.naturalWidth = constructed.naturalWidth;
+  probeResults.imageConstructor.isElement = constructed instanceof HTMLImageElement;
+  probeResults.imageElement.complete = element.complete;
+  probeResults.imageElement.naturalWidth = element.naturalWidth;
+  document.getElementById('results').textContent = JSON.stringify(probeResults, null, 2);
+}, 500);
+</script>
+</html>

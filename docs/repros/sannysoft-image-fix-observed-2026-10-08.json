@@ -1,0 +1,77 @@
+{
+  "measuredAt": "2026-10-08T15:47:07.9780189Z",
+  "url": "https://bot.sannysoft.com/",
+  "localUncommittedFix": true,
+  "htmlBridgeBaseCommit": "83e98dd8cdb4820e3953b386ffaafce71bdafeb7",
+  "browserPackageReferenceUnchanged": "0.1.0-preview.21",
+  "analysisExitCode": 0,
+  "analysisDurationMs": 56877.9,
+  "scannerRows": 20,
+  "displayedFingerprintPropertyCount": 32,
+  "displayedFingerprintCharacters": 5779,
+  "collector": {
+    "image": "load",
+    "complete": true,
+    "width": 1,
+    "fields": 33,
+    "tpCanvas": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "platform": {
+    "imageConstructor": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1,
+      "isElement": true
+    },
+    "imageElement": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1
+    },
+    "timerFired": true,
+    "writeParent": null,
+    "writeParentTag": "BODY",
+    "innerTextAfterAssignment": "",
+    "pluginArrayType": "undefined",
+    "pluginTag": "[object Object]",
+    "pluginLength": 0,
+    "mediaDevicesType": "undefined",
+    "legacyGetUserMediaType": "undefined",
+    "viewport": [
+      1024,
+      768
+    ],
+    "screen": [
+      1024,
+      768
+    ],
+    "screenPrototypeWidthType": "undefined",
+    "webglAvailable": false
+  },
+  "tests": {
+    "NewImageCases": 21,
+    "ReleaseVM": {
+      "passed": 2000,
+      "failed": 0,
+      "skipped": 21
+    },
+    "Release": {
+      "passed": 1944,
+      "failed": 0,
+      "skipped": 21
+    },
+    "EngineNeutrality": "passed",
+    "FocusedWithExistingDimensionCases": 42
+  },
+  "assemblySha256": {
+    "Broiler.HtmlBridge.Scripting.dll": "D8E9D4195FA09B564216B56CEF466BEB695472E548C83F9CD4C2DC63BEA23A71",
+    "Broiler.HtmlBridge.Core.dll": "810B0F24518A6A1B8FEC0ACA66518544C19638BC20F057E0704897CC583BD966",
+    "Broiler.HtmlBridge.DomBridgeUtils.dll": "A6451A93A84AE08A9FD1E369AEC09ABCD4C1371C6B72013F98A55A648B7043CE",
+    "Broiler.HtmlBridge.Dom.dll": "171EE388F51D3AD9744225883CF4666A757305512950EB68E29FC073B84C007B"
+  }
+}
