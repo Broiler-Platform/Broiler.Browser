@@ -1,0 +1,77 @@
+{
+  "measuredAt": "2026-10-08T19:51:00.0000000Z",
+  "url": "docs/repros/sannysoft-platform-probes.html",
+  "localFix": "Screen interface, prototype accessors, and receiver checks",
+  "fixScope": "Broiler.HtmlBridge (ScreenBinding, ScreenOrientationBinding, IScreenHost, Window.cs, Hosts.Window.cs)",
+  "analysisExitCode": 0,
+  "platform1280x900": {
+    "imageConstructor": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1,
+      "isElement": true
+    },
+    "imageElement": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1
+    },
+    "timerFired": true,
+    "writeParent": "write-cell",
+    "writeParentTag": "TD",
+    "innerTextAfterAssignment": "INNER_TEXT_VALUE",
+    "pluginArrayType": "function",
+    "pluginTag": "[object PluginArray]",
+    "pluginLength": 0,
+    "mediaDevicesType": "undefined",
+    "legacyGetUserMediaType": "undefined",
+    "viewport": [
+      1280,
+      900
+    ],
+    "screen": [
+      1280,
+      900
+    ],
+    "screenPrototypeWidthType": "object",
+    "webglAvailable": false
+  },
+  "platform800x600": {
+    "viewport": [
+      800,
+      600
+    ],
+    "screen": [
+      800,
+      600
+    ],
+    "screenPrototypeWidthType": "object"
+  },
+  "tests": {
+    "Broiler.HtmlBridge.Tests (Release)": {
+      "passed": 2031,
+      "failed": 0,
+      "skipped": 21
+    },
+    "Broiler.HtmlBridge.Tests (Release-VM)": {
+      "passed": 2087,
+      "failed": 0,
+      "skipped": 21
+    },
+    "Broiler.HtmlBridge.Tests.ScreenInterfaceTests": {
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Broiler.Browser.Core.Tests": {
+      "passed": 319,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Broiler.Browser.Cli.Tests": {
+      "passed": 223,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using Broiler.App.Rendering;
@@ -239,6 +240,7 @@ internal sealed class PageAnalyzer
                 BroilerJsOnly = true,
                 Profiler = profiler,
                 WrapLayoutView = layouts.Wrap,
+                Viewport = () => new Size(_options.Width, _options.Height),
             });
 
         var page = await _phases.RunAsync(

@@ -1,0 +1,84 @@
+{
+  "measuredAt": "2026-10-08T18:38:00.0000000Z",
+  "url": "https://bot.sannysoft.com/",
+  "localUncommittedFix": true,
+  "htmlBridgeBaseCommit": "d6086cfe16d9a799bc8af504f4b5b355f57f5e9a",
+  "browserPackageReferenceUnchanged": "0.1.0-preview.22",
+  "analysisExitCode": 0,
+  "scannerRows": 20,
+  "displayedFingerprintPropertyCount": 32,
+  "collector": {
+    "image": "load",
+    "complete": true,
+    "width": 1,
+    "fields": 33,
+    "tpCanvas": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "finalScript": {
+    "inline30Aborted": false,
+    "pluginsLength": 0,
+    "pluginsType": "failed",
+    "pluginsInstanceOfPluginArray": true,
+    "languages": "en-US,en",
+    "webglVendor": "Canvas has no webgl context",
+    "webglRenderer": "Canvas has no webgl context",
+    "brokenImageDimensions": "0x0"
+  },
+  "platform": {
+    "imageConstructor": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1,
+      "isElement": true
+    },
+    "imageElement": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1
+    },
+    "timerFired": true,
+    "writeParent": "write-cell",
+    "writeParentTag": "TD",
+    "innerTextAfterAssignment": "",
+    "pluginArrayType": "function",
+    "pluginTag": "[object PluginArray]",
+    "pluginLength": 0,
+    "mediaDevicesType": "undefined",
+    "legacyGetUserMediaType": "undefined",
+    "viewport": [
+      1024,
+      768
+    ],
+    "screen": [
+      1024,
+      768
+    ],
+    "screenPrototypeWidthType": "undefined",
+    "webglAvailable": false
+  },
+  "tests": {
+    "DocumentWriteTests": 9,
+    "ReleaseVM": {
+      "passed": 2041,
+      "failed": 0,
+      "skipped": 21
+    },
+    "Release": {
+      "passed": 1985,
+      "failed": 0,
+      "skipped": 21
+    },
+    "EngineNeutrality": "passed"
+  },
+  "assemblySha256": {
+    "Broiler.HtmlBridge.Core.dll": "7DCC899149563F4B38563F8939150B8582E6608A1B7B5375DCB31AC2E88A4E6E",
+    "Broiler.HtmlBridge.DomBridgeUtils.dll": "1DB8435FFF165EFBC43F26A5C793375C96451CCB468BCDB7332E73B4A357775A",
+    "Broiler.HtmlBridge.Dom.dll": "C727D16C666004E3235E508224DF314693D0B20FEBE18A191FB0EED4954E08C7",
+    "Broiler.HtmlBridge.Scripting.dll": "4A07B55D350F2650C80707742919285570BB9404784BB4BBA59CD730DDEBAD2F"
+  }
+}

@@ -11,11 +11,13 @@
 <script>
 var probeResults = {
   imageConstructor: {event: 'pending'},
-  imageElement: {event: 'pending'}
+  imageElement: {event: 'pending'},
+  brokenImageElement: {event: 'pending'}
 };
 var png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
 var constructed = new Image();
 var element = document.createElement('img');
+var broken = document.createElement('img');
 document.getElementById('inner-text-target').innerText = 'INNER_TEXT_VALUE';
 function observe(image, result) {
   image.onload = function () { result.event = 'load'; };
@@ -24,7 +26,14 @@ function observe(image, result) {
 }
 observe(constructed, probeResults.imageConstructor);
 observe(element, probeResults.imageElement);
+broken.onload = function () { probeResults.brokenImageElement.event = 'load'; };
+broken.onerror = function () {
+  probeResults.brokenImageElement.event = 'error';
+  probeResults.brokenImageElement.dimensions = broken.width + 'x' + broken.height;
+};
+broken.src = 'data:image/png;base64,invalid!';
 document.body.appendChild(element);
+document.body.appendChild(broken);
 setTimeout(function () {
   probeResults.timerFired = true;
   probeResults.writeParent = document.getElementById('written-value').parentNode.id;
@@ -44,6 +53,9 @@ setTimeout(function () {
   probeResults.imageConstructor.isElement = constructed instanceof HTMLImageElement;
   probeResults.imageElement.complete = element.complete;
   probeResults.imageElement.naturalWidth = element.naturalWidth;
+  probeResults.brokenImageElement.complete = broken.complete;
+  probeResults.brokenImageElement.naturalWidth = broken.naturalWidth;
+  probeResults.brokenImageElement.naturalHeight = broken.naturalHeight;
   document.getElementById('results').textContent = JSON.stringify(probeResults, null, 2);
 }, 500);
 </script>

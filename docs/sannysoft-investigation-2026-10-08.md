@@ -2,13 +2,17 @@
 
 Measured on **2026-10-08**, starting at **17:03 Europe/Berlin**, against
 [bot.sannysoft.com](https://bot.sannysoft.com/).
-**Status: first P1 implemented and verified in the local HtmlBridge checkout;
-remaining repairs proposed. Browser's published package reference is unchanged.**
+**Status: all four P1 items implemented and verified in the local HtmlBridge checkout;
+remaining P2/P3 repairs proposed. Browser's published package reference is unchanged.**
 
 The investigation below preserves the original baseline. The first P1 follow-up
-is recorded in [the image-loading fix and validation notes](sannysoft-image-fix-2026-10-08.md).
-With the patched local assemblies, the unmodified live page now populates its
-fingerprint details and all 20 scanner rows.
+is recorded in [the image-loading fix and validation notes](sannysoft-image-fix-2026-10-08.md),
+the second P1 follow-up is recorded in [the PluginArray fix and validation notes](sannysoft-plugin-fix-2026-10-08.md),
+the third P1 follow-up is recorded in [the document.write fix and validation notes](sannysoft-write-fix-2026-10-08.md),
+and the fourth P1 follow-up is recorded in [the innerText fix and validation notes](sannysoft-innertext-fix-2026-10-08.md).
+With the patched local assemblies, the unmodified live page populates its
+fingerprint details, all 20 scanner rows, all detail table cells in-place,
+and displays test result text for `PluginArray` type validation.
 
 Broiler fetches and renders the page, but several result sections remain empty.
 Both `--analyze` and `--capture-image` exit successfully; that means the commands
@@ -76,12 +80,12 @@ capture reported three failures, without the analytics fetch failure.
 | Priority | Problem | Owner | Completion criterion |
 | --- | --- | --- | --- |
 | P1 — locally fixed | `new Image()` never loads or errors | HtmlBridge; HTML/Media integration | Verified: the collector's image promise settles and the fingerprint/scanner sections populate. |
-| P1 | Missing `PluginArray` interface | HtmlBridge | `instanceof PluginArray` executes without throwing, including an empty plugin list. |
-| P1 | Nested `document.write()` escapes its table cell | HtmlBridge | Each detail value is inserted at its executing script's position. |
-| P1 | `innerText` assignment does nothing | HtmlBridge | Plugin-type result text appears; generic element assignment updates the DOM. |
-| P2 | Script viewport ignores CLI dimensions | Browser CLI | Initial scripts, media queries, geometry and rendering use the requested viewport. |
-| P2 | `screen` lacks interface/prototype accessors | HtmlBridge | Screen descriptor probes return the appropriate accessor instead of `undefined`. |
-| P2 — addressed by first P1 | Image element events/metadata are incomplete | HtmlBridge; HTML/Media integration | Verified for the implemented image lifecycle; see follow-up scope and limitations. |
+| P1 — locally fixed | Missing `PluginArray` interface | HtmlBridge | Verified: `instanceof PluginArray` executes without throwing, empty list semantics hold, and final script completes. |
+| P1 — locally fixed | Nested `document.write()` escapes its table cell | HtmlBridge | Verified: each detail value is inserted at its executing script's position; no accumulation at body end. |
+| P1 — locally fixed | `innerText` assignment does nothing | HtmlBridge | Verified: Plugin-type result text appears ("failed"); generic element assignment updates the DOM per WHATWG HTML §3.2.6.2. |
+| P2 — locally fixed | Script viewport ignores CLI dimensions | Browser CLI | Verified: initial scripts, media queries, geometry and rendering agree on requested viewport (1280×900, 800×600). |
+| P2 — locally fixed | `screen` lacks interface/prototype accessors | HtmlBridge | Screen descriptor probes return the appropriate accessor instead of `undefined`. |
+| P2 — locally fixed | Image element events/metadata are incomplete | HtmlBridge; HTML/Media integration | Verified: element and constructor share lifecycle, 404/broken dispatch errors, metadata updates, and unstyled broken dimensions report 0x0. |
 | P3 | Unsupported media/WebGL APIs and ignored wrapping | HtmlBridge, media/graphics, Layout | Explicit capability scope and independent compatibility tests. |
 
 P1 here means blocking meaningful page output, not a crash or security severity.
@@ -206,6 +210,8 @@ The analyzer's coarse window comparison reported **0.00% difference even on the
 reduced fixture with these different numbers**. It is useful for large visual
 changes, but must not be used to establish DOM or API equivalence.
 
+> **Resolution (2026-10-08)**: Completed and verified in `src/Broiler.Browser.Cli`. `HeadlessBrowserOptions` now accepts `Viewport` and forwards it to `BrowserApp.BridgeOptions`. `PageAnalyzer`, `CaptureService`, and CLI dispatch now configure viewport dimensions for analysis, image captures, and evaluation runs before scripts execute. Full details in [`docs/sannysoft-viewport-fix-2026-10-08.md`](sannysoft-viewport-fix-2026-10-08.md).
+
 ## 6. Screen descriptors and image element lifecycle need follow-up
 
 The collector explicitly inspects the getter for `width` on `screen`'s prototype.
@@ -215,6 +221,9 @@ properties. Implement the Screen interface and its attribute accessors using a
 consistent host source; verify descriptors and receiver checks independently of
 the CLI viewport repair. This caught exception does not block the collector.
 
+> **Resolution (2026-10-08)**: Completed and verified in `d:\Broiler.HtmlBridge`. `Screen` and `ScreenOrientation` interface objects and prototypes are now exposed on `window` and `globalThis`. `window.screen` is an instance of `Screen` with no own properties, all 9 CSSOM View attributes (`width`, `height`, `availWidth`, `availHeight`, `availLeft`, `availTop`, `colorDepth`, `pixelDepth`, `orientation`) are accessors on `Screen.prototype` with Web IDL receiver checks (`Illegal invocation`), and values are read dynamically from `IScreenHost`. Full details in [`docs/sannysoft-screen-fix-2026-10-08.md`](sannysoft-screen-fix-2026-10-08.md).
+
+
 A separate `document.createElement('img')` probe, appended to the body with the
 same data URL, also receives no event during settling. Its `complete` and
 `naturalWidth` properties are undefined (therefore omitted by JSON serialization).
@@ -223,6 +232,8 @@ That replay's remote nonexistent-image requests failed at the transport level, s
 it does not establish the correct broken-image dimensions. Use deterministic
 successful/404 fixture responses to validate event dispatch and sizing after the
 common image lifecycle is implemented.
+
+> **Resolution (2026-10-08)**: Completed and verified in `d:\Broiler.HtmlBridge`. `document.createElement('img')` and `new Image()` share the same underlying `HTMLImageElement` lifecycle. In addition to successful data/HTTP loads, deterministic 404 responses, invalid data URLs, and network failures dispatch `error` events (calling `.onerror` and `addEventListener('error')`), set `complete = true`, set `naturalWidth = 0` / `naturalHeight = 0`, and report `width = 0` / `height = 0` for unstyled broken images (matching modern Chromium layout behavior for broken images without attributes/CSS) while preserving explicit HTML attributes and CSS styles. Validated through 32 tests in `Broiler.HtmlBridge.Tests.ImageLoadingTests`, updated `docs/repros/sannysoft-platform-probes.html` (`brokenImageElement` reporting `event: "error"`, `dimensions: "0x0"`, `complete: true`), and CLI headless analysis. Full details in [`docs/sannysoft-image-lifecycle-fix-2026-10-08.md`](sannysoft-image-lifecycle-fix-2026-10-08.md).
 
 ## Other findings and expected outcomes
 

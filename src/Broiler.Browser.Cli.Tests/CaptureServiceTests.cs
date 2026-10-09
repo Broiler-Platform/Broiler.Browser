@@ -262,4 +262,93 @@ public sealed class CaptureServiceTests : IDisposable
         Assert.Equal("rewritten by an expression", TextOf(html, "sync"));
         Assert.Equal("written by a timer", TextOf(html, "timer"));
     }
+
+    private async Task<JsonElement[]> EvaluateWithDimensionsAsync(string url, int width, int height, params string[] expressions)
+    {
+        var output = _pages.Output("report.json");
+        await new CaptureService().EvaluatePageAsync(new PageEvaluationOptions
+        {
+            Url = url,
+            OutputPath = output,
+            Width = width,
+            Height = height,
+            Expressions = expressions,
+            HtmlOutputPath = _pages.Output("after.html"),
+        });
+
+        using var report = JsonDocument.Parse(await File.ReadAllTextAsync(output));
+        return [.. report.RootElement.GetProperty("evaluations").EnumerateArray().Select(e => e.Clone())];
+    }
+
+    [Theory(Timeout = 600000)]
+    [InlineData(1280, 900)]
+    [InlineData(800, 600)]
+    public async Task Page_Evaluation_And_Initial_Scripts_See_Configured_Viewport(int width, int height)
+    {
+        const string pageHtml = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <style>
+              #testbox { width: 50vw; height: 100px; }
+            </style>
+            </head>
+            <body>
+            <div id="testbox"></div>
+            <p id="recorded"></p>
+            <script>
+              document.getElementById('recorded').textContent = window.innerWidth + 'x' + window.innerHeight;
+            </script>
+            </body>
+            </html>
+            """;
+
+        var url = _pages.Write($"viewport-{width}x{height}.html", pageHtml);
+        var evaluations = await EvaluateWithDimensionsAsync(
+            url, width, height,
+            "window.innerWidth",
+            "window.innerHeight",
+            "screen.width",
+            "screen.height",
+            "window.matchMedia('(min-width: 1000px)').matches",
+            "document.getElementById('testbox').getBoundingClientRect().width");
+
+        Assert.Equal(width.ToString(), Read(evaluations[0]).Value);
+        Assert.Equal(height.ToString(), Read(evaluations[1]).Value);
+        Assert.Equal(width.ToString(), Read(evaluations[2]).Value);
+        Assert.Equal(height.ToString(), Read(evaluations[3]).Value);
+        Assert.Equal((width >= 1000).ToString().ToLowerInvariant(), Read(evaluations[4]).Value);
+        Assert.Equal((width / 2.0).ToString(), Read(evaluations[5]).Value);
+
+        var afterHtml = await File.ReadAllTextAsync(_pages.Output("after.html"));
+        Assert.Equal($"{width}x{height}", TextOf(afterHtml, "recorded"));
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task Capture_Image_Passes_Configured_Viewport_To_Initial_Scripts()
+    {
+        const string pageHtml = """
+            <!DOCTYPE html>
+            <html>
+            <body>
+            <p id="dims"></p>
+            <script>
+              document.getElementById('dims').textContent = window.innerWidth + 'x' + window.innerHeight;
+            </script>
+            </body>
+            </html>
+            """;
+
+        var url = _pages.Write("capture-vp.html", pageHtml);
+        var outputImage = _pages.Output("capture-vp.png");
+        await new CaptureService().CaptureImageAsync(new ImageCaptureOptions
+        {
+            Url = url,
+            OutputPath = outputImage,
+            Width = 1280,
+            Height = 900,
+        });
+
+        Assert.True(File.Exists(outputImage));
+    }
 }

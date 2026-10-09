@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CreepJS reduced proxy prototype cycle</title>
+<pre id="result">not started</pre>
+<script>
+// Reduced from CreepJS's "failed at chain cycle error" test.
+// Run in a child process: affected Broiler.JS versions terminate the host.
+var fn = function example() {};
+var original = Object.getPrototypeOf(fn);
+var proxy = new Proxy(fn, {});
+try {
+    Object.setPrototypeOf(proxy, Object.create(proxy)).toString();
+    document.getElementById('result').textContent = 'unexpected completion';
+} catch (error) {
+    document.getElementById('result').textContent = error.name + ': ' + error.message;
+} finally {
+    Object.setPrototypeOf(fn, original);
+}
+</script>

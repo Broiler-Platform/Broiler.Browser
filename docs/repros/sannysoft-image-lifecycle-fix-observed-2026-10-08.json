@@ -1,0 +1,68 @@
+{
+  "measuredAt": "2026-10-08T20:17:16.0000000Z",
+  "url": "docs/repros/sannysoft-platform-probes.html",
+  "localFix": "Image element lifecycle, metadata, event dispatch, and broken image dimensions",
+  "fixScope": "Broiler.HtmlBridge (Images.cs, ResourceLoader.cs, ComputedStyleBinding.cs, NodeInterfaces.cs, ImageLoadingTests.cs)",
+  "analysisExitCode": 0,
+  "platform1280x900": {
+    "imageConstructor": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1,
+      "isElement": true
+    },
+    "imageElement": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1
+    },
+    "brokenImageElement": {
+      "event": "error",
+      "dimensions": "0x0",
+      "complete": true,
+      "naturalWidth": 0,
+      "naturalHeight": 0
+    },
+    "timerFired": true,
+    "writeParent": "write-cell",
+    "writeParentTag": "TD",
+    "innerTextAfterAssignment": "INNER_TEXT_VALUE",
+    "pluginArrayType": "function",
+    "pluginTag": "[object PluginArray]",
+    "pluginLength": 0,
+    "mediaDevicesType": "undefined",
+    "legacyGetUserMediaType": "undefined",
+    "viewport": [
+      1280,
+      900
+    ],
+    "screen": [
+      1280,
+      900
+    ],
+    "screenPrototypeWidthType": "object",
+    "webglAvailable": false
+  },
+  "tests": {
+    "Broiler.HtmlBridge.Tests (Release)": {
+      "passed": 2042,
+      "failed": 0,
+      "skipped": 21
+    },
+    "Broiler.HtmlBridge.Tests (Release-VM)": {
+      "passed": 2098,
+      "failed": 0,
+      "skipped": 21
+    },
+    "Broiler.HtmlBridge.Tests.ImageLoadingTests": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Broiler.Browser.Cli.Tests": {
+      "passed": 223,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

@@ -51,7 +51,9 @@ public sealed class PageAnalysisTests : IDisposable
         TimeSpan? watchdog = null,
         Action<int>? exit = null,
         string? directory = null,
-        bool window = true)
+        bool window = true,
+        int width = 800,
+        int height = 600)
     {
         directory ??= _pages.Output("analysis-" + Guid.NewGuid().ToString("N")[..8]);
         var console = new StringWriter();
@@ -60,8 +62,8 @@ public sealed class PageAnalysisTests : IDisposable
             {
                 Url = url,
                 OutputDirectory = directory,
-                Width = 800,
-                Height = 600,
+                Width = width,
+                Height = height,
                 Watchdog = watchdog,
                 RenderInWindow = window,
             },
@@ -321,5 +323,48 @@ public sealed class PageAnalysisTests : IDisposable
         var watchdog = await File.ReadAllTextAsync(Path.Combine(directory, "watchdog.md"));
         Assert.Contains("stopped by the watchdog", watchdog, StringComparison.Ordinal);
         Assert.Matches("in the [a-z-]+ phase", watchdog);
+    }
+
+    [Theory(Timeout = 600000)]
+    [InlineData(1280, 900)]
+    [InlineData(800, 600)]
+    public async Task Analysis_Initial_Scripts_And_Layout_See_Configured_Viewport(int width, int height)
+    {
+        var page = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <style>
+              #box { width: 50vw; height: 50px; }
+            </style>
+            </head>
+            <body>
+            <div id="box"></div>
+            <p id="viewport-out"></p>
+            <p id="screen-out"></p>
+            <p id="media-out"></p>
+            <p id="layout-out"></p>
+            <script>
+              document.getElementById('viewport-out').textContent = window.innerWidth + 'x' + window.innerHeight;
+              document.getElementById('screen-out').textContent = screen.width + 'x' + screen.height;
+              document.getElementById('media-out').textContent = window.matchMedia('(min-width: 1000px)').matches ? 'wide' : 'narrow';
+              document.getElementById('layout-out').textContent = 'box-' + document.getElementById('box').getBoundingClientRect().width;
+            </script>
+            </body>
+            </html>
+            """;
+
+        var url = _pages.Write($"viewport-analysis-{width}x{height}.html", page);
+        var (exitCode, dir, report, _) = await AnalyzeAsync(url, window: false, width: width, height: height);
+
+        Assert.Equal(PageAnalyzer.Completed, exitCode);
+        Assert.Equal($"{width}×{height}", report.GetProperty("viewport").GetString());
+
+        var afterHtml = await File.ReadAllTextAsync(Path.Combine(dir, "document-after-scripts.html"));
+        Assert.Contains($"id=\"viewport-out\">{width}x{height}<", afterHtml, StringComparison.Ordinal);
+        Assert.Contains($"id=\"screen-out\">{width}x{height}<", afterHtml, StringComparison.Ordinal);
+        var expectedMedia = width >= 1000 ? "wide" : "narrow";
+        Assert.Contains($"id=\"media-out\">{expectedMedia}<", afterHtml, StringComparison.Ordinal);
+        Assert.Contains($"id=\"layout-out\">box-{width / 2}<", afterHtml, StringComparison.Ordinal);
     }
 }

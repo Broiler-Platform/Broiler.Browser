@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CreepJS platform probes</title>
+<div id="sentinel">main document preserved</div>
+<pre id="result"></pre>
+<script>
+var observations = {};
+function probe(name, fn) {
+    try { observations[name] = fn(); }
+    catch (e) { observations[name] = {error: e.name, message: e.message}; }
+}
+probe('fragmentConstructor', function () {
+    var fragment = new DocumentFragment();
+    return {nodeType: fragment.nodeType, ownerDocument: fragment.ownerDocument === document};
+});
+probe('fragmentFactory', function () {
+    var fragment = document.createDocumentFragment();
+    return {nodeType: fragment.nodeType, ownerDocument: fragment.ownerDocument === document};
+});
+probe('console', function () {
+    return {group: typeof console.group, groupCollapsed: typeof console.groupCollapsed,
+        groupEnd: typeof console.groupEnd, log: typeof console.log};
+});
+probe('frameIsolation', function () {
+    var start = window.length;
+    var frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    var child = frame.contentWindow;
+    var result = {start: start, length: window.length, indexed: window[start] === child,
+        indexedType: typeof window[start], framesIndexed: window.frames[start] === child,
+        ownDocument: child.document !== document, ownWindow: child.window === child,
+        sharedFunction: child.Function === Function};
+    child.document.body.innerHTML = '<p>child only</p>';
+    result.sentinelPreserved = !!document.getElementById('sentinel');
+    frame.remove();
+    return result;
+});
+probe('capabilities', function () {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    var svgText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    return {Crypto: typeof Crypto, crypto: typeof crypto,
+        digest: typeof crypto.subtle.digest, Worker: typeof Worker,
+        speechSynthesis: typeof speechSynthesis, OfflineAudioContext: typeof OfflineAudioContext,
+        webgl: !!canvas.getContext('webgl'), canvasRadialGradient: typeof ctx.createRadialGradient,
+        canvasEllipse: typeof ctx.ellipse,
+        canvasGetTransform: typeof ctx.getTransform,
+        svgGetBBox: typeof svgText.getBBox, svgGetComputedTextLength: typeof svgText.getComputedTextLength,
+        svgGetSubStringLength: typeof svgText.getSubStringLength,
+        svgGetExtentOfChar: typeof svgText.getExtentOfChar};
+});
+document.getElementById('result').textContent = JSON.stringify(observations, null, 2);
+</script>

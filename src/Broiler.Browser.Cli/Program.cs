@@ -363,7 +363,7 @@ public class Program
         if (evaluatePageUrl is not null)
         {
             exitCode = await RunPageEvaluation(
-                evaluatePageUrl, output, evaluateExpressions, evaluateHtmlOutput, timeoutSeconds);
+                evaluatePageUrl, output, evaluateExpressions, evaluateHtmlOutput, timeoutSeconds, width, height);
 
             if (diagnosticSession is not null)
             {
@@ -471,6 +471,8 @@ public class Program
                 {
                     Url = url,
                     OutputPath = output,
+                    Width = width,
+                    Height = height,
                     FullPage = fullPage,
                     FollowFirstLink = followFirstLink,
                     TimeoutSeconds = timeoutSeconds,
@@ -529,7 +531,9 @@ public class Program
         string? output,
         IReadOnlyList<string> expressions,
         string? htmlOutput,
-        int timeoutSeconds)
+        int timeoutSeconds,
+        int width,
+        int height)
     {
         if (output is null)
         {
@@ -563,6 +567,8 @@ public class Program
             {
                 Url = pageUrl,
                 OutputPath = output,
+                Width = width,
+                Height = height,
                 Expressions = expressions,
                 HtmlOutputPath = htmlOutput,
                 TimeoutSeconds = timeoutSeconds,
@@ -789,13 +795,10 @@ public class Program
                 timeoutSeconds.ToString(CultureInfo.InvariantCulture),
             };
 
-            if (imageMode)
-            {
-                arguments.Add("--width");
-                arguments.Add(width.ToString(CultureInfo.InvariantCulture));
-                arguments.Add("--height");
-                arguments.Add(height.ToString(CultureInfo.InvariantCulture));
-            }
+            arguments.Add("--width");
+            arguments.Add(width.ToString(CultureInfo.InvariantCulture));
+            arguments.Add("--height");
+            arguments.Add(height.ToString(CultureInfo.InvariantCulture));
 
             if (fullPage)
                 arguments.Add("--full-page");
@@ -869,8 +872,8 @@ public class Program
         Console.WriteLine("  --threads <N>          Concurrency for a batch or for --fuzz-layout (default: one per");
         Console.WriteLine("                         core). --threads 1 reproduces the sequential run exactly.");
         Console.WriteLine("  --seed <N>             Base seed for --fuzz-layout (default: a clock reading)");
-        Console.WriteLine("  --width <PIXELS>       Image width in pixels (default: 1024, used with --capture-image)");
-        Console.WriteLine("  --height <PIXELS>      Image height in pixels (default: 768, used with --capture-image)");
+        Console.WriteLine("  --width <PIXELS>       Viewport and image width in pixels (default: 1024)");
+        Console.WriteLine("  --height <PIXELS>      Viewport and image height in pixels (default: 768)");
         Console.WriteLine("  --full-page            Capture the full page content");
         Console.WriteLine("  --follow-first-link    Follow the first link on the page before rendering");
         Console.WriteLine("  --timeout <SECS>       Navigation timeout in seconds (default: 30)");

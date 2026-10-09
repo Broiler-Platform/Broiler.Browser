@@ -1,3 +1,4 @@
+using System.Drawing;
 using Broiler.App.Rendering;
 using Broiler.Browser;
 using Broiler.HtmlBridge;
@@ -67,7 +68,12 @@ internal sealed class HeadlessBrowser : IDisposable
         _profile = BrowserProfile.CreateEphemeral();
         Network = options.WrapNetwork?.Invoke(_profile.Network) ?? _profile.Network;
         _bridges = new BridgeRecorder(new DomBridgeFactory(
-            BrowserApp.BridgeOptions(Network, _profile.DocumentCookies, DocumentFor, options.WrapLayoutView)));
+            BrowserApp.BridgeOptions(
+                Network,
+                _profile.DocumentCookies,
+                DocumentFor,
+                options.WrapLayoutView,
+                options.Viewport)));
         Engine = options.BroilerJsOnly ? new ScriptEngine(_bridges) : BrowserApp.NewScriptEngine(_bridges);
         if (options.Profiler is { } profiler)
             Engine.Profiler = profiler;
@@ -278,4 +284,10 @@ internal sealed record HeadlessBrowserOptions
     /// questions with a layout of the whole document.
     /// </summary>
     public Func<Broiler.Layout.ILayoutView, Broiler.Layout.ILayoutView>? WrapLayoutView { get; init; }
+
+    /// <summary>
+    /// The size the page's scripts and layout see as the viewport, asked as each document's bridge
+    /// is made, or null for the bridge's default (1024×768).
+    /// </summary>
+    public Func<Size?>? Viewport { get; init; }
 }

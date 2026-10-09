@@ -1,0 +1,61 @@
+{
+  "measuredAt": "2026-10-08T19:26:00.0000000Z",
+  "url": "docs/repros/sannysoft-platform-probes.html",
+  "localFix": "CLI viewport propagation to headless sessions",
+  "fixScope": "Broiler.Browser.Cli (HeadlessBrowser, PageAnalyzer, CaptureService, Program)",
+  "analysisExitCode": 0,
+  "platform1280x900": {
+    "imageConstructor": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1,
+      "isElement": true
+    },
+    "imageElement": {
+      "event": "load",
+      "complete": true,
+      "naturalWidth": 1
+    },
+    "timerFired": true,
+    "writeParent": "write-cell",
+    "writeParentTag": "TD",
+    "innerTextAfterAssignment": "INNER_TEXT_VALUE",
+    "pluginArrayType": "function",
+    "pluginTag": "[object PluginArray]",
+    "pluginLength": 0,
+    "mediaDevicesType": "undefined",
+    "legacyGetUserMediaType": "undefined",
+    "viewport": [
+      1280,
+      900
+    ],
+    "screen": [
+      1280,
+      900
+    ],
+    "screenPrototypeWidthType": "undefined",
+    "webglAvailable": false
+  },
+  "platform800x600": {
+    "viewport": [
+      800,
+      600
+    ],
+    "screen": [
+      800,
+      600
+    ]
+  },
+  "tests": {
+    "Broiler.Browser.Core.Tests": {
+      "passed": 319,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Broiler.Browser.Cli.Tests": {
+      "passed": 223,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

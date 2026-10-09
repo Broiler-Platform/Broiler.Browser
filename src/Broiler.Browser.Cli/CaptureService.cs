@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using Broiler.App.Rendering;
@@ -117,6 +118,16 @@ public class CaptureOptions
     public required string OutputPath { get; init; }
 
     /// <summary>
+    /// The width of the viewport in pixels. Defaults to 1024.
+    /// </summary>
+    public int Width { get; init; } = 1024;
+
+    /// <summary>
+    /// The height of the viewport in pixels. Defaults to 768.
+    /// </summary>
+    public int Height { get; init; } = 768;
+
+    /// <summary>
     /// Whether to capture the full page content or only a summary.
     /// Defaults to <c>false</c>.
     /// </summary>
@@ -186,6 +197,16 @@ public class PageEvaluationOptions
     public string? HtmlOutputPath { get; init; }
 
     /// <summary>
+    /// The width of the viewport in pixels. Defaults to 1024.
+    /// </summary>
+    public int Width { get; init; } = 1024;
+
+    /// <summary>
+    /// The height of the viewport in pixels. Defaults to 768.
+    /// </summary>
+    public int Height { get; init; } = 768;
+
+    /// <summary>
     /// Document fetch timeout in seconds. Defaults to 30.
     /// </summary>
     public int TimeoutSeconds { get; init; } = 30;
@@ -227,7 +248,12 @@ public class CaptureService
     {
         EnsureOutputDirectory(options.OutputPath);
 
-        using var browser = new HeadlessBrowser(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        using var browser = new HeadlessBrowser(
+            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            new HeadlessBrowserOptions
+            {
+                Viewport = () => new Size(options.Width, options.Height),
+            });
         LoadedPage page = await browser.LoadAsync(options.Url, options.FollowFirstLink);
         using var scripted = browser.Run(page);
         var html = scripted.Serialize();
@@ -255,7 +281,12 @@ public class CaptureService
         var startedAt = DateTimeOffset.UtcNow;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        using var browser = new HeadlessBrowser(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        using var browser = new HeadlessBrowser(
+            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            new HeadlessBrowserOptions
+            {
+                Viewport = () => new Size(options.Width, options.Height),
+            });
         LoadedPage page = await browser.LoadAsync(options.Url, followFirstLink: false);
         using var scripted = browser.Run(page, needsRealm: true);
 
@@ -316,7 +347,12 @@ public class CaptureService
     {
         EnsureOutputDirectory(options.OutputPath);
 
-        using var browser = new HeadlessBrowser(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        using var browser = new HeadlessBrowser(
+            TimeSpan.FromSeconds(options.TimeoutSeconds),
+            new HeadlessBrowserOptions
+            {
+                Viewport = () => new Size(options.Width, options.Height),
+            });
         LoadedPage page = await browser.LoadAsync(options.Url, options.FollowFirstLink);
         string html;
         using (var scripted = browser.Run(page))

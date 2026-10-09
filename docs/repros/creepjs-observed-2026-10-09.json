@@ -1,0 +1,825 @@
+{
+  "date": "2026-10-09",
+  "target": "https://abrahamjuliot.github.io/creepjs/",
+  "browserCommit": "2867527cda36eb5b8aa880b86130c11d1b25ccd4",
+  "workingTree": "Existing modifications preserved; built current tracked and uncommitted Browser source with restored packages into separate artifacts path. No product source changed in this investigation.",
+  "environment": {
+    "engine": "Broiler.JS",
+    "engineVersion": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+    "runtime": ".NET 10.0.12",
+    "operatingSystem": "Microsoft Windows 10.0.26200",
+    "architecture": "X64",
+    "cliConfiguration": "Release",
+    "commandLine": "--analyze file:///D:/Broiler.Browser/artifacts/creepjs-2026-10-09/replay/static.html --output-dir D:\\Broiler.Browser\\artifacts\\creepjs-2026-10-09\\static --width 1280 --height 900 --analysis-timeout 60 --no-window",
+    "components": {
+      "Broiler.Browser.Core": "0.1.0-preview.1+2867527cda36eb5b8aa880b86130c11d1b25ccd4",
+      "Broiler.CSS": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+      "Broiler.CSS.Dom": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+      "Broiler.Cli": "0.1.0-preview.1+2867527cda36eb5b8aa880b86130c11d1b25ccd4",
+      "Broiler.Dom": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+      "Broiler.Dom.Html": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+      "Broiler.Graphics": "0.1.0-preview.11+549c6a7e354774e95b2f957a40b6f73ba8173e4f",
+      "Broiler.HTML.Core": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Dom": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Image": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Image.Compat": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Orchestration": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HtmlBridge.Core": "0.1.0-preview.23+4d6313c231ce8407153b19930c9fc846347fc20e",
+      "Broiler.HtmlBridge.Dom": "0.1.0-preview.23+4d6313c231ce8407153b19930c9fc846347fc20e",
+      "Broiler.HtmlBridge.Scripting": "0.1.0-preview.23+4d6313c231ce8407153b19930c9fc846347fc20e",
+      "Broiler.JSeal": "0.1.0-preview.5+f2a460aec5d358da47e21c99e3119a6a8eba5348",
+      "Broiler.JSeal.BroilerJs": "0.1.0-preview.5+f2a460aec5d358da47e21c99e3119a6a8eba5348",
+      "Broiler.JavaScript.Ast": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.BuiltIns": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.Engine": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.ExpressionCompiler": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.Expressions": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.LinqExpressions": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.Modules": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.Runtime": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.JavaScript.Storage": "0.1.0-preview.6+df80fc075a770b72c795cabe680b7fd94f7a4d55",
+      "Broiler.Layout": "0.1.0-preview.21+ef72f99aa36ba62951bab97070e7de2c2c26874a",
+      "Broiler.Media": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+      "Broiler.Media.Image": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+      "Broiler.Media.Image.Managed": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+      "Broiler.Net": "0.1.0-preview.2+ffc0c5f3efaf3f9d1e3321b0711b32e83474d39c",
+      "Broiler.Regex": "0.1.0-preview.3+749b80e3f497e31e82d74ba072929a29d6cda864"
+    }
+  },
+  "build": {
+    "sdk": "10.0.401",
+    "warnings": 0,
+    "errors": 0
+  },
+  "liveExit": -1073741571,
+  "captureExit": -1073741571,
+  "nativeExitHex": "0xC00000FD",
+  "experiments": [
+    {
+      "name": "reduced-cycle",
+      "exit": 3221225725,
+      "seconds": 3.62,
+      "args": [
+        "--evaluate-page",
+        "D:\\Broiler.Browser\\docs\\repros\\creepjs-proxy-cycle.html",
+        "--evaluate",
+        "document.getElementById('result').textContent",
+        "--output",
+        "D:\\Broiler.Browser\\artifacts\\creepjs-2026-10-09\\reduced-cycle.json"
+      ]
+    },
+    {
+      "name": "static",
+      "exit": 0,
+      "seconds": 2.36,
+      "args": [
+        "--analyze",
+        "file:///D:/Broiler.Browser/artifacts/creepjs-2026-10-09/replay/static.html",
+        "--output-dir",
+        "D:\\Broiler.Browser\\artifacts\\creepjs-2026-10-09\\static",
+        "--width",
+        "1280",
+        "--height",
+        "900",
+        "--analysis-timeout",
+        "60",
+        "--no-window"
+      ]
+    },
+    {
+      "name": "skip-advanced",
+      "exit": 0,
+      "seconds": 10.86,
+      "args": [
+        "--analyze",
+        "file:///D:/Broiler.Browser/artifacts/creepjs-2026-10-09/replay/index.html",
+        "--output-dir",
+        "D:\\Broiler.Browser\\artifacts\\creepjs-2026-10-09\\skip-advanced",
+        "--width",
+        "1280",
+        "--height",
+        "900",
+        "--analysis-timeout",
+        "60",
+        "--no-window",
+        "--verbose"
+      ]
+    }
+  ],
+  "platform": {
+    "fragmentConstructor": {
+      "error": "TypeError",
+      "message": "Illegal constructor"
+    },
+    "fragmentFactory": {
+      "nodeType": 11,
+      "ownerDocument": true
+    },
+    "console": {
+      "group": "undefined",
+      "groupCollapsed": "undefined",
+      "groupEnd": "undefined",
+      "log": "function"
+    },
+    "frameIsolation": {
+      "start": 0,
+      "length": 1,
+      "indexed": false,
+      "indexedType": "undefined",
+      "framesIndexed": true,
+      "ownDocument": true,
+      "ownWindow": true,
+      "sharedFunction": true,
+      "sentinelPreserved": true
+    },
+    "capabilities": {
+      "Crypto": "undefined",
+      "crypto": "object",
+      "digest": "function",
+      "Worker": "function",
+      "speechSynthesis": "undefined",
+      "OfflineAudioContext": "undefined",
+      "webgl": false,
+      "canvasRadialGradient": "undefined",
+      "canvasEllipse": "undefined",
+      "canvasGetTransform": "undefined",
+      "svgGetBBox": "undefined",
+      "svgGetComputedTextLength": "function",
+      "svgGetSubStringLength": "function",
+      "svgGetExtentOfChar": "undefined"
+    }
+  },
+  "nodeControl": {
+    "version": "v24.17.0",
+    "outcome": "RangeError: Maximum call stack size exceeded; process survived"
+  },
+  "resources": {
+    "0000-abrahamjuliot.github.io-creepjs.html": {
+      "bytes": 8331,
+      "sha256": "e59328901b58f9cd77776a282a9de8c01aa57e4ea36b3e94283050807ae28b59"
+    },
+    "0002-abrahamjuliot.github.io-creepjs-creep.js": {
+      "bytes": 550117,
+      "sha256": "80f43f364bd973bc03cb5b82de033ce28b2bbb145cb04237632a46ef040a92be"
+    },
+    "0005-abrahamjuliot.github.io-creepjs-style.min.css": {
+      "bytes": 217563,
+      "sha256": "6756a37800b6050c73d799a5099da121b3498d75ed01577d84f3e182e105cbd3"
+    }
+  },
+  "assemblies": {
+    "Broiler.Browser.Core.dll": {
+      "bytes": 184832,
+      "sha256": "642792ba7f9fb0c76fe564eb0fa4eac5a4d205ac1087e2d39cc617000957bbf2"
+    },
+    "Broiler.Cli.dll": {
+      "bytes": 526848,
+      "sha256": "d078fbbbf3f44db82ad623d3a7cf6a2dd88eac9b3cfbdbd0dfb53900ebf0f0ac"
+    },
+    "Broiler.CSS.dll": {
+      "bytes": 182784,
+      "sha256": "a7a4616b95fa6b4ec0d8687e355ec5e06310a67c93d4919a081d28a225be1cb6"
+    },
+    "Broiler.CSS.Dom.dll": {
+      "bytes": 206336,
+      "sha256": "fcdfcb2fab8a97ec806192def2d1cc827cb558297573787386a053b5608bfa6a"
+    },
+    "Broiler.Dom.dll": {
+      "bytes": 80384,
+      "sha256": "6c19b775e01fec540208cfe8511dba46e82368473d7d06cb230f9b8cec8bcf65"
+    },
+    "Broiler.Dom.Html.dll": {
+      "bytes": 94720,
+      "sha256": "2b5b9d2de762379c9a93430a535bffbacd278c427c9ddc83bc2cd1f73188d5db"
+    },
+    "Broiler.Graphics.dll": {
+      "bytes": 209408,
+      "sha256": "3afceb92a02c7221aa90a4fe8c7cab7fc01bdd717b0880bdb9441675f16ea722"
+    },
+    "Broiler.HTML.Core.dll": {
+      "bytes": 133120,
+      "sha256": "7b8130f82513ced5f9203d4ae9f6f298a6b9a7460259d4b6c1706f29a5b6adce"
+    },
+    "Broiler.HTML.Dom.dll": {
+      "bytes": 41472,
+      "sha256": "63e5876a0047ac04121abbf8f7333953c2876c39c3e4669cd7c0068a61e8c93d"
+    },
+    "Broiler.HTML.Graphics.dll": {
+      "bytes": 26112,
+      "sha256": "99d6da7f68bde481dde584adb40b0512dc4c5c2659c70907538d2f0a99eed2ab"
+    },
+    "Broiler.HTML.Image.Compat.dll": {
+      "bytes": 164864,
+      "sha256": "9f95f6545c2a71e893b32f57a2d7e058d050a4df0a72f73bc3b6c1dbab4a113e"
+    },
+    "Broiler.HTML.Image.dll": {
+      "bytes": 125440,
+      "sha256": "510905c6e893dd23d0cab906e9bffd7a042b6814482175a8a50fa48b0ed803ff"
+    },
+    "Broiler.HTML.Orchestration.dll": {
+      "bytes": 205312,
+      "sha256": "f61b297037fae2088bc4df1920edb41c104acad94a48647911822a8f44b3a57c"
+    },
+    "Broiler.HtmlBridge.Core.dll": {
+      "bytes": 103936,
+      "sha256": "6db820f763b85fa8a8a845c1dc81239349fcd0db530ff3d9131f5ff4570dd294"
+    },
+    "Broiler.HtmlBridge.Dom.dll": {
+      "bytes": 1594368,
+      "sha256": "21840ae350436ea0d570e329a321bf28a015924365c60e78393fa0b6492d60c6"
+    },
+    "Broiler.HtmlBridge.DomBridgeUtils.dll": {
+      "bytes": 134144,
+      "sha256": "66a1c41f318f5cf8d2f09105819c8acbd33e75774740f494ade6994449289c87"
+    },
+    "Broiler.HtmlBridge.Scripting.dll": {
+      "bytes": 31232,
+      "sha256": "1c853cf45839d9116724e2c26fa2f720836c9a14779b3ac81b083043cbac63b1"
+    },
+    "Broiler.Input.dll": {
+      "bytes": 26112,
+      "sha256": "d5b0b95ed6998409e22d47631bb1beacfc89cee8eb2bbeca9401d32837246f68"
+    },
+    "Broiler.Input.Keyboard.dll": {
+      "bytes": 23040,
+      "sha256": "d153c047f0db66e18fa3059cbaff7bd7475c817c3218531fc5b2cd28a5a8288f"
+    },
+    "Broiler.Input.Mouse.dll": {
+      "bytes": 19456,
+      "sha256": "547b60fd5302c6f8e91c715c215ddf0841399b12f6b3966157425ee8cfe75068"
+    },
+    "Broiler.Input.Pen.dll": {
+      "bytes": 11776,
+      "sha256": "58e9096c8237a4dac819360c324f7cacaba2247cc9e9b9927a3a7f7fcd3cc1f0"
+    },
+    "Broiler.Input.Text.dll": {
+      "bytes": 12800,
+      "sha256": "822bfe9ab2914f4890a7a65f07d5a99377e88fd2df7eb070628284da34719a59"
+    },
+    "Broiler.Input.Touch.dll": {
+      "bytes": 11264,
+      "sha256": "e02127a3d1b0712512a8239ac792763941db1782bc4dc55de3c4853178f346dc"
+    },
+    "Broiler.JavaScript.Ast.dll": {
+      "bytes": 54272,
+      "sha256": "4a697189901c5499cde455ccbb56ce23fd72fe96c9c674641b967d83f24232fd"
+    },
+    "Broiler.JavaScript.BuiltIns.dll": {
+      "bytes": 1320960,
+      "sha256": "26ddd2caea89ae977781ab6f56ec53d4fcd04ff788459435c9524a37c6e50fb1"
+    },
+    "Broiler.JavaScript.Compiler.dll": {
+      "bytes": 268288,
+      "sha256": "47e5d6568bb75ef59ea7eb9fb5b9d7a9f22868f3f63d955a005de01b0701d91d"
+    },
+    "Broiler.JavaScript.Engine.dll": {
+      "bytes": 107520,
+      "sha256": "0c91c3660c61d03a3852eccdac31ab9fe92d129389630ad1b453374c60d408db"
+    },
+    "Broiler.JavaScript.ExpressionCompiler.dll": {
+      "bytes": 77824,
+      "sha256": "cdb3abcb9013204b7b521e05061275a8f8c5353df3f61504f0ecddcdc303ec09"
+    },
+    "Broiler.JavaScript.Expressions.dll": {
+      "bytes": 120832,
+      "sha256": "aeeef8c3736f2498ec153fb285e920e5773136fef7c559e80c313879ba9a114e"
+    },
+    "Broiler.JavaScript.Extensions.dll": {
+      "bytes": 16384,
+      "sha256": "ac567ec394234ad8eafca7f5750775ec251415501ced84c342816e63e1b0c58a"
+    },
+    "Broiler.JavaScript.Globals.dll": {
+      "bytes": 22016,
+      "sha256": "7e9542b612899d2076057c0128640a7c1f992f77d3906ab8d17cfb0e99ed98bc"
+    },
+    "Broiler.JavaScript.LinqExpressions.dll": {
+      "bytes": 123392,
+      "sha256": "7e0fbe05f46eb59fe88ab681529e865e5606b7e7d1d99f032fabc7832a14fcb8"
+    },
+    "Broiler.JavaScript.Modules.dll": {
+      "bytes": 75264,
+      "sha256": "b81614bb054edbaadf19bf6e73562d4b7791f25b69bfb48b8f693eaea389c1ae"
+    },
+    "Broiler.JavaScript.Parser.dll": {
+      "bytes": 103424,
+      "sha256": "45b83e4631f4d10f8f71cfc63da0aaa6a3365e295fe5ed8ae916b329d0bd5688"
+    },
+    "Broiler.JavaScript.Runtime.dll": {
+      "bytes": 269312,
+      "sha256": "a0f5d836f9d8ac3832e757dba35bd50aa4207172b3b979f40d12f41988cdc503"
+    },
+    "Broiler.JavaScript.Storage.dll": {
+      "bytes": 44544,
+      "sha256": "36185dd28782b82995914e2486cb7f6d5dc70458e65b0b85f0c3c587da158562"
+    },
+    "Broiler.JSeal.BroilerJs.dll": {
+      "bytes": 65024,
+      "sha256": "0ec85da6158f365bd3734e3dea9f568fac6b29bd2f298646179aada4fc50c485"
+    },
+    "Broiler.JSeal.dll": {
+      "bytes": 28672,
+      "sha256": "0a70a6ce5fc37e6c484fa41f86252a77169c3459a79213e1cbeaefb71ae3b41c"
+    },
+    "Broiler.Layout.dll": {
+      "bytes": 735232,
+      "sha256": "9fe3005517c75eb496806a38a096fd2ce7ee5de7ae68c3d9ba1e9ea5b913d5cf"
+    },
+    "Broiler.Media.dll": {
+      "bytes": 39424,
+      "sha256": "8050c428222e0e7ad17397757498a45a7165056ce0a7c066deb42ea5d2e851a2"
+    },
+    "Broiler.Media.Image.dll": {
+      "bytes": 34816,
+      "sha256": "868d5d85bb9fdea5554f45d7f5a715b6a2b8bd352687d9fc3ce6c6b6cd55aeca"
+    },
+    "Broiler.Media.Image.Managed.dll": {
+      "bytes": 213504,
+      "sha256": "f48962aacf6baa3f98f6a502a467dac29cb873f42df2bce65fb1dfaf663ba353"
+    },
+    "Broiler.Native.dll": {
+      "bytes": 5632,
+      "sha256": "a8585d0a0850cbc1ebb2166c7e411eb3d787f651d98fbf2dc900690129831d13"
+    },
+    "Broiler.Native.Windows.dll": {
+      "bytes": 217088,
+      "sha256": "187268e0bf600be10048bd112246850fe610a9a1bf8c146b8f01a755da0572d5"
+    },
+    "Broiler.Net.dll": {
+      "bytes": 457728,
+      "sha256": "21ebcdebaa5164141cc909d2be2c07c56d839d9691924f805fbfd49fbb37885f"
+    },
+    "Broiler.Regex.dll": {
+      "bytes": 100864,
+      "sha256": "4bc9a92dbdbcf546b4762c2ab617ae6c873b56306dd0e032360c2926847a5173"
+    },
+    "Broiler.UI.Button.dll": {
+      "bytes": 9216,
+      "sha256": "3fd97174ade8067ca6bf5091d7c39a9aeb36f184794b8dcb990d883260c58825"
+    },
+    "Broiler.UI.Button.Standard.dll": {
+      "bytes": 14336,
+      "sha256": "ed5bcfc435b6c50e81dd1d199bd44e0764fa2b6b81801f0e7f70da7ed612ea28"
+    },
+    "Broiler.UI.CheckBox.dll": {
+      "bytes": 8704,
+      "sha256": "dddaf48733f32ebbcaf4dfd1d9430f80209e4483b61500ae565600f889406120"
+    },
+    "Broiler.UI.CheckBox.Standard.dll": {
+      "bytes": 12288,
+      "sha256": "88537f986f63724287eadcc5602be1f45ed11220e6e6ff99863170a86e20a6fc"
+    },
+    "Broiler.UI.ComboBox.dll": {
+      "bytes": 11776,
+      "sha256": "45b92b9e77107ad1ee41e4c645b9e7f6e2ec6dc88feda7e9f19db56c530cd031"
+    },
+    "Broiler.UI.ComboBox.Standard.dll": {
+      "bytes": 14336,
+      "sha256": "7fc0e9eec37650275026a49a134be04c5e6cc19355f718cbe6e884de07486e2b"
+    },
+    "Broiler.UI.Dialog.dll": {
+      "bytes": 14848,
+      "sha256": "00d36f3d2e77ebee90200f1de3756f803359a3005133bb310b4fa40e764fa7b4"
+    },
+    "Broiler.UI.Dialog.Standard.dll": {
+      "bytes": 13824,
+      "sha256": "1d22febaf561332d316a65b4e0e2e75a708188a474578cc9ce400f55979695a4"
+    },
+    "Broiler.UI.dll": {
+      "bytes": 72704,
+      "sha256": "08749251a46ca56ec9dfd4a1fd3a9e34d2e563d878160be3450831e946ec16a3"
+    },
+    "Broiler.UI.Edit.dll": {
+      "bytes": 11264,
+      "sha256": "856710c0c3bcf78714608049f204bba80a6c9270b294e2832d61fe30e771dad0"
+    },
+    "Broiler.UI.Edit.Standard.dll": {
+      "bytes": 34304,
+      "sha256": "05a9728300ffe924a2f0dd558e6989c38997eba7b3e68e24657417db40c8648b"
+    },
+    "Broiler.UI.FileDialog.dll": {
+      "bytes": 19456,
+      "sha256": "51a2477ee8f2c6274fd983e70e7a15c938fafac83e434ee9dd57fdf1781375a2"
+    },
+    "Broiler.UI.FileDialog.Standard.dll": {
+      "bytes": 37376,
+      "sha256": "83b4d42e4bcf6474b9d1932ac679fc632754dfd7db7637c8524a1f15e61209d7"
+    },
+    "Broiler.UI.Label.dll": {
+      "bytes": 9216,
+      "sha256": "76c0cf65f55a67a24ad1485f472d7bf1d9bb145a0401e153d314fbb9d98b6b38"
+    },
+    "Broiler.UI.Label.Standard.dll": {
+      "bytes": 17408,
+      "sha256": "4fad78557d52487e05a3182aeee6b017b57c4060f434120c4419544c01d201c3"
+    },
+    "Broiler.UI.ListView.dll": {
+      "bytes": 31232,
+      "sha256": "0f9e776900c15b1ca554245bc1e66c11fd6da5dbf65008e89eb98c92911aa761"
+    },
+    "Broiler.UI.ListView.Standard.dll": {
+      "bytes": 26624,
+      "sha256": "fee79910795853a0d7b614819bbdbd9f51c756113cd7489505302718132d510f"
+    },
+    "Broiler.UI.RadioButton.dll": {
+      "bytes": 11264,
+      "sha256": "9fe0648cb3684b288852bcd772a53ab9659ae5788d71b5c9a302022f8b45da2c"
+    },
+    "Broiler.UI.RadioButton.Standard.dll": {
+      "bytes": 11776,
+      "sha256": "71e728efba4ad985be96447b1664b4b6059d5ee1f9d9628bb48a5b429fa90555"
+    },
+    "Broiler.UI.Standard.dll": {
+      "bytes": 75264,
+      "sha256": "93dfe4897e7f25dfff1f8c595127010cbf548009bb12422a3a8fa04aa957307e"
+    },
+    "Broiler.UI.Window.dll": {
+      "bytes": 26112,
+      "sha256": "a3e87b15404ad30282b8a30485a33542460ea506fb84359f40b21ed3b272037b"
+    },
+    "Broiler.UI.Window.Standard.dll": {
+      "bytes": 11776,
+      "sha256": "aef0ec3a079fbe0681901e8f7636df44dbc20d0ac5ad4d118a29959ead6d0a4e"
+    },
+    "Broiler.Unicode.Properties.dll": {
+      "bytes": 401920,
+      "sha256": "b58f8acd9cc5af37c214f53fd3dcb892db345d2dcc2fb74a740cd5c7be58c2d5"
+    }
+  },
+  "network": [
+    {
+      "id": 1,
+      "started": "2026-10-09T06:12:41.8139573Z",
+      "method": "GET",
+      "url": "https://abrahamjuliot.github.io/creepjs/",
+      "scope": "analysis",
+      "destination": "document",
+      "mode": "navigate",
+      "initiator": null,
+      "synchronous": false,
+      "requestHeaders": [],
+      "requestHeadersCapturePoint": "before-session-processing",
+      "status": 200,
+      "statusText": "OK",
+      "httpVersion": "HTTP/1.1",
+      "finalUrl": "https://abrahamjuliot.github.io/creepjs/",
+      "redirects": [],
+      "contentType": "text/html; charset=utf-8",
+      "contentLength": null,
+      "responseHeaders": [
+        {
+          "key": "Connection",
+          "value": "keep-alive"
+        },
+        {
+          "key": "Server",
+          "value": "GitHub.com"
+        },
+        {
+          "key": "x-origin-cache",
+          "value": "HIT"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "ETag",
+          "value": "W/\"6a2a21c2-208b\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "max-age=600"
+        },
+        {
+          "key": "x-proxy-cache",
+          "value": "HIT"
+        },
+        {
+          "key": "X-GitHub-Request-Id",
+          "value": "0938:2410A3:A96DA1:AB01A7:6AC423DD"
+        },
+        {
+          "key": "x-github-edge-region",
+          "value": "fra"
+        },
+        {
+          "key": "Accept-Ranges",
+          "value": "bytes"
+        },
+        {
+          "key": "Date",
+          "value": "Fri, 09 Oct 2026 06:12:42 GMT"
+        },
+        {
+          "key": "Via",
+          "value": "1.1 varnish"
+        },
+        {
+          "key": "Age",
+          "value": "592"
+        },
+        {
+          "key": "X-Served-By",
+          "value": "cache-fra-etou8220055-FRA"
+        },
+        {
+          "key": "X-Cache",
+          "value": "HIT"
+        },
+        {
+          "key": "X-Cache-Hits",
+          "value": "1"
+        },
+        {
+          "key": "X-Timer",
+          "value": "S1791526362.002793,VS0,VE1"
+        },
+        {
+          "key": "Vary",
+          "value": "Accept-Encoding"
+        },
+        {
+          "key": "X-Fastly-Request-ID",
+          "value": "244696f74ee55409e599fceb2b7310f840337890"
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/html; charset=utf-8"
+        },
+        {
+          "key": "Last-Modified",
+          "value": "Thu, 11 Jun 2026 02:47:30 GMT"
+        },
+        {
+          "key": "Expires",
+          "value": "Mon, 05 Oct 2026 22:19:50 GMT"
+        }
+      ],
+      "tainting": "basic",
+      "headersMs": 147.2,
+      "completeMs": 155.3,
+      "body": "complete",
+      "bodyBytes": 8331,
+      "savedAs": "0000-abrahamjuliot.github.io-creepjs.html",
+      "error": null,
+      "errorKind": null,
+      "bodyError": null,
+      "isFailure": false
+    },
+    {
+      "id": 2,
+      "started": "2026-10-09T06:12:42.1784825Z",
+      "method": "GET",
+      "url": "https://abrahamjuliot.github.io/creepjs/creep.js",
+      "scope": "analysis",
+      "destination": "script",
+      "mode": "nocors",
+      "initiator": "https://abrahamjuliot.github.io/creepjs/",
+      "synchronous": true,
+      "requestHeaders": [],
+      "requestHeadersCapturePoint": "before-session-processing",
+      "status": 200,
+      "statusText": "OK",
+      "httpVersion": "HTTP/1.1",
+      "finalUrl": "https://abrahamjuliot.github.io/creepjs/creep.js",
+      "redirects": [],
+      "contentType": "application/javascript; charset=utf-8",
+      "contentLength": null,
+      "responseHeaders": [
+        {
+          "key": "Connection",
+          "value": "keep-alive"
+        },
+        {
+          "key": "Server",
+          "value": "GitHub.com"
+        },
+        {
+          "key": "x-origin-cache",
+          "value": "HIT"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "ETag",
+          "value": "W/\"6a2a21c2-864e5\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "max-age=600"
+        },
+        {
+          "key": "x-proxy-cache",
+          "value": "HIT"
+        },
+        {
+          "key": "X-GitHub-Request-Id",
+          "value": "542A:1673E:8AD1FB:8BED1E:6AC83AEE"
+        },
+        {
+          "key": "x-github-edge-region",
+          "value": "fra"
+        },
+        {
+          "key": "Accept-Ranges",
+          "value": "bytes"
+        },
+        {
+          "key": "Date",
+          "value": "Fri, 09 Oct 2026 06:12:42 GMT"
+        },
+        {
+          "key": "Via",
+          "value": "1.1 varnish"
+        },
+        {
+          "key": "Age",
+          "value": "355"
+        },
+        {
+          "key": "X-Served-By",
+          "value": "cache-fra-etou8220055-FRA"
+        },
+        {
+          "key": "X-Cache",
+          "value": "HIT"
+        },
+        {
+          "key": "X-Cache-Hits",
+          "value": "1"
+        },
+        {
+          "key": "X-Timer",
+          "value": "S1791526362.196356,VS0,VE2"
+        },
+        {
+          "key": "Vary",
+          "value": "Accept-Encoding"
+        },
+        {
+          "key": "X-Fastly-Request-ID",
+          "value": "1cf2a1a60929c8f98f781e8c1200860f770a1745"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Last-Modified",
+          "value": "Thu, 11 Jun 2026 02:47:30 GMT"
+        },
+        {
+          "key": "Expires",
+          "value": "Fri, 09 Oct 2026 00:45:57 GMT"
+        }
+      ],
+      "tainting": "basic",
+      "headersMs": 21.2,
+      "completeMs": 62.3,
+      "body": "complete",
+      "bodyBytes": 550117,
+      "savedAs": "0002-abrahamjuliot.github.io-creepjs-creep.js",
+      "error": null,
+      "errorKind": null,
+      "bodyError": null,
+      "isFailure": false
+    },
+    {
+      "id": 3,
+      "started": "2026-10-09T06:12:42.8333076Z",
+      "method": "GET",
+      "url": "https://abrahamjuliot.github.io/creepjs/style.min.css",
+      "scope": "analysis",
+      "destination": "style",
+      "mode": "nocors",
+      "initiator": "https://abrahamjuliot.github.io/creepjs/",
+      "synchronous": true,
+      "requestHeaders": [],
+      "requestHeadersCapturePoint": "before-session-processing",
+      "status": 200,
+      "statusText": "OK",
+      "httpVersion": "HTTP/1.1",
+      "finalUrl": "https://abrahamjuliot.github.io/creepjs/style.min.css",
+      "redirects": [],
+      "contentType": "text/css; charset=utf-8",
+      "contentLength": null,
+      "responseHeaders": [
+        {
+          "key": "Connection",
+          "value": "keep-alive"
+        },
+        {
+          "key": "Server",
+          "value": "GitHub.com"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "ETag",
+          "value": "W/\"6a2a21c2-351db\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "max-age=600"
+        },
+        {
+          "key": "x-proxy-cache",
+          "value": "HIT"
+        },
+        {
+          "key": "X-GitHub-Request-Id",
+          "value": "D1B4:34F611:35C185:366C61:6AC5F45A"
+        },
+        {
+          "key": "x-github-edge-region",
+          "value": "fra"
+        },
+        {
+          "key": "Accept-Ranges",
+          "value": "bytes"
+        },
+        {
+          "key": "Date",
+          "value": "Fri, 09 Oct 2026 06:12:42 GMT"
+        },
+        {
+          "key": "Via",
+          "value": "1.1 varnish"
+        },
+        {
+          "key": "Age",
+          "value": "356"
+        },
+        {
+          "key": "X-Served-By",
+          "value": "cache-fra-etou8220055-FRA"
+        },
+        {
+          "key": "X-Cache",
+          "value": "HIT"
+        },
+        {
+          "key": "X-Cache-Hits",
+          "value": "1"
+        },
+        {
+          "key": "X-Timer",
+          "value": "S1791526363.849169,VS0,VE2"
+        },
+        {
+          "key": "Vary",
+          "value": "Accept-Encoding"
+        },
+        {
+          "key": "X-Fastly-Request-ID",
+          "value": "122e1a816fca31991b562170ce71c1509c99688e"
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/css; charset=utf-8"
+        },
+        {
+          "key": "Last-Modified",
+          "value": "Thu, 11 Jun 2026 02:47:30 GMT"
+        },
+        {
+          "key": "Expires",
+          "value": "Wed, 07 Oct 2026 07:30:13 GMT"
+        }
+      ],
+      "tainting": "basic",
+      "headersMs": 19.4,
+      "completeMs": 54.9,
+      "body": "complete",
+      "bodyBytes": 217563,
+      "savedAs": "0005-abrahamjuliot.github.io-creepjs-style.min.css",
+      "error": null,
+      "errorKind": null,
+      "bodyError": null,
+      "isFailure": false
+    }
+  ],
+  "static": {
+    "durationMs": 2188.9,
+    "completed": true,
+    "javascriptErrors": "# Broiler JavaScript diagnostics — started 2026-10-09T06:14:06.2884755Z\n",
+    "console": ""
+  },
+  "skip-advanced": {
+    "durationMs": 10644.8,
+    "completed": true,
+    "javascriptErrors": "# Broiler JavaScript diagnostics — started 2026-10-09T06:14:08.6577153Z\n2026-10-09T06:14:11.3361992Z Error   [JavaScript/console.error] TypeError: Illegal constructor\n2026-10-09T06:14:15.1493790Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T06:14:15.3329046Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T06:14:16.0039635Z Error   [JavaScript/console.error] TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom')\n2026-10-09T06:14:16.1257176Z Error   [JavaScript/console.error] TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform')\n2026-10-09T06:14:16.2803887Z Error   [JavaScript/console.error] TypeError: Cannot get property userAgent of undefined (evaluating 'workerScope.userAgent')\n2026-10-09T06:14:16.3151414Z Error   [JavaScript/console.error] TypeError: Cannot get property deviceMemory of undefined (evaluating 'workerScope.deviceMemory')\n2026-10-09T06:14:16.3420660Z Error   [JavaScript/console.error] TypeError: Cannot get property hardwareConcurrency of undefined (evaluating 'workerScope.hardwareConcurrency')\n2026-10-09T06:14:16.6512051Z Error   [JavaScript/console.error] ReferenceError: Crypto is not defined\n2026-10-09T06:14:17.3546699Z Error   [JavaScript/CaptureService.UnhandledRejection] Unhandled promise rejection: TypeError: undefined is not a function\n",
+    "console": "2026-10-09T06:14:11.3361992Z console.error  TypeError: Illegal constructor\n2026-10-09T06:14:13.1141619Z console.log    %c✔ (47.17ms) window passed color:#4cca9f\n2026-10-09T06:14:13.1340353Z console.log    %c✔ (1.20ms) html element passed color:#4cca9f\n2026-10-09T06:14:13.4999445Z console.log    %c✔ (348.84ms) computed style passed color:#4cca9f\n2026-10-09T06:14:13.6355760Z console.log    %c✔ (113.94ms) css media passed color:#4cca9f\n2026-10-09T06:14:13.6587440Z console.log    %c✔ (2.56ms) screen passed color:#4cca9f\n2026-10-09T06:14:13.7534582Z console.log    %c✔ (65.19ms) math passed color:#4cca9f\n2026-10-09T06:14:13.8625360Z console.log    %c✔ (96.20ms) console errors passed color:#4cca9f\n2026-10-09T06:14:14.1932281Z console.log    %c✔ (308.88ms) timezone passed color:#4cca9f\n2026-10-09T06:14:14.2696799Z console.log    %c✔ (22.48ms) media passed color:#4cca9f\n2026-10-09T06:14:14.5338352Z console.log    %c- audio failed color:lightcoral\n2026-10-09T06:14:14.5424796Z console.log    %c- webgl failed color:lightcoral\n2026-10-09T06:14:15.1380045Z console.log    %c✔ (539.85ms) fonts passed color:#4cca9f\n2026-10-09T06:14:15.1493202Z console.log    %c- svg failed color:lightcoral\n2026-10-09T06:14:15.1493790Z console.error  TypeError: undefined is not a function\n2026-10-09T06:14:15.2360000Z console.log    %c✔ (85.80ms) intl passed color:#4cca9f\n2026-10-09T06:14:15.3328371Z console.log    %c- canvas 2d failed color:lightcoral\n2026-10-09T06:14:15.3329046Z console.error  TypeError: undefined is not a function\n2026-10-09T06:14:16.0038819Z console.log    %c- rects failed color:lightcoral\n2026-10-09T06:14:16.0039635Z console.error  TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom')\n2026-10-09T06:14:16.0498727Z console.log    %c✔ (45.94ms) resistance passed color:#4cca9f\n2026-10-09T06:14:16.0739329Z console.log    %c- speech failed color:lightcoral\n2026-10-09T06:14:16.0807267Z console.log    73 API properties analyzed in 1426.73ms (73 corrupted)\n2026-10-09T06:14:16.1257176Z console.error  TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform')\n2026-10-09T06:14:16.2803887Z console.error  TypeError: Cannot get property userAgent of undefined (evaluating 'workerScope.userAgent')\n2026-10-09T06:14:16.3151414Z console.error  TypeError: Cannot get property deviceMemory of undefined (evaluating 'workerScope.deviceMemory')\n2026-10-09T06:14:16.3420660Z console.error  TypeError: Cannot get property hardwareConcurrency of undefined (evaluating 'workerScope.hardwareConcurrency')\n2026-10-09T06:14:16.5495123Z console.log    %c✔ (447.33ms) navigator passed color:#4cca9f\n2026-10-09T06:14:16.6511378Z console.log    %c- headless failed color:lightcoral\n2026-10-09T06:14:16.6512051Z console.error  ReferenceError: Crypto is not defined\n2026-10-09T06:14:16.8424437Z console.log    %c✔ (190.87ms) features passed color:#4cca9f\n2026-10-09T06:14:16.8789463Z console.log    Fingerprinting complete in 3997.17ms\n2026-10-09T06:14:17.2161145Z console.log    Hashing complete in 337.06ms\n2026-10-09T06:14:17.2163754Z console.log    %c✔ loose fingerprint passed color:#4cca9f\n"
+  },
+  "bypasses": {
+    "durationMs": 10146.7,
+    "completed": true,
+    "javascriptErrors": "# Broiler JavaScript diagnostics — started 2026-10-09T06:16:11.6790478Z\n2026-10-09T06:16:15.7295563Z Error   [JavaScript/console.error] TypeError: Cannot convert undefined or null to object\n2026-10-09T06:16:17.0591518Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T06:16:17.2337291Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T06:16:17.6845628Z Error   [JavaScript/console.error] TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom')\n2026-10-09T06:16:17.8189391Z Error   [JavaScript/console.error] TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform')\n2026-10-09T06:16:18.0133137Z Error   [JavaScript/console.error] TypeError: Cannot get property userAgent of undefined (evaluating 'workerScope.userAgent')\n2026-10-09T06:16:18.0472657Z Error   [JavaScript/console.error] TypeError: Cannot get property deviceMemory of undefined (evaluating 'workerScope.deviceMemory')\n2026-10-09T06:16:18.0689243Z Error   [JavaScript/console.error] TypeError: Cannot get property hardwareConcurrency of undefined (evaluating 'workerScope.hardwareConcurrency')\n2026-10-09T06:16:18.3736713Z Error   [JavaScript/console.error] ReferenceError: Crypto is not defined\n2026-10-09T06:16:19.6856930Z Error   [JavaScript/CaptureService.UnhandledRejection] Unhandled promise rejection: TypeError: Cannot convert undefined or null to object\n",
+    "console": "See ignored artifact directory; large fingerprint diagnostic output excluded."
+  },
+  "liveLogExcerpt": "[   0.203s] analyzing https://abrahamjuliot.github.io/creepjs/\n[   0.203s] output    D:\\Broiler.Browser\\artifacts\\creepjs-2026-10-09\\live\n[   0.203s] engine    Broiler.JS, viewport 1280x900\n[   1.695s] start     load\n[   1.910s]   network   [analysis] GET document 200 text/html; charset=utf-8 147 ms https://abrahamjuliot.github.io/creepjs/\n[   2.090s]   network   [analysis] GET script   200 application/javascript; charset=utf-8 21 ms https://abrahamjuliot.github.io/creepjs/creep.js\n[   2.140s] done      load (445 ms) - 200 text/html; charset=utf-8, 8,331 bytes from https://abrahamjuliot.github.io/creepjs/; 0 classic, 1 deferred, 0 module script(s)\n[   2.141s] start     scripts\n[   2.277s]   exception #1 first-chance [scripts] System.IO.FileNotFoundException: Could not load file or assembly 'Broiler.JavaScript.Clr, Culture=neutral, PublicKeyToken=null'. Das System kann die angegebene Datei nicht finden. (in System.Reflection.RuntimeAssembly.InternalLoad)\n[   2.743s]   network   [analysis] GET style    200 text/css; charset=utf-8 19 ms https://abrahamjuliot.github.io/creepjs/style.min.css\n[   3.150s]   exception #2 first-chance [scripts] System.OperationCanceledException: The operation was canceled. (in System.Threading.CancellationToken.ThrowOperationCanceledException)\n[js-entry] enabled (turn >= 100 ms, gap >= 1000 ms; a crossing of 16384 ms is marked WATCHDOG)\n[   5.440s]   exception #3 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: toFixed() digits argument must be between 0 and 100 (in Broiler.JavaScript.BuiltIns.Number.JSNumber.ToFixed)\n[   5.561s]   exception #4 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: speechSynthesis is not defined (in Broiler.JavaScript.Engine.JSContext.ResolveIdentifierWithoutWithScopes)\n[   5.595s]   exception #5 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: TypeError: Illegal constructor (in Broiler.JavaScript.Runtime.JSException.Throw)\n[   5.618s]   console   error: TypeError: Illegal constructor\n[   5.742s]   exception #6 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: toString is not a constructor (in Broiler.JavaScript.BuiltIns.Function.JSFunction.CreateInstance)\n[   5.759s]   exception #7 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: toString is not a constructor (in Broiler.JavaScript.BuiltIns.Function.JSFunction.CreateInstance)\n[   5.761s]   exception #8 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: toString is not a constructor (in Broiler.JavaScript.BuiltIns.Function.JSFunction.CreateInstance)\n[   5.768s]   exception #9 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: Class extends value is not a constructor or null (in Broiler.JavaScript.BuiltIns.Class.JSClass.ResolveSuperclassPrototype)\n[   5.775s]   exception #10 first-chance [scripts] Broiler.JavaScript.Runtime.JSException:  (in Broiler.JavaScript.Runtime.JSException.Throw)\n[   5.801s]   exception #11 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: Function.prototype.toString cannot be called with non function (in Broiler.JavaScript.BuiltIns.Function.JSFunction.ToString)\n[   5.819s]   exception #12 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: 'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them (in Broiler.JavaScript.BuiltIns.Function.JSFunction+<>c__DisplayClass86_0.<CreateFrozenThrowTypeErrorFunction>b__0)\n[   5.825s]   exception #13 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: 'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them (in Broiler.JavaScript.BuiltIns.Function.JSFunction+<>c__DisplayClass86_0.<CreateFrozenThrowTypeErrorFunction>b__0)\n[   5.830s]   exception #14 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: Cyclic __proto__ value (in Broiler.JavaScript.Runtime.JSValue.SetPrototypeOf)\n[   5.840s]   exception #15 first-chance [scripts] Broiler.JavaScript.Runtime.JSException: proxy is not defined (in Broiler.JavaScript.Engine.JSContext.ResolveIdentifierWithoutWithScopes)\nStack overflow.\n   at System.Collections.Generic.Dictionary`2[[System.UInt32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].FindValue(UInt32)\n   at System.Collections.Generic.Dictionary`2[[System.UInt32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].TryGetValue(UInt32, Int32 ByRef)\n   at Broiler.JavaScript.Runtime.ObjectShape.TryGetSlot(UInt32, Int32 ByRef)\n   at Broiler.JavaScript.Runtime.JSObject.TryGetShapeOnlyProperty(UInt32, Broiler.JavaScript.Storage.JSProperty ByRef)\n   at Broiler.JavaScript.Runtime.JSObject.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSObject.get_Item(Broiler.JavaScript.Storage.KeyString)\n   at Broiler.JavaScript.BuiltIns.Proxy.JSProxy.GetTrap(Broiler.JavaScript.Storage.KeyString)\n   at Broiler.JavaScript.BuiltIns.Proxy.JSProxy.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSValue.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSObject.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSValue.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSObject.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.BuiltIns.Function.JSFunction.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.BuiltIns.Proxy.JSProxy.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSValue.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSObject.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSValue.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSObject.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.BuiltIns.Function.JSFunction.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.BuiltIns.Proxy.JSProxy.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSValue.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)\n   at Broiler.JavaScript.Runtime.JSObject.GetValue(Broiler.JavaScript.Storage.KeyString, Broiler.JavaScript.Runtime.JSValue, Boolean)"
+}
