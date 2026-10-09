@@ -94,10 +94,10 @@ has **not** been demonstrated.
 | Priority | Problem | Owner | Completion criterion |
 | --- | --- | --- | --- |
 | P0 — locally fixed | Proxy prototype recursion terminates the host | Broiler.JS | Verified: reduced case produces a catchable RangeError; unmodified live CLI survives the advanced proxy probes. |
-| P1 | `new DocumentFragment()` throws | HtmlBridge | Constructor creates a real fragment with correct owner/prototype and insertion semantics. |
-| P1 | `window[0]` is undefined despite an inserted iframe | HtmlBridge | Numeric window access resolves the same child as `frames[0]` and `contentWindow`, including updates. |
-| P1 | Console grouping methods are absent | HtmlBridge | Group calls execute without rejecting the page's main async function. |
-| P1 investigation | Rendering still rejects after diagnostic bypasses | HtmlBridge / JS | Isolate the remaining `cssMediaHTML` failure; unmodified page reaches its result DOM. |
+| P1 — locally fixed | `new DocumentFragment()` throws | HtmlBridge | Constructor creates a real fragment with correct owner/prototype and insertion semantics. Verified in `DocumentFragmentConstructorTests`. |
+| P1 — locally fixed | `window[0]` is undefined despite an inserted iframe | HtmlBridge | Numeric window access resolves the same child as `frames[0]` and `contentWindow`, including updates. Verified in `FrameStructureTests`. |
+| P1 — locally fixed | Console grouping methods are absent | HtmlBridge | Group calls execute without rejecting the page's main async function. Verified in `ConsoleBindingTests`. |
+| P1 investigation — fixed | Rendering still rejects after diagnostic bypasses | HtmlBridge / JS | Isolated `cssMediaHTML` root cause: `win.screen` and `win.matchMedia` missing on sub-windows caused `getCSSMedia` to throw and return undefined, which crashed `cssMediaHTML` destructuring. Fixed via `MirroredGlobals` and `Crypto` interface. |
 | P2 | Missing/incomplete fingerprinting APIs | HtmlBridge, Graphics, Media, Layout | Independently verified API behavior or truthful unsupported results; no fabricated fingerprints. |
 | P2 | Native crashes prevent the final diagnostics report | Browser CLI | Parent process records child failure and preserves a useful incomplete report. |
 
