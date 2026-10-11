@@ -70,6 +70,7 @@
   <ItemGroup>
     <PackageReference Include="Broiler.HTML.Graphics" />
     <PackageReference Include="Broiler.HTML.Image" />
+    <PackageReference Include="Broiler.HtmlBridge.Core" />
     <PackageReference Include="Broiler.HtmlBridge.Dom" />
     <PackageReference Include="Broiler.HtmlBridge.Scripting" />
     <PackageReference Include="Broiler.Net" />

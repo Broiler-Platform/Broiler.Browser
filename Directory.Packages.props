@@ -16,8 +16,9 @@
   <ItemGroup>
     <PackageVersion Include="Broiler.HTML.Graphics" Version="0.1.0-preview.28" />
     <PackageVersion Include="Broiler.HTML.Image" Version="0.1.0-preview.28" />
-    <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="$(BroilerHtmlBridgeVersion)" />
-    <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="$(BroilerHtmlBridgeVersion)" />
+    <PackageVersion Include="Broiler.HtmlBridge.Core" Version="0.1.0-preview.28" />
+    <PackageVersion Include="Broiler.HtmlBridge.Dom" Version="0.1.0-preview.28" />
+    <PackageVersion Include="Broiler.HtmlBridge.Scripting" Version="0.1.0-preview.28" />
     <PackageVersion Include="Broiler.HtmlBridge.Scripting.Vm" Version="$(BroilerHtmlBridgeVersion)" />
     <PackageVersion Include="Broiler.CSS.Dom" Version="0.1.0-preview.17" />
     <PackageVersion Include="Broiler.Dom.Html" Version="0.1.0-preview.14" />
