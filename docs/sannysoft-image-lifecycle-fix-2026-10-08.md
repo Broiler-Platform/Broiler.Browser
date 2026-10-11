@@ -1,5 +1,11 @@
 # Sannysoft third P2: image element lifecycle, metadata, and broken image dimensions
 
+**Later package verification:** see the [2026-10-09 reinvestigation](fingerprinting-reinvestigation-2026-10-09.md)
+and [active compatibility roadmap](fingerprinting-compatibility-roadmap.md).
+The implementation details, local overlays and test totals below describe this
+historical repair; the new report records the narrower smoke checks run against
+current published packages.
+
 Implemented and verified on 2026-10-08 across `D:\Broiler.HtmlBridge` and `D:\Broiler.Browser`.
 This completes the third P2 item in the [original investigation](sannysoft-investigation-2026-10-08.md).
 

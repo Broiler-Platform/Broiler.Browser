@@ -1,5 +1,11 @@
 # Sannysoft second P2: Screen interface, prototype accessors, and receiver checks
 
+**Later package verification:** see the [2026-10-09 reinvestigation](fingerprinting-reinvestigation-2026-10-09.md)
+and [active compatibility roadmap](fingerprinting-compatibility-roadmap.md).
+The implementation details, local overlays and test totals below describe this
+historical repair; the new report records the narrower smoke checks run against
+current published packages.
+
 Implemented on 2026-10-08 in `D:\Broiler.HtmlBridge`.
 This completes the second P2 item (Problem 6) in the [investigation plan](sannysoft-investigation-2026-10-08.md).
 

@@ -495,7 +495,8 @@ internal static class Triage
             if (network.Failed > 0)
             {
                 findings.Add(new(FindingSeverity.Warning, "Network", $"{network.Failed} of {network.Requests} request(s) failed",
-                    string.Join("; ", network.Failures.Take(5).Select(static f => $"{f.Destination} {f.Url} → {f.Error ?? f.Status?.ToString(CultureInfo.InvariantCulture) ?? f.BodyError}")),
+                    string.Join("; ", network.Failures.GroupBy(static f => new { f.Scope, f.Destination, f.Url, f.Status, f.Error, f.BodyError })
+                        .Take(5).Select(static g => $"{g.Key.Scope}: {g.Key.Destination} {g.Key.Url} → {g.Key.Error ?? g.Key.Status?.ToString(CultureInfo.InvariantCulture) ?? g.Key.BodyError} (×{g.Count()})")),
                     "network.json"));
             }
         }

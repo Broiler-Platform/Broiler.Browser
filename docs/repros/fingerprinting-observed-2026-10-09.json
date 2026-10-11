@@ -1,0 +1,649 @@
+{
+  "measuredDate": "2026-10-09",
+  "browserCommit": "a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+  "htmlBridgeCommit": "784cd50f76897a1b8682abd2543f881f546c18b1",
+  "build": {
+    "configuration": "Release",
+    "warnings": 0,
+    "errors": 0,
+    "localAssemblyOverlay": false,
+    "siteScriptsModified": false
+  },
+  "scope": "Broiler.JS only. No reference-browser render. Concurrent runs; timings are not benchmarks.",
+  "environment": {
+    "engine": "Broiler.JS",
+    "engineVersion": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+    "runtime": ".NET 10.0.12",
+    "operatingSystem": "Microsoft Windows 10.0.26200",
+    "architecture": "X64",
+    "cliConfiguration": "Release",
+    "commandLine": "--analyze https://abrahamjuliot.github.io/creepjs/ --output-dir artifacts/compatibility-2026-10-09-current/creepjs --width 1280 --height 900 --analysis-timeout 180 --verbose",
+    "components": {
+      "Broiler.Browser.Core": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+      "Broiler.CSS": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+      "Broiler.CSS.Dom": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+      "Broiler.Cli": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+      "Broiler.Dom": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+      "Broiler.Dom.Html": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+      "Broiler.Graphics": "0.1.0-preview.11+549c6a7e354774e95b2f957a40b6f73ba8173e4f",
+      "Broiler.HTML.Core": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Dom": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Graphics": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Image": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Image.Compat": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HTML.Orchestration": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+      "Broiler.HtmlBridge.Core": "0.1.0-preview.25+784cd50f76897a1b8682abd2543f881f546c18b1",
+      "Broiler.HtmlBridge.Dom": "0.1.0-preview.25+784cd50f76897a1b8682abd2543f881f546c18b1",
+      "Broiler.HtmlBridge.DomBridgeUtils": "0.1.0-preview.25+784cd50f76897a1b8682abd2543f881f546c18b1",
+      "Broiler.HtmlBridge.Scripting": "0.1.0-preview.25+784cd50f76897a1b8682abd2543f881f546c18b1",
+      "Broiler.JSeal": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+      "Broiler.JSeal.BroilerJs": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+      "Broiler.JavaScript.Ast": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.BuiltIns": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Compiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Engine": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.ExpressionCompiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Expressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Extensions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Globals": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.LinqExpressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Modules": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Parser": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Runtime": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.JavaScript.Storage": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+      "Broiler.Layout": "0.1.0-preview.21+ef72f99aa36ba62951bab97070e7de2c2c26874a",
+      "Broiler.Media": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+      "Broiler.Media.Image": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+      "Broiler.Media.Image.Managed": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+      "Broiler.Net": "0.1.0-preview.2+ffc0c5f3efaf3f9d1e3321b0711b32e83474d39c",
+      "Broiler.Regex": "0.1.0-preview.3+749b80e3f497e31e82d74ba072929a29d6cda864",
+      "Broiler.UI": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Button": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Button.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.CheckBox": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.CheckBox.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.ComboBox": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.ComboBox.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Edit": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Edit.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Label": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Label.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.ListView": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.ListView.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.RadioButton": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.RadioButton.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Window": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.UI.Window.Standard": "0.1.0-preview.19+21e22ace8b15f6d83fbd7e9d9dfeed04102a9aa4",
+      "Broiler.Unicode.Properties": "0.1.0-preview.2+e1619c02886c30a0c520df38eae19db86aa41f31"
+    }
+  },
+  "sites": {
+    "sannysoft": {
+      "url": "https://bot.sannysoft.com/",
+      "startedAt": "2026-10-09T13:50:59.7906671Z",
+      "durationMs": 40265.3,
+      "viewport": "1280×900",
+      "analysisCompleted": true,
+      "analysisExitCode": 0,
+      "captureExitCode": 0,
+      "window": {
+        "image": "screenshot-window.png",
+        "differenceRatio": 0,
+        "settled": true,
+        "status": "Done",
+        "durationMs": 14662.3,
+        "notCompared": null
+      },
+      "elementsAsFetched": 176,
+      "elementsAfterScripts": 289,
+      "scripting": {
+        "failures": 2,
+        "distinctFailures": [
+          {
+            "signature": "Script <script> failed: undefined is not a function",
+            "count": 1,
+            "example": "Script inline-16 failed: undefined is not a function",
+            "firstContext": "ScriptEngine.ExecuteInteractive"
+          },
+          {
+            "signature": "Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (evaluating 'navigator.mediaDevices.enumerateDevices')",
+            "count": 1,
+            "example": "Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (evaluating 'navigator.mediaDevices.enumerateDevices')",
+            "firstContext": "CaptureService.UnhandledRejection"
+          }
+        ],
+        "missingApis": [
+          {
+            "name": "enumerateDevices",
+            "kind": "property",
+            "count": 1
+          }
+        ],
+        "unhandledRejections": 1,
+        "console": {
+          "console.debug": 1
+        },
+        "javaScriptExceptions": 20,
+        "settleExhausted": false,
+        "pendingWorkAfterSettle": true
+      },
+      "network": {
+        "requests": 37,
+        "failed": 9,
+        "requestsByScope": {
+          "analysis": 18,
+          "window": 19
+        }
+      },
+      "networkFailures": [
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "analysis",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "analysis",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "analysis",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "analysis",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "window",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "window",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "window",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "window",
+          "error": null
+        },
+        {
+          "url": "https://intoli.com/nonexistent-image.png",
+          "status": 404,
+          "scope": "window",
+          "error": null
+        }
+      ],
+      "layoutInvariantCount": 0,
+      "layoutInvariantExamples": [],
+      "dom": {
+        "fingerprintTopLevelKeys": 32,
+        "fingerprintKeyNames": [
+          "plugins",
+          "mimeTypes",
+          "userAgent",
+          "platform",
+          "languages",
+          "screen",
+          "touchScreen",
+          "videoCard",
+          "multimediaDevices",
+          "productSub",
+          "navigatorPrototype",
+          "etsl",
+          "screenDesc",
+          "phantomJS",
+          "nightmareJS",
+          "selenium",
+          "webDriver",
+          "webDriverValue",
+          "errorsGenerated",
+          "resOverflow",
+          "accelerometerUsed",
+          "screenMediaQuery",
+          "hasChrome",
+          "detailChrome",
+          "permissions",
+          "iframeChrome",
+          "debugTool",
+          "battery",
+          "deviceMemory",
+          "tpCanvas",
+          "audioCodecs",
+          "videoCodecs"
+        ],
+        "scannerRows": 20,
+        "pluginTypeText": "failed",
+        "canvasTexts": {
+          "canvas1": "Hash: -1632150322",
+          "canvas2": "Hash: -1632150322",
+          "canvas3": "Hash: -1632150322",
+          "canvas4": "Hash: -1632150322",
+          "canvas5": "Hash: -1632150322"
+        },
+        "mediaText": ""
+      },
+      "javascriptErrorsLog": "# Broiler JavaScript diagnostics — started 2026-10-09T13:50:59.9973567Z\n2026-10-09T13:51:09.1801625Z Error   [JavaScript/ScriptEngine.ExecuteInteractive] Script inline-16 failed: undefined is not a function\n    Broiler.JavaScript.Runtime.JSException: undefined is not a function\n    at InvokeFunction in /_/Broiler.JS/Broiler.JavaScript.Runtime/JSUndefined.cs:line 74\n    at native in inline-16:line 1\n    \n        at InvokeFunction:/_/Broiler.JS/Broiler.JavaScript.Runtime/JSUndefined.cs:74,1\n        at native:inline-16:1,1\n    \n    \n2026-10-09T13:51:22.5760675Z Error   [JavaScript/CaptureService.UnhandledRejection] Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (evaluating 'navigator.mediaDevices.enumerateDevices')\n2026-10-09T13:51:27.6826164Z Error   [JavaScript/ScriptEngine.ExecuteInteractive] Script inline-16 failed: undefined is not a function\n    Broiler.JavaScript.Runtime.JSException: undefined is not a function\n    at InvokeFunction in /_/Broiler.JS/Broiler.JavaScript.Runtime/JSUndefined.cs:line 74\n    at native in inline-16:line 1\n    \n        at InvokeFunction:/_/Broiler.JS/Broiler.JavaScript.Runtime/JSUndefined.cs:74,1\n        at native:inline-16:1,1\n    \n    \n",
+      "captureJavascriptErrorsLog": "# Broiler JavaScript diagnostics — started 2026-10-09T13:53:53.7194011Z\n2026-10-09T13:54:00.6180339Z Error   [JavaScript/ScriptEngine.ExecuteInteractive] Script inline-16 failed: undefined is not a function\n    Broiler.JavaScript.Runtime.JSException: undefined is not a function\n    at InvokeFunction in /_/Broiler.JS/Broiler.JavaScript.Runtime/JSUndefined.cs:line 74\n    at native in inline-16:line 1\n    \n        at InvokeFunction:/_/Broiler.JS/Broiler.JavaScript.Runtime/JSUndefined.cs:74,1\n        at native:inline-16:1,1\n    \n    \n2026-10-09T13:54:16.5403707Z Error   [JavaScript/ScriptExtractor.FetchExternalScript] Failed to fetch external script 'https://mc.yandex.ru/metrika/tag.js': The operation was canceled.\n    System.Threading.Tasks.TaskCanceledException: The operation was canceled.\n     ---> System.TimeoutException: A connection could not be established within the configured ConnectTimeout.\n       --- End of inner exception stack trace ---\n       at System.Net.Http.HttpConnectionPool.CreateConnectTimeoutException(OperationCanceledException oce)\n       at System.Net.Http.HttpConnectionPool.InjectNewHttp11ConnectionAsync(QueueItem queueItem)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)\n       at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()\n       at System.Threading.Tasks.AwaitTaskContinuation.RunOrScheduleAction(IAsyncStateMachineBox box, Boolean allowInlining)\n       at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)\n       at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)\n       at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)\n       at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()\n       at System.Threading.Tasks.AwaitTaskContinuation.RunOrScheduleAction(IAsyncStateMachineBox box, Boolean allowInlining)\n       at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)\n       at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)\n       at System.Runtime.CompilerServices.AsyncValueTaskMethodBuilder`1.SetException(Exception exception)\n       at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)\n       at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()\n       at System.Threading.Tasks.AwaitTaskContinuation.RunOrScheduleAction(IAsyncStateMachineBox box, Boolean allowInlining)\n       at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)\n       at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)\n       at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)\n       at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()\n       at System.Net.Sockets.SocketAsyncEventArgs.<DnsConnectAsync>g__Core|113_0(MultiConnectSocketAsyncEventArgs internalArgs, Task`1 addressesTask, Int32 port, SocketType socketType, ProtocolType protocolType, CancellationToken cancellationToken)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)\n       at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)\n       at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()\n       at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\n       at System.Net.Sockets.SocketAsyncEventArgs.<>c.<.cctor>b__174_0(UInt32 errorCode, UInt32 numBytes, NativeOverlapped* nativeOverlapped)\n       at System.Threading.PortableThreadPool.IOCompletionPoller.Event.Invoke()\n       at System.Threading.ThreadPoolTypedWorkItemQueue.System.Threading.IThreadPoolWorkItem.Execute()\n       at System.Threading.ThreadPoolWorkQueue.Dispatch()\n       at System.Threading.PortableThreadPool.WorkerThread.WorkerThreadStart()\n       at System.Threading.Thread.StartCallback()\n    --- End of stack trace from previous location ---\n       at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellation(CancellationToken cancellationToken)\n       at System.Net.Http.HttpConnectionWaiter`1.WaitForConnectionAsync(HttpRequestMessage request, HttpConnectionPool pool, Boolean async, CancellationToken requestCancellationToken)\n       at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)\n       at System.Net.Http.HttpMessageHandlerStage.Send(HttpRequestMessage request, CancellationToken cancellationToken)\n       at System.Net.Http.Metrics.MetricsHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)\n       at System.Net.Http.HttpMessageHandlerStage.Send(HttpRequestMessage request, CancellationToken cancellationToken)\n       at System.Net.Http.DiagnosticsHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)\n       at System.Net.Http.DecompressionHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)\n       at System.Net.Http.HttpMessageHandlerStage.Send(HttpRequestMessage request, CancellationToken cancellationToken)\n       at System.Net.Http.SocketsHttpHandler.Send(HttpRequestMessage request, CancellationToken cancellationToken)\n       at Broiler.Net.Http.LoopbackRouting.RoutingHandler.Send(HttpRequestMessage request, CancellationToken cancellationToken)\n       at Broiler.Net.Http.BrowserNetworkSession.InvokeAsync(HttpRequestMessage message, Boolean async, CancellationToken cancellationToken)\n       at Broiler.Net.Http.BrowserNetworkSession.SendCore(HttpRequestMessage request, RequestContext context, Boolean async, CancellationToken cancellationToken)\n       at Broiler.Net.Http.BrowserNetworkSession.Send(HttpRequestMessage request, RequestContext context, CancellationToken cancellationToken)\n       at Broiler.HtmlBridge.BridgeTransport.GetText(IBrowserRequestTransport transport, Uri url, RequestContext context, TimeSpan timeout, CancellationToken cancellationToken, Func`2 acceptResponse, ResourceTimingRequest timing)\n       at Broiler.HtmlBridge.ScriptExtractionService.FetchResolvedScript(String resolvedUrl, Nullable`1 request, String pageUrl)\n       at Broiler.HtmlBridge.ScriptExtractionService.FetchExternalScript(String scriptUrl, String pageUrl, RequestPrefetcher`1 prefetcher, Nullable`1 request)\n2026-10-09T13:54:17.6841222Z Error   [JavaScript/CaptureService.UnhandledRejection] Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (evaluating 'navigator.mediaDevices.enumerateDevices')\n",
+      "resourceSha256": {
+        "0000-bot.sannysoft.com-index.html": {
+          "url": "https://bot.sannysoft.com/",
+          "kind": "Document",
+          "bytes": 25144,
+          "sha256": "ffd7f989d8b9b2cea5489833ab04f18eaf87c0cbaec2f96ef652bcc752bcf151"
+        },
+        "0002-cdn.jsdelivr.net-ua-parser-js-0.7.19-src-ua-parser.min.js": {
+          "url": "https://cdn.jsdelivr.net/npm/ua-parser-js@0.7.19/src/ua-parser.min.js",
+          "kind": "Script",
+          "bytes": 14770,
+          "sha256": "91b9208a1d31e60c0549e34b8e8811e5061bd4b74ff3a80c1a09639fc034f01e"
+        },
+        "0003-cdnjs.cloudflare.com-lodash.js-4.17.11-lodash.min.js": {
+          "url": "https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.min.js",
+          "kind": "Script",
+          "bytes": 73229,
+          "sha256": "effca8652df9e3c7d74915ea73fc58ce3b26b96dec14aceebce087774e8f9a9b"
+        },
+        "0006-cdnjs.cloudflare.com-jquery-3.3.1-jquery.min.js": {
+          "url": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js",
+          "kind": "Script",
+          "bytes": 86927,
+          "sha256": "160a426ff2894252cd7cebbdd6d6b7da8fcd319c65b70468f10b6690c45d02ef"
+        },
+        "0008-bot.sannysoft.com-modernizr.js": {
+          "url": "https://bot.sannysoft.com/modernizr.js",
+          "kind": "Script",
+          "bytes": 2490,
+          "sha256": "7d0ee6079c21b0b2cd4e55feb240d87118f75d166e02eef7c674ed0b8e69019c"
+        },
+        "0010-bot.sannysoft.com-fpCollect.min.js": {
+          "url": "https://bot.sannysoft.com/fpCollect.min.js",
+          "kind": "Script",
+          "bytes": 14410,
+          "sha256": "35dbf4651645c093d72e6eda17325f7cadf667397ff48ff2c2a8257fba403d8e"
+        },
+        "0012-bot.sannysoft.com-fpScanner.js": {
+          "url": "https://bot.sannysoft.com/fpScanner.js",
+          "kind": "Script",
+          "bytes": 7793,
+          "sha256": "a6a342e675841a48e4cd5c7c74746edfd77e9437387cb09b87791b6995f924e5"
+        },
+        "0045-mc.yandex.ru-metrika-tag.js": {
+          "url": "https://mc.yandex.ru/metrika/tag.js",
+          "kind": "Script",
+          "bytes": 277750,
+          "sha256": "0840945fe24e3329ef4cd016dbcc4fbeedf387c42bb49bfa49740a076efb032c"
+        },
+        "0046-mc.yandex.ru-metrika-tag.js": {
+          "url": "https://mc.yandex.ru/metrika/tag.js",
+          "kind": "Script",
+          "bytes": 277747,
+          "sha256": "34b857ff58704e2ecc68785a8ddc57456c498ecaf911e135ba9180124f0e2845"
+        },
+        "0063-document-after-scripts.html": {
+          "url": "https://bot.sannysoft.com/",
+          "kind": "Document",
+          "bytes": 34679,
+          "sha256": "dc5856344d32060107d1e1a5e52ed4e16f005d955f81dac739ea44c1ea8edc2b"
+        }
+      },
+      "artifactSha256": {
+        "report.json": "7a70281e2db8f6822873bf311199f210639ffb4058ec052db81acd4b8bb4fd8a",
+        "document-after-scripts.html": "dc5856344d32060107d1e1a5e52ed4e16f005d955f81dac739ea44c1ea8edc2b",
+        "screenshot.png": "a9f412fdeeb3f338dd3b36797646421907e539133da26b788199ac959c146238",
+        "ordinaryCapture": "a9f412fdeeb3f338dd3b36797646421907e539133da26b788199ac959c146238"
+      }
+    },
+    "creepjs": {
+      "url": "https://abrahamjuliot.github.io/creepjs/",
+      "startedAt": "2026-10-09T13:50:59.790683Z",
+      "durationMs": 30027.3,
+      "viewport": "1280×900",
+      "analysisCompleted": true,
+      "analysisExitCode": 0,
+      "captureExitCode": 0,
+      "window": {
+        "image": "screenshot-window.png",
+        "differenceRatio": 0,
+        "settled": true,
+        "status": "Done",
+        "durationMs": 9519.6,
+        "notCompared": null
+      },
+      "elementsAsFetched": 246,
+      "elementsAfterScripts": 2316,
+      "scripting": {
+        "failures": 1,
+        "distinctFailures": [
+          {
+            "signature": "Unhandled promise rejection: ReferenceError: navigator is not defined",
+            "count": 1,
+            "example": "Unhandled promise rejection: ReferenceError: navigator is not defined",
+            "firstContext": "CaptureService.UnhandledRejection"
+          }
+        ],
+        "missingApis": [
+          {
+            "name": "navigator",
+            "kind": "global",
+            "count": 1
+          }
+        ],
+        "unhandledRejections": 1,
+        "console": {
+          "console.log": 30,
+          "console.error": 8,
+          "console.groupCollapsed": 4
+        },
+        "javaScriptExceptions": 1927,
+        "settleExhausted": false,
+        "pendingWorkAfterSettle": false
+      },
+      "network": {
+        "requests": 15,
+        "failed": 0,
+        "requestsByScope": {
+          "analysis": 8,
+          "window": 7
+        }
+      },
+      "networkFailures": [],
+      "layoutInvariantCount": 104,
+      "layoutInvariantExamples": [
+        "root.Children[0].Children[1].Children[0].Children[0].Children[0].Children[1].Children[0].Children[2].Lines[0].Y (131) > Lines[1].Y (0) — lines not ordered vertically",
+        "root.Children[0].Children[1].Children[0].Children[0].Children[0].Children[1].Children[0].Children[4].Lines[0].Y (247) > Lines[1].Y (0) — lines not ordered vertically",
+        "root.Children[0].Children[1].Children[0].Children[0].Children[0].Children[1].Children[1].Children[2].Lines[0].Y (392) > Lines[1].Y (0) — lines not ordered vertically"
+      ],
+      "dom": {
+        "fingerprintDataTextLength": 36753,
+        "fpIdPresent": true,
+        "fuzzyPresent": true,
+        "headlessTextExcerpt": " Headless chromium: blocked 0% like headless: blocked 0% headless: blocked 0% stealth: blocked platform hints: blocked 52.34ms Resistancea6cb1852 privacy: unknown security: unknown mode: unknown extension: .modal-creep-e"
+      },
+      "javascriptErrorsLog": "# Broiler JavaScript diagnostics — started 2026-10-09T13:50:59.9970078Z\n2026-10-09T13:51:09.7740102Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T13:51:10.0221863Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T13:51:10.6324167Z Error   [JavaScript/console.error] TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom')\n2026-10-09T13:51:10.7907064Z Error   [JavaScript/console.error] TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform')\n2026-10-09T13:51:10.9731618Z Error   [JavaScript/console.error] TypeError: Cannot get property userAgent of undefined (evaluating 'workerScope.userAgent')\n2026-10-09T13:51:11.0199634Z Error   [JavaScript/console.error] TypeError: Cannot get property deviceMemory of undefined (evaluating 'workerScope.deviceMemory')\n2026-10-09T13:51:11.0495090Z Error   [JavaScript/console.error] TypeError: Cannot get property hardwareConcurrency of undefined (evaluating 'workerScope.hardwareConcurrency')\n2026-10-09T13:51:11.4341873Z Error   [JavaScript/console.error] ReferenceError: Window is not defined\n2026-10-09T13:51:14.3279692Z Error   [JavaScript/CaptureService.UnhandledRejection] Unhandled promise rejection: ReferenceError: navigator is not defined\n2026-10-09T13:51:24.0267280Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T13:51:24.3457950Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T13:51:24.5757320Z Error   [JavaScript/console.error] TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom')\n2026-10-09T13:51:25.0812153Z Error   [JavaScript/console.error] TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform')\n2026-10-09T13:51:25.2527193Z Error   [JavaScript/console.error] TypeError: Cannot get property userAgent of undefined (evaluating 'workerScope.userAgent')\n2026-10-09T13:51:25.2884148Z Error   [JavaScript/console.error] TypeError: Cannot get property deviceMemory of undefined (evaluating 'workerScope.deviceMemory')\n2026-10-09T13:51:25.3170316Z Error   [JavaScript/console.error] TypeError: Cannot get property hardwareConcurrency of undefined (evaluating 'workerScope.hardwareConcurrency')\n2026-10-09T13:51:25.6795188Z Error   [JavaScript/console.error] ReferenceError: Window is not defined\n",
+      "captureJavascriptErrorsLog": "# Broiler JavaScript diagnostics — started 2026-10-09T13:53:43.3099261Z\n2026-10-09T13:53:49.2433898Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T13:53:49.4924658Z Error   [JavaScript/console.error] TypeError: undefined is not a function\n2026-10-09T13:53:50.1819904Z Error   [JavaScript/console.error] TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom')\n2026-10-09T13:53:50.2870383Z Error   [JavaScript/console.error] TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform')\n2026-10-09T13:53:50.4412847Z Error   [JavaScript/console.error] TypeError: Cannot get property userAgent of undefined (evaluating 'workerScope.userAgent')\n2026-10-09T13:53:50.4717107Z Error   [JavaScript/console.error] TypeError: Cannot get property deviceMemory of undefined (evaluating 'workerScope.deviceMemory')\n2026-10-09T13:53:50.4922952Z Error   [JavaScript/console.error] TypeError: Cannot get property hardwareConcurrency of undefined (evaluating 'workerScope.hardwareConcurrency')\n2026-10-09T13:53:50.7796184Z Error   [JavaScript/console.error] ReferenceError: Window is not defined\n2026-10-09T13:53:53.8399125Z Error   [JavaScript/CaptureService.UnhandledRejection] Unhandled promise rejection: ReferenceError: navigator is not defined\n",
+      "resourceSha256": {
+        "0000-abrahamjuliot.github.io-creepjs.html": {
+          "url": "https://abrahamjuliot.github.io/creepjs/",
+          "kind": "Document",
+          "bytes": 8331,
+          "sha256": "e59328901b58f9cd77776a282a9de8c01aa57e4ea36b3e94283050807ae28b59"
+        },
+        "0002-abrahamjuliot.github.io-creepjs-creep.js": {
+          "url": "https://abrahamjuliot.github.io/creepjs/creep.js",
+          "kind": "Script",
+          "bytes": 550117,
+          "sha256": "80f43f364bd973bc03cb5b82de033ce28b2bbb145cb04237632a46ef040a92be"
+        },
+        "0005-abrahamjuliot.github.io-creepjs-style.min.css": {
+          "url": "https://abrahamjuliot.github.io/creepjs/style.min.css",
+          "kind": "Stylesheet",
+          "bytes": 217563,
+          "sha256": "6756a37800b6050c73d799a5099da121b3498d75ed01577d84f3e182e105cbd3"
+        },
+        "0011-document-after-scripts.html": {
+          "url": "https://abrahamjuliot.github.io/creepjs/",
+          "kind": "Document",
+          "bytes": 105125,
+          "sha256": "c667e09806aa3a5c6d1645ca6ede458ebe9a6c389a9ffa5eb0d904a707c538dc"
+        }
+      },
+      "artifactSha256": {
+        "report.json": "f78f2039372857512ea3e1eeb551376e90b6e91c67fe0a5c03ac55e7169d4713",
+        "document-after-scripts.html": "c667e09806aa3a5c6d1645ca6ede458ebe9a6c389a9ffa5eb0d904a707c538dc",
+        "screenshot.png": "ac72e92182b73136f8fd2488a94e36a32f8696536b806bee659585c62e7d92ca",
+        "ordinaryCapture": "5ee34b175a965f860042797cdb2756f57d6d8aee6c86dc65d6e07e43e9f6e906"
+      }
+    }
+  },
+  "probes": {
+    "sannysoft-probes": {
+      "url": "file:///D:/Broiler.Browser/docs/repros/sannysoft-platform-probes.html",
+      "startedAt": "2026-10-09T13:51:19.473Z",
+      "value": {
+        "imageConstructor": {
+          "event": "load",
+          "complete": true,
+          "naturalWidth": 1,
+          "isElement": true
+        },
+        "imageElement": {
+          "event": "load",
+          "complete": true,
+          "naturalWidth": 1
+        },
+        "brokenImageElement": {
+          "event": "error",
+          "dimensions": "0x0",
+          "complete": true,
+          "naturalWidth": 0,
+          "naturalHeight": 0
+        },
+        "timerFired": true,
+        "writeParent": "write-cell",
+        "writeParentTag": "TD",
+        "innerTextAfterAssignment": "INNER_TEXT_VALUE",
+        "pluginArrayType": "function",
+        "pluginTag": "[object PluginArray]",
+        "pluginLength": 0,
+        "mediaDevicesType": "undefined",
+        "legacyGetUserMediaType": "undefined",
+        "viewport": [
+          1280,
+          900
+        ],
+        "screen": [
+          1280,
+          900
+        ],
+        "screenPrototypeWidthType": "object",
+        "webglAvailable": false
+      },
+      "error": null,
+      "rawSha256": "5e90883ab7c418d9455d9ee7c1e29cd050dcbd28a2c026156fc8e09b957cc344"
+    },
+    "creepjs-probes": {
+      "url": "file:///D:/Broiler.Browser/docs/repros/creepjs-platform-probes.html",
+      "startedAt": "2026-10-09T13:51:19.797Z",
+      "value": {
+        "fragmentConstructor": {
+          "nodeType": 11,
+          "ownerDocument": true
+        },
+        "fragmentFactory": {
+          "nodeType": 11,
+          "ownerDocument": true
+        },
+        "console": {
+          "group": "function",
+          "groupCollapsed": "function",
+          "groupEnd": "function",
+          "log": "function"
+        },
+        "frameIsolation": {
+          "start": 0,
+          "length": 1,
+          "indexed": true,
+          "indexedType": "object",
+          "framesIndexed": true,
+          "ownDocument": true,
+          "ownWindow": true,
+          "sharedFunction": true,
+          "sentinelPreserved": true
+        },
+        "capabilities": {
+          "Crypto": "function",
+          "crypto": "object",
+          "digest": "function",
+          "Worker": "function",
+          "speechSynthesis": "undefined",
+          "OfflineAudioContext": "undefined",
+          "webgl": false,
+          "canvasRadialGradient": "undefined",
+          "canvasEllipse": "undefined",
+          "canvasGetTransform": "undefined",
+          "svgGetBBox": "undefined",
+          "svgGetComputedTextLength": "function",
+          "svgGetSubStringLength": "function",
+          "svgGetExtentOfChar": "undefined"
+        }
+      },
+      "error": null,
+      "rawSha256": "ebb5a322e58decb5ada4d3e7f98d5e9e29f5802894a98501e5fd8729080266f6"
+    },
+    "proxy-cycle": {
+      "url": "file:///D:/Broiler.Browser/docs/repros/creepjs-proxy-cycle.html",
+      "startedAt": "2026-10-09T13:51:19.982Z",
+      "value": "RangeError: Maximum call stack size exceeded",
+      "error": null,
+      "rawSha256": "940293e4794a67b100d1888718d3fa988b7283ec3cfcdbc8ed1b377701de2616"
+    },
+    "followup-probes": {
+      "url": "http://127.0.0.1:8765/fingerprinting-current-probes.html",
+      "startedAt": "2026-10-09T13:55:22.994Z",
+      "value": {
+        "worker": {
+          "state": "message",
+          "data": {
+            "selfIsGlobal": true,
+            "document": "undefined",
+            "navigator": "undefined",
+            "WorkerNavigator": "undefined",
+            "WorkerGlobalScope": "undefined",
+            "DedicatedWorkerGlobalScope": "undefined",
+            "isWorkerGlobal": null,
+            "crypto": "object",
+            "performance": "object",
+            "platform": null,
+            "userAgent": null
+          }
+        },
+        "interfaces": {
+          "Window": "undefined",
+          "Navigator": "undefined",
+          "DOMRect": "undefined",
+          "DOMRectList": "undefined",
+          "WorkerGlobalScope": "undefined",
+          "mediaDevices": "undefined",
+          "getUserMedia": "undefined"
+        },
+        "elementRects": {
+          "length": 1,
+          "item": "undefined",
+          "tag": "[object Array]",
+          "first": {
+            "x": 8,
+            "y": 8,
+            "width": 100,
+            "height": 20,
+            "bottom": 28
+          }
+        },
+        "emptyElementRects": {
+          "length": 0,
+          "item": "undefined",
+          "tag": "[object Array]",
+          "first": null
+        },
+        "rangeRects": {
+          "length": 0,
+          "item": "undefined",
+          "tag": "[object Array]",
+          "first": null
+        },
+        "childRealm": {
+          "sharedFunction": true,
+          "sharedObject": true,
+          "prototypeLeaks": true,
+          "Window": "undefined"
+        }
+      },
+      "error": null,
+      "rawSha256": "2e78c5e263c9b9136a6123d233312fab66258ae71e0c06007ba313cb22c70d98"
+    }
+  },
+  "fixtureSha256": {
+    "sannysoft-platform-probes.html": "d5b3aa56d8fdf0e35209964b42139da92a9a45a9ac97eef575224e53ab986eb7",
+    "creepjs-platform-probes.html": "b7b86fff552c4bce673273f9f2ec5af5b5117b83e999afa28d5549118860d547",
+    "creepjs-proxy-cycle.html": "595418f1751b7df9ec54d02eff5eca7df38f50c3e32006e50e6554a3156bd20e",
+    "fingerprinting-current-probes.html": "4cb85e6815e7041831ab6ecde3648bf0d3d593a1b0c79d5d14468e2fb6c4db1b",
+    "fingerprinting-worker-probe.js": "e64879914037de2a134dcbb9d31b334e9bda97a2360819ab0a7d1b638ba52f63"
+  },
+  "loadedBinarySha256": {
+    "Broiler.Browser.Core.dll": "781230bcdb2b20fa0b9d0d88187433f99357504df57af5870fd02a683a275e99",
+    "Broiler.Cli.dll": "acedec9ee8520eb0b823994b4e1880c585a9d9915edb25e40661c92d4bba8502",
+    "Broiler.CSS.dll": "a7a4616b95fa6b4ec0d8687e355ec5e06310a67c93d4919a081d28a225be1cb6",
+    "Broiler.CSS.Dom.dll": "fcdfcb2fab8a97ec806192def2d1cc827cb558297573787386a053b5608bfa6a",
+    "Broiler.Dom.dll": "6c19b775e01fec540208cfe8511dba46e82368473d7d06cb230f9b8cec8bcf65",
+    "Broiler.Dom.Html.dll": "2b5b9d2de762379c9a93430a535bffbacd278c427c9ddc83bc2cd1f73188d5db",
+    "Broiler.Graphics.dll": "3afceb92a02c7221aa90a4fe8c7cab7fc01bdd717b0880bdb9441675f16ea722",
+    "Broiler.HTML.Core.dll": "7b8130f82513ced5f9203d4ae9f6f298a6b9a7460259d4b6c1706f29a5b6adce",
+    "Broiler.HTML.Dom.dll": "63e5876a0047ac04121abbf8f7333953c2876c39c3e4669cd7c0068a61e8c93d",
+    "Broiler.HTML.Graphics.dll": "99d6da7f68bde481dde584adb40b0512dc4c5c2659c70907538d2f0a99eed2ab",
+    "Broiler.HTML.Image.Compat.dll": "9f95f6545c2a71e893b32f57a2d7e058d050a4df0a72f73bc3b6c1dbab4a113e",
+    "Broiler.HTML.Image.dll": "510905c6e893dd23d0cab906e9bffd7a042b6814482175a8a50fa48b0ed803ff",
+    "Broiler.HTML.Orchestration.dll": "f61b297037fae2088bc4df1920edb41c104acad94a48647911822a8f44b3a57c",
+    "Broiler.HtmlBridge.Core.dll": "84e17afc81853481588dd010f826a4904d334d2c7793b140531c4d860b642f59",
+    "Broiler.HtmlBridge.Dom.dll": "50e98424a606378ce357460adf0fa78ac39e7d0d3f9eeb35b2cd9fc083af1432",
+    "Broiler.HtmlBridge.DomBridgeUtils.dll": "8fe39ff004d35b31328e8f86d433039caeb67b97d72b01613eb135c1ec0b0e56",
+    "Broiler.HtmlBridge.Scripting.dll": "3c565961527c1fa0ef239ec10ba1df0f13d24eb74e1f170ae797e34040772cd5",
+    "Broiler.JavaScript.Ast.dll": "18518156f7a8f22f27e69605b4a6df2349c60758578e78fbd4e7638320d7cead",
+    "Broiler.JavaScript.BuiltIns.dll": "3a34012be1f02a82a90ac1d79672f55b007ca4eaa8f846fb71e3666e0be6f275",
+    "Broiler.JavaScript.Compiler.dll": "fedb98f98945c3ec3581027651a15ac55957632b2cf70a31a4f53d19f33794fa",
+    "Broiler.JavaScript.Engine.dll": "6e6abe070a0ace22c163c69724d39106539f4f5da6699aa75205736f1cb7bb61",
+    "Broiler.JavaScript.ExpressionCompiler.dll": "e7abeb2274c9858838fccd356af535e9a89281525414e6ec383f8d85d40d2032",
+    "Broiler.JavaScript.Expressions.dll": "677713b6b72ece7e4c3d4d7b4f7b9b225db3a4e964db558ba9d3a6ec976a079f",
+    "Broiler.JavaScript.Extensions.dll": "409f82e74a3538b4ed23f571309342e769466e35ab8b023007cf409e5de6b50a",
+    "Broiler.JavaScript.Globals.dll": "7c651a10e67198055a05e7e39ed20e61cc25695402c0cd9e5d2066ed219ca5d3",
+    "Broiler.JavaScript.LinqExpressions.dll": "e29cd62cce0fc3dd7931c8f064a019f62f7a9d19b2609be7b943e7b8b76f337b",
+    "Broiler.JavaScript.Modules.dll": "2c202a0197469f4d3a9e048cf294092b1e2fe758b823697973b905efa380154d",
+    "Broiler.JavaScript.Parser.dll": "1a23249c8a1d29072a0ff4e9e0a01440819ab566ac1976b3a24729b553f0ec86",
+    "Broiler.JavaScript.Runtime.dll": "51e0b3b8ed8a7e1d6637043f6ca09cdf0a140258b91e5ffee200023bdc509d86",
+    "Broiler.JavaScript.Storage.dll": "0efed8326f8a079aea12fc6ce896a8b5fb521506f6cdcad4f32e55aabcad0be9",
+    "Broiler.JSeal.BroilerJs.dll": "5608e43ff6c8bb9c5fef55cf65e5c2d47a25d34c1ce43ae234f57b24ff90d0a8",
+    "Broiler.JSeal.dll": "f521d8f75fad38ce1a912be3c8ce3f0f7ecdddbc43c12981cc05bee872991722",
+    "Broiler.Layout.dll": "9fe3005517c75eb496806a38a096fd2ce7ee5de7ae68c3d9ba1e9ea5b913d5cf",
+    "Broiler.Media.dll": "8050c428222e0e7ad17397757498a45a7165056ce0a7c066deb42ea5d2e851a2",
+    "Broiler.Media.Image.dll": "868d5d85bb9fdea5554f45d7f5a715b6a2b8bd352687d9fc3ce6c6b6cd55aeca",
+    "Broiler.Media.Image.Managed.dll": "f48962aacf6baa3f98f6a502a467dac29cb873f42df2bce65fb1dfaf663ba353",
+    "Broiler.Net.dll": "21ebcdebaa5164141cc909d2be2c07c56d839d9691924f805fbfd49fbb37885f",
+    "Broiler.Regex.dll": "4bc9a92dbdbcf546b4762c2ab617ae6c873b56306dd0e032360c2926847a5173",
+    "Broiler.UI.Button.dll": "3fd97174ade8067ca6bf5091d7c39a9aeb36f184794b8dcb990d883260c58825",
+    "Broiler.UI.Button.Standard.dll": "ed5bcfc435b6c50e81dd1d199bd44e0764fa2b6b81801f0e7f70da7ed612ea28",
+    "Broiler.UI.CheckBox.dll": "dddaf48733f32ebbcaf4dfd1d9430f80209e4483b61500ae565600f889406120",
+    "Broiler.UI.CheckBox.Standard.dll": "88537f986f63724287eadcc5602be1f45ed11220e6e6ff99863170a86e20a6fc",
+    "Broiler.UI.ComboBox.dll": "45b92b9e77107ad1ee41e4c645b9e7f6e2ec6dc88feda7e9f19db56c530cd031",
+    "Broiler.UI.ComboBox.Standard.dll": "7fc0e9eec37650275026a49a134be04c5e6cc19355f718cbe6e884de07486e2b",
+    "Broiler.UI.dll": "08749251a46ca56ec9dfd4a1fd3a9e34d2e563d878160be3450831e946ec16a3",
+    "Broiler.UI.Edit.dll": "856710c0c3bcf78714608049f204bba80a6c9270b294e2832d61fe30e771dad0",
+    "Broiler.UI.Edit.Standard.dll": "05a9728300ffe924a2f0dd558e6989c38997eba7b3e68e24657417db40c8648b",
+    "Broiler.UI.Label.dll": "76c0cf65f55a67a24ad1485f472d7bf1d9bb145a0401e153d314fbb9d98b6b38",
+    "Broiler.UI.Label.Standard.dll": "4fad78557d52487e05a3182aeee6b017b57c4060f434120c4419544c01d201c3",
+    "Broiler.UI.ListView.dll": "0f9e776900c15b1ca554245bc1e66c11fd6da5dbf65008e89eb98c92911aa761",
+    "Broiler.UI.ListView.Standard.dll": "fee79910795853a0d7b614819bbdbd9f51c756113cd7489505302718132d510f",
+    "Broiler.UI.RadioButton.dll": "9fe0648cb3684b288852bcd772a53ab9659ae5788d71b5c9a302022f8b45da2c",
+    "Broiler.UI.RadioButton.Standard.dll": "71e728efba4ad985be96447b1664b4b6059d5ee1f9d9628bb48a5b429fa90555",
+    "Broiler.UI.Standard.dll": "93dfe4897e7f25dfff1f8c595127010cbf548009bb12422a3a8fa04aa957307e",
+    "Broiler.UI.Window.dll": "a3e87b15404ad30282b8a30485a33542460ea506fb84359f40b21ed3b272037b",
+    "Broiler.UI.Window.Standard.dll": "aef0ec3a079fbe0681901e8f7636df44dbc20d0ac5ad4d118a29959ead6d0a4e",
+    "Broiler.Unicode.Properties.dll": "b58f8acd9cc5af37c214f53fd3dcb892db345d2dcc2fb74a740cd5c7be58c2d5"
+  }
+}

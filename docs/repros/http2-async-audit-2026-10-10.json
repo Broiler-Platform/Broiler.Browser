@@ -1,0 +1,134 @@
+[
+  {
+    "label": "async-12-round1",
+    "elapsedMs": 216,
+    "requests": 12,
+    "peakConcurrent": 12,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "label": "prefetch-12-round1",
+    "elapsedMs": 399,
+    "requests": 12,
+    "peakConcurrent": 6,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "label": "js-fetch-2-round1",
+    "elapsedMs": 516,
+    "requests": 2,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "callsReturnedMs=456"
+  },
+  {
+    "label": "js-async-xhr-2-round1",
+    "elapsedMs": 849,
+    "requests": 2,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "callsReturnedMs=489"
+  },
+  {
+    "label": "js-beacon-2-round1",
+    "elapsedMs": 489,
+    "requests": 2,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "true,true,callsReturnedMs=421"
+  },
+  {
+    "label": "js-fetch-stream-round1",
+    "elapsedMs": 461,
+    "requests": 1,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "callReturnedMs=409"
+  },
+  {
+    "label": "async-12-round2",
+    "elapsedMs": 203,
+    "requests": 12,
+    "peakConcurrent": 12,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "label": "prefetch-12-round2",
+    "elapsedMs": 411,
+    "requests": 12,
+    "peakConcurrent": 6,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "label": "js-fetch-2-round2",
+    "elapsedMs": 468,
+    "requests": 2,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "callsReturnedMs=406"
+  },
+  {
+    "label": "js-async-xhr-2-round2",
+    "elapsedMs": 482,
+    "requests": 2,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "callsReturnedMs=427"
+  },
+  {
+    "label": "js-beacon-2-round2",
+    "elapsedMs": 479,
+    "requests": 2,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "true,true,callsReturnedMs=414"
+  },
+  {
+    "label": "js-fetch-stream-round2",
+    "elapsedMs": 457,
+    "requests": 1,
+    "peakConcurrent": 1,
+    "connections": 1,
+    "protocols": [
+      "HTTP/2"
+    ],
+    "detail": "callReturnedMs=406"
+  }
+]

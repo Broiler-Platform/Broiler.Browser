@@ -11,6 +11,27 @@ namespace Broiler.Cli.Tests;
 /// </summary>
 public sealed class AnalysisInspectorTests
 {
+    [Fact]
+    public void SvgImageIsNotAnObsoleteHtmlElementButForeignObjectContentsAreHtml()
+    {
+        var report = HtmlInspector.Inspect("<!doctype html><svg><image/><foreignObject><center>HTML</center></foreignObject></svg>", null, [], "https://example.test/");
+        Assert.Equal("center", Assert.Single(report.ObsoleteElements).Tag);
+    }
+
+    [Fact]
+    public void RepeatedNetworkFailuresAreGroupedWithinTheirRunScope()
+    {
+        var request = new NetworkEntry { Id = 1, Started = System.DateTime.UtcNow, Method = "GET",
+            Url = "https://example.test/broken.png", Destination = "image", Mode = "no-cors", Status = 404 };
+        var findings = Triage.Rank(EmptyReport() with { Network = new NetworkSummary {
+            Requests = 3, Failed = 3, Failures = [request, request with { Id = 2 }, request with { Id = 3, Scope = "window" }] } });
+        var finding = Assert.Single(findings, f => f.Area == "Network");
+        Assert.Contains("analysis: image", finding.Detail);
+        Assert.Contains("(×2)", finding.Detail);
+        Assert.Contains("window: image", finding.Detail);
+        Assert.Contains("(×1)", finding.Detail);
+    }
+
     // ── CSS ─────────────────────────────────────────────────────────────────────────────────────
 
     [Fact(Timeout = 600000)]

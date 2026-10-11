@@ -92,6 +92,7 @@ public sealed class RenderingPipeline(
             : await pageLoader.LoadAsync(request, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         fetchTiming.MarkResponseEnd();
+        fetchTiming.RecordResponseVersion(response.HttpVersion);
 
         string url = response.FinalUrl;
         DocumentRequestContext document = CreateDocumentContext(url);

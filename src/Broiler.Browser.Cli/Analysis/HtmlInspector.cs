@@ -186,6 +186,7 @@ internal static class HtmlInspector
                 .Select(static e => e.LocalName.ToLowerInvariant())
                 .Where(static tag => !tag.Contains('-') && !StandardElements.Contains(tag) && !ObsoleteElements.Contains(tag)), MaxListed),
             ObsoleteElements = Top(finalElements
+                .Where(static e => !InForeignContent(e))
                 .Select(static e => e.LocalName.ToLowerInvariant())
                 .Where(static tag => ObsoleteElements.Contains(tag)), MaxListed),
             CustomElements = Top(finalElements
@@ -462,6 +463,8 @@ internal static class HtmlInspector
     {
         for (var current = element.ParentElement; current is not null; current = current.ParentElement)
         {
+            if (current.LocalName.ToLowerInvariant() is "foreignobject" or "desc" or "title")
+                return false;
             if (current.LocalName.ToLowerInvariant() is "svg" or "math")
                 return true;
         }

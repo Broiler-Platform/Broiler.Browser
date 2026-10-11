@@ -1,5 +1,12 @@
 # CreepJS P0: proxy recursion no longer terminates the host
 
+**Published-package verification:** the later
+[current-package reinvestigation](fingerprinting-reinvestigation-2026-10-09.md)
+confirms the fix in JavaScript preview.7, with no DLL overlay. Both live commands
+exit 0; the proxy-cycle fixture catches RangeError. Use the
+[active roadmap](fingerprinting-compatibility-roadmap.md) for remaining work.
+The local-build procedure and results below are historical implementation evidence.
+
 Implemented and verified on 2026-10-09 against the updated Broiler.JS checkout
 at `a7bdfed6141837aac35c4f26d3efd78bde6b670a`.
 

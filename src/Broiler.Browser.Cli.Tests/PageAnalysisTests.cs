@@ -82,6 +82,26 @@ public sealed class PageAnalysisTests : IDisposable
     }
 
     [Fact(Timeout = 600000)]
+    public async Task CanvasPixelsReachTheScreenshotWithoutBecomingScriptVisibleAttributes()
+    {
+        var url = _pages.Write("canvas.html", """
+            <!doctype html><body style="margin:0"><canvas id="c" width="40" height="40"></canvas><div id="out"></div>
+            <script>var c=document.getElementById('c'),x=c.getContext('2d');x.fillStyle='red';x.fillRect(0,0,40,40);
+            document.getElementById('out').textContent=c.hasAttribute('data-broiler-canvas-bitmap');</script>
+            """);
+        var (exitCode, directory, report, _) = await AnalyzeAsync(url, window: false, width: 80, height: 80);
+        Assert.Equal(PageAnalyzer.Completed, exitCode);
+        Assert.Equal(0, report.GetProperty("scripting").GetProperty("failures").GetInt32());
+        var html = await File.ReadAllTextAsync(Path.Combine(directory, "document-after-scripts.html"));
+        Assert.Contains(">false</div>", html);
+        using var image = Broiler.Graphics.Imaging.BBitmap.Decode(Path.Combine(directory, "screenshot.png"));
+        var pixel = image.GetPixel(20, 20);
+        Assert.Equal(255, pixel.R);
+        Assert.Equal(0, pixel.G);
+        Assert.Equal(0, pixel.B);
+    }
+
+    [Fact(Timeout = 600000)]
     public async Task An_Analysis_Writes_Its_Report_Screenshots_Logs_And_The_Pages_Files()
     {
         var (exitCode, directory, _, _) = await AnalyzeAsync(WriteProblemPage());
@@ -165,6 +185,29 @@ public sealed class PageAnalysisTests : IDisposable
 
         var only = Assert.Single(collapsed);
         Assert.Contains("collapsed-marker", only, StringComparison.Ordinal);
+    }
+
+    [Fact(Timeout = 600000)]
+    public async Task Embedded_Source_Text_Is_Not_Reported_As_A_Collapsed_Label()
+    {
+        var (exitCode, _, report, _) = await AnalyzeAsync(_pages.Write("embedded-source.html", """
+            <!DOCTYPE html>
+            <html><head><title>Embedded source</title></head><body>
+            <div>
+              <style>.source-marker { color: red; }</style>
+              <script type="application/json">{"source-marker": true}</script>
+              <p>Visible content</p>
+            </div>
+            <div style="height: 0; overflow: hidden">collapsed-label-marker</div>
+            </body></html>
+            """), window: false);
+
+        Assert.Equal(PageAnalyzer.Completed, exitCode);
+        var collapsed = report.GetProperty("layout").GetProperty("collapsedWithText").EnumerateArray()
+            .Select(static finding => finding.GetProperty("detail").GetString())
+            .ToArray();
+
+        Assert.Contains("collapsed-label-marker", Assert.Single(collapsed), StringComparison.Ordinal);
     }
 
     /// <summary>

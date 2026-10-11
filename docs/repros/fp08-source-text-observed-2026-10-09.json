@@ -1,0 +1,188 @@
+{
+  "date": "2026-10-09",
+  "scope": "FP-08 embedded-source collapsed-text diagnostics only; local Browser change, unchanged NuGet dependencies",
+  "tests": {
+    "before": "New regression test fails: style source plus collapsed label reported",
+    "afterPassed": 50,
+    "afterFailed": 0,
+    "beforeTrxSha256": "b1601c888ecb0018ab77fb49569ad20bdfb6e5ed508ed1ff145957b4a2b50e45",
+    "afterTrxSha256": "9cac6635e0d46f8ea0caacc9bca6bd6d65d9fc60ac7e1fb197ce053c10c8fc4d"
+  },
+  "sites": {
+    "creepjs": {
+      "before": {
+        "startedAt": "2026-10-09T13:50:59.790683Z",
+        "completed": true,
+        "collapsedWithText": [
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div#headless-resistance-detection-results.flex-grid > div.relative.col-six > div",
+            "box": "355,-171 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-extension:checked ~ .modal-container { ⏎ \t\t\tvis…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid.relative > div#creep-resize.relative.col-six.rejected > div.screen-container.relative.help",
+            "box": "355,-171 0×0",
+            "detail": "laid out 0×0 but holds text: \".screen-frame { width:180px;height:126.5625px; } ⏎ \t\t\t\t\t\t.sc…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fp-app > fingerprint > div#fingerprint-data > div.flex-grid.relative",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".unsupport { ⏎ \t\t\tbackground: #f1f1f1; ⏎ \t\t\tcolor: #aaa; ⏎ \t…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid.relative > div.col-six > div",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-features-js:checked ~ .modal-container { ⏎ \t\t\tv…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid > div.relative.col-six > div",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-css-media:checked ~ .modal-container { ⏎ \t\t\tvis…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid > div.relative.col-six > div",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-css-match-media:checked ~ .modal-container { ⏎ …\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid > div.relative.col-six > div",
+            "box": "355,-55 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-computed-style:checked ~ .modal-container { ⏎ \t…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid > div.relative.col-six > div",
+            "box": "355,-55 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-css-style-declaration-version-system-styles:che…\""
+          },
+          {
+            "element": "style",
+            "path": "… > fingerprint > div#fingerprint-data > div.flex-grid > div.relative.col-six",
+            "box": "355,-55 0×3086",
+            "detail": "laid out 0×3086 but holds text: \".gradient { background: repeating-linear-gradient(to right, …\""
+          },
+          {
+            "element": "style",
+            "path": "… > div > div.flex-grid > div.relative.col-six.rejected > div",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-maths:checked ~ .modal-container { ⏎ \t\t\tvisibil…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div > label.modal-container > label.modal-content > div",
+            "box": "0,0 0×0",
+            "detail": "laid out 0×0 but holds text: \".math-chromium, ⏎ \t\t.math-firefox, ⏎ \t\t.math-tor-browser, ⏎ …\""
+          },
+          {
+            "element": "style",
+            "path": "… > div > div.flex-grid > div.relative.col-six > div",
+            "box": "355,8 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-console-errors:checked ~ .modal-container { ⏎ \t…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div > div.flex-grid > div.relative.col-six > div",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-iframe-content-window-version:checked ~ .modal-…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div > div.flex-grid > div.relative.col-six > div",
+            "box": "355,8 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-html-element-version:checked ~ .modal-container…\""
+          },
+          {
+            "element": "style",
+            "path": "… > div#fingerprint-data > div.flex-grid.relative > div.col-six > div.help",
+            "box": "0,58 0×0",
+            "detail": "laid out 0×0 but holds text: \".modal-creep-permissions:checked ~ .modal-container { ⏎ \t\t\tv…\""
+          }
+        ],
+        "elementsAfterScripts": 2316,
+        "scriptFailures": 1,
+        "unhandledRejections": 1,
+        "layoutInvariantCount": 104,
+        "window": {
+          "image": "screenshot-window.png",
+          "differenceRatio": 0,
+          "settled": true,
+          "status": "Done",
+          "durationMs": 9519.6,
+          "notCompared": null
+        },
+        "reportSha256": "f78f2039372857512ea3e1eeb551376e90b6e91c67fe0a5c03ac55e7169d4713",
+        "fetchedHtmlSha256": "e59328901b58f9cd77776a282a9de8c01aa57e4ea36b3e94283050807ae28b59"
+      },
+      "after": {
+        "startedAt": "2026-10-09T16:36:54.7073279Z",
+        "completed": true,
+        "collapsedWithText": [],
+        "elementsAfterScripts": 2316,
+        "scriptFailures": 1,
+        "unhandledRejections": 1,
+        "layoutInvariantCount": 104,
+        "window": {
+          "image": "screenshot-window.png",
+          "differenceRatio": 0,
+          "settled": true,
+          "status": "Done",
+          "durationMs": 10258.6,
+          "notCompared": null
+        },
+        "reportSha256": "804dfcaec1f13c1b5044af372647befdd9d5fc22e4dc6dabf99a773b703b74b2",
+        "fetchedHtmlSha256": "e59328901b58f9cd77776a282a9de8c01aa57e4ea36b3e94283050807ae28b59"
+      },
+      "exitCode": 0,
+      "sameFetchedHtml": true
+    },
+    "sannysoft": {
+      "before": {
+        "startedAt": "2026-10-09T13:50:59.7906671Z",
+        "completed": true,
+        "collapsedWithText": [],
+        "elementsAfterScripts": 289,
+        "scriptFailures": 2,
+        "unhandledRejections": 1,
+        "layoutInvariantCount": 0,
+        "window": {
+          "image": "screenshot-window.png",
+          "differenceRatio": 0,
+          "settled": true,
+          "status": "Done",
+          "durationMs": 14662.3,
+          "notCompared": null
+        },
+        "reportSha256": "7a70281e2db8f6822873bf311199f210639ffb4058ec052db81acd4b8bb4fd8a",
+        "fetchedHtmlSha256": "ffd7f989d8b9b2cea5489833ab04f18eaf87c0cbaec2f96ef652bcc752bcf151"
+      },
+      "after": {
+        "startedAt": "2026-10-09T16:37:04.8730381Z",
+        "completed": true,
+        "collapsedWithText": [],
+        "elementsAfterScripts": 289,
+        "scriptFailures": 2,
+        "unhandledRejections": 1,
+        "layoutInvariantCount": 0,
+        "window": {
+          "image": "screenshot-window.png",
+          "differenceRatio": 0,
+          "settled": true,
+          "status": "Done",
+          "durationMs": 15870.2,
+          "notCompared": null
+        },
+        "reportSha256": "3898121f5259eb95fb79de5dfa1ac9263823e183f61a54698ed9a8a24055789b",
+        "fetchedHtmlSha256": "ffd7f989d8b9b2cea5489833ab04f18eaf87c0cbaec2f96ef652bcc752bcf151"
+      },
+      "exitCode": 0,
+      "sameFetchedHtml": true
+    }
+  }
+}

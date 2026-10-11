@@ -30,6 +30,9 @@ public sealed class PageLoadResult
     /// <summary>The HTTP status of the final response; 200 for a local file.</summary>
     public int StatusCode { get; init; } = 200;
 
+    /// <summary>The final response's negotiated HTTP version; null for documents fetched without HTTP.</summary>
+    public Version? HttpVersion { get; init; }
+
     /// <summary>
     /// The method of the request that produced the final response: a <c>POST</c> that was
     /// redirected with <c>303</c> (or <c>301</c>/<c>302</c>) ends as a <c>GET</c>.

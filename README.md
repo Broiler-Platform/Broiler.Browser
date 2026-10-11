@@ -28,11 +28,17 @@ as a NuGet package from nuget.org.
 ## Getting started
 
 The dependency components are NuGet packages, restored from nuget.org by the first build, so a
-plain clone is the whole checkout:
+plain clone normally contains the browser checkout:
 
 ```bash
 git clone https://github.com/Broiler-Platform/Broiler.Browser.git
 ```
+
+This working tree includes the HTTP/2 async follow-up and selects local
+`Broiler.HtmlBridge.*` version `0.1.0-preview.28-http2.2`. On a fresh machine, build
+that version from the modified sibling HtmlBridge checkout with
+`./eng/build-http2-packages.ps1` before building Browser. See
+[HTTP/2 dependencies](docs/http2-support.md#dependency-packages).
 
 Build and run the Windows head:
 
@@ -51,6 +57,11 @@ dotnet run --project src/Broiler.Browser.Cli/Broiler.Browser.Cli.csproj -c Relea
 ```
 
 See [docs/command-line.md](docs/command-line.md) for everything else it does.
+
+The [Sannysoft/CreepJS compatibility roadmap](docs/fingerprinting-compatibility-roadmap.md)
+records the completed practical scope and explicitly deferred API gaps. The
+[completion report](docs/fingerprinting-completion-2026-10-09.md) includes Canvas/SVG,
+layout fixes, local package instructions and reproducible validation.
 
 For Windows packet capture with TCP/UDP process attribution, hostname hints and
 JSON Lines output, see the standalone [Broiler.Traffic CLI](docs/traffic-cli.md).

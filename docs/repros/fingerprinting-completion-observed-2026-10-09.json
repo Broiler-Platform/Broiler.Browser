@@ -1,0 +1,373 @@
+{
+  "observedUtc": "2026-10-09T19:45:44.288294Z",
+  "pages": {
+    "fixture": {
+      "url": "file:///D:/Broiler.Browser/docs/repros/fingerprinting-graphics-layout.html",
+      "viewport": [
+        400,
+        700
+      ],
+      "failures": 0,
+      "analysisStarted": "2026-10-09T19:41:11.2526352Z",
+      "unhandledRejections": 0,
+      "invariantViolations": 0,
+      "loadedAssemblies": {
+        "Broiler.Browser.Core": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+        "Broiler.CSS": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+        "Broiler.CSS.Dom": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+        "Broiler.Cli": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+        "Broiler.Dom": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+        "Broiler.Dom.Html": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+        "Broiler.Graphics": "0.1.0-preview.11+549c6a7e354774e95b2f957a40b6f73ba8173e4f",
+        "Broiler.HTML.Core": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Dom": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Image": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Image.Compat": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Orchestration": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HtmlBridge.Core": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.Dom": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.DomBridgeUtils": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.Scripting": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.JSeal": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+        "Broiler.JSeal.BroilerJs": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+        "Broiler.JavaScript.Ast": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.BuiltIns": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Compiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Engine": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.ExpressionCompiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Expressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Extensions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Globals": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.LinqExpressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Modules": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Parser": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Runtime": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Storage": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.Layout": "0.1.0-preview.23+ef72f99aa36ba62951bab97070e7de2c2c26874a",
+        "Broiler.Media": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Media.Image": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Media.Image.Managed": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Net": "0.1.0-preview.2+ffc0c5f3efaf3f9d1e3321b0711b32e83474d39c",
+        "Broiler.Regex": "0.1.0-preview.3+749b80e3f497e31e82d74ba072929a29d6cda864"
+      },
+      "probes": {
+        "gradientPixels": true,
+        "curves": true,
+        "transformState": true,
+        "svgBounds": true,
+        "svgFontMetrics": true,
+        "longWordWrap": true,
+        "resizeUnwrap": true
+      },
+      "sources": [
+        {
+          "file": "0001-inline-0.js",
+          "sha256": "39986DADC444C93168BB4BC83A8C21C7A0F0E6A230B28A69C4639F584D107FF6"
+        }
+      ],
+      "documentSha256": "331B31D762A5991A18BF487E9D8B46DF07404ACB811F1879B88A10CDCFB64322"
+    },
+    "creepjs": {
+      "url": "https://abrahamjuliot.github.io/creepjs/",
+      "viewport": [
+        1280,
+        900
+      ],
+      "failures": 0,
+      "analysisStarted": "2026-10-09T19:41:21.7411921Z",
+      "unhandledRejections": 0,
+      "invariantViolations": 0,
+      "loadedAssemblies": {
+        "Broiler.Browser.Core": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+        "Broiler.CSS": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+        "Broiler.CSS.Dom": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+        "Broiler.Cli": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+        "Broiler.Dom": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+        "Broiler.Dom.Html": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+        "Broiler.Graphics": "0.1.0-preview.11+549c6a7e354774e95b2f957a40b6f73ba8173e4f",
+        "Broiler.HTML.Core": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Dom": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Image": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Image.Compat": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Orchestration": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HtmlBridge.Core": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.Dom": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.DomBridgeUtils": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.Scripting": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.JSeal": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+        "Broiler.JSeal.BroilerJs": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+        "Broiler.JavaScript.Ast": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.BuiltIns": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Compiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Engine": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.ExpressionCompiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Expressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Extensions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Globals": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.LinqExpressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Modules": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Parser": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Runtime": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Storage": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.Layout": "0.1.0-preview.23+ef72f99aa36ba62951bab97070e7de2c2c26874a",
+        "Broiler.Media": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Media.Image": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Media.Image.Managed": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Net": "0.1.0-preview.2+ffc0c5f3efaf3f9d1e3321b0711b32e83474d39c",
+        "Broiler.Regex": "0.1.0-preview.3+749b80e3f497e31e82d74ba072929a29d6cda864",
+        "Broiler.Unicode.Properties": "0.1.0-preview.2+e1619c02886c30a0c520df38eae19db86aa41f31"
+      },
+      "collectorsPassed": [
+        "canvas 2d",
+        "svg",
+        "rects",
+        "dedicated worker",
+        "navigator",
+        "headless",
+        "media"
+      ],
+      "sources": [
+        {
+          "file": "0002-abrahamjuliot.github.io-creepjs-creep.js",
+          "sha256": "80F43F364BD973BC03CB5B82DE033CE28B2BBB145CB04237632A46EF040A92BE"
+        }
+      ],
+      "documentSha256": "E59328901B58F9CD77776A282A9DE8C01AA57E4EA36B3E94283050807AE28B59"
+    },
+    "sannysoft": {
+      "url": "https://bot.sannysoft.com/",
+      "viewport": [
+        1280,
+        900
+      ],
+      "failures": 0,
+      "analysisStarted": "2026-10-09T19:42:14.0478584Z",
+      "unhandledRejections": 0,
+      "invariantViolations": 0,
+      "loadedAssemblies": {
+        "Broiler.Browser.Core": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+        "Broiler.CSS": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+        "Broiler.CSS.Dom": "0.1.0-preview.16+3f8b4e005556ac5a59ae95675a1579821fe3b4ea",
+        "Broiler.Cli": "0.1.0-preview.1+a18f0b6ee425468eed72300dd2b4065ff2ea6c1d",
+        "Broiler.Dom": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+        "Broiler.Dom.Html": "0.1.0-preview.14+00b21bff7ebe170886ea5c8c779a5c9fc3985810",
+        "Broiler.Graphics": "0.1.0-preview.11+549c6a7e354774e95b2f957a40b6f73ba8173e4f",
+        "Broiler.HTML.Core": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Dom": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Image": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Image.Compat": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HTML.Orchestration": "0.1.0-preview.25+174034607567a8dbfbce548bbee9fb00f934414d",
+        "Broiler.HtmlBridge.Core": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.Dom": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.DomBridgeUtils": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.HtmlBridge.Scripting": "0.1.0-preview.32+784cd50f76897a1b8682abd2543f881f546c18b1",
+        "Broiler.JSeal": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+        "Broiler.JSeal.BroilerJs": "0.1.0-preview.6+4c3040f40c384c0ec5b7bf1f42a93a70bff6004d",
+        "Broiler.JavaScript.Ast": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.BuiltIns": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Compiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Engine": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.ExpressionCompiler": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Expressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Extensions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Globals": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.LinqExpressions": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Modules": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Parser": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Runtime": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.JavaScript.Storage": "0.1.0-preview.7+5385af142ef1753fca00998482800f70e6b950f2",
+        "Broiler.Layout": "0.1.0-preview.23+ef72f99aa36ba62951bab97070e7de2c2c26874a",
+        "Broiler.Media": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Media.Image": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Media.Image.Managed": "0.1.0-preview.14+8e112663bf8ffbed346766e941fd9bb36a18d800",
+        "Broiler.Net": "0.1.0-preview.2+ffc0c5f3efaf3f9d1e3321b0711b32e83474d39c",
+        "Broiler.Regex": "0.1.0-preview.3+749b80e3f497e31e82d74ba072929a29d6cda864",
+        "Broiler.Unicode.Properties": "0.1.0-preview.2+e1619c02886c30a0c520df38eae19db86aa41f31"
+      },
+      "scannerRows": 20,
+      "canvasHashes": 5,
+      "fingerprintKeys": 32,
+      "sources": [
+        {
+          "file": "0002-cdnjs.cloudflare.com-lodash.js-4.17.11-lodash.min.js",
+          "sha256": "EFFCA8652DF9E3C7D74915EA73FC58CE3B26B96DEC14ACEEBCE087774E8F9A9B"
+        },
+        {
+          "file": "0003-cdnjs.cloudflare.com-jquery-3.3.1-jquery.min.js",
+          "sha256": "160A426FF2894252CD7CEBBDD6D6B7DA8FCD319C65B70468F10B6690C45D02EF"
+        },
+        {
+          "file": "0004-cdn.jsdelivr.net-ua-parser-js-0.7.19-src-ua-parser.min.js",
+          "sha256": "91B9208A1D31E60C0549E34B8E8811E5061BD4B74FF3A80C1A09639FC034F01E"
+        },
+        {
+          "file": "0008-bot.sannysoft.com-fpScanner.js",
+          "sha256": "A6A342E675841A48E4CD5C7C74746EDFD77E9437387CB09B87791B6995F924E5"
+        },
+        {
+          "file": "0010-bot.sannysoft.com-fpCollect.min.js",
+          "sha256": "35DBF4651645C093D72E6EDA17325F7CADF667397FF48FF2C2A8257FBA403D8E"
+        },
+        {
+          "file": "0012-bot.sannysoft.com-modernizr.js",
+          "sha256": "7D0EE6079C21B0B2CD4E55FEB240D87118F75D166E02EEF7C674ED0B8E69019C"
+        },
+        {
+          "file": "0020-inline-6.js",
+          "sha256": "1B2DAB81055DB4C6DA239042C9C4D36040EEC682F37BAA808A678AEE8D9BFBBF"
+        },
+        {
+          "file": "0021-inline-7.js",
+          "sha256": "F8560020E808C62BA0D4549EE6CAE1C50040D004B445B60F16D75D692422BBFA"
+        },
+        {
+          "file": "0022-inline-8.js",
+          "sha256": "0F2A139F90E7F7F9F1F4A84B32045977095DC2B5917B7089407184DB58A7756F"
+        },
+        {
+          "file": "0023-inline-9.js",
+          "sha256": "7C8A68279FF76F491B12EBC33AF867B5A2416C47DF791D588F116B4B05E20351"
+        },
+        {
+          "file": "0024-inline-10.js",
+          "sha256": "75BECC2AA07EC46D8FDF3CB08934652B650A29B9E744883B66F7B4359AD976EA"
+        },
+        {
+          "file": "0026-inline-12.js",
+          "sha256": "76B7ED0F33785A2446DFBDC061D1FD70B9A12ABEB4FEB77DA1829B2BBBC9FE71"
+        },
+        {
+          "file": "0027-inline-13.js",
+          "sha256": "BC4B35751A90A6400D3CAF187F23BE5BEE2C328733160EF3E827B1740A001270"
+        },
+        {
+          "file": "0028-inline-14.js",
+          "sha256": "369D03F8C90A301C52A166F1AB7E6C6D9653195CEE100AB32390EBC6AE0D1902"
+        },
+        {
+          "file": "0029-inline-15.js",
+          "sha256": "6C914A6ED6D7AD5D1C5DBD8209F20989A79B7D941E5BA9F1416D902ADAB0719D"
+        },
+        {
+          "file": "0030-inline-16.js",
+          "sha256": "71FE8A57F9D19F55F27E23067F5C39CB043823C55566FF798DD0142AC44F8EF3"
+        },
+        {
+          "file": "0031-inline-17.js",
+          "sha256": "E2E4D1C3617883600710C989F88CF66525A306451093DA73CB3FC0B57FABA56D"
+        },
+        {
+          "file": "0032-inline-18.js",
+          "sha256": "57B38E46D9B378C9A5E3727AEC965CF788A09DD761392C3F73BCFB0F5A15CBDF"
+        },
+        {
+          "file": "0033-inline-19.js",
+          "sha256": "BE701E15AA5000004A3EFBA4E5CC2C50FDA47E6FA05F5EDD0E8036AFF06E4423"
+        },
+        {
+          "file": "0034-inline-20.js",
+          "sha256": "32694B1B4A20E762035F633173DAD27E1B6A0CDFEC82D7240110136D72910FE1"
+        },
+        {
+          "file": "0035-inline-21.js",
+          "sha256": "7DCA60E893CFD0E6134DB0C0BED019AA69145CF787643FED45DB77C1EEDD689A"
+        },
+        {
+          "file": "0036-inline-22.js",
+          "sha256": "215B541E040B6792510B84ED6C50E00C4ABF9B651D1D4442F4C4AD5DFE11894D"
+        },
+        {
+          "file": "0037-inline-23.js",
+          "sha256": "484808D6B1B5A1A8DAEA1CF843539E5C0D3BC2D381985702B57CE0FA267791DE"
+        },
+        {
+          "file": "0038-inline-24.js",
+          "sha256": "715BE280C55F2AFA4F6DD9178CD388075D0D0165AB4DD9D71662E48D75F30469"
+        },
+        {
+          "file": "0039-inline-25.js",
+          "sha256": "9471E5C3BFE4E36D5B1F5CC53082A9D9360FA6E0EDC59DFB9D50B4E31319EADC"
+        },
+        {
+          "file": "0040-inline-26.js",
+          "sha256": "1FA35BD5855DB153B4D67FF50538A92012B2072C72958111658CE77A6DA83FB8"
+        },
+        {
+          "file": "0041-inline-27.js",
+          "sha256": "BB84D5AE5BF9E91909A77A70577F983BB598EB2B7D57323CDC0B09FF8A02534A"
+        },
+        {
+          "file": "0042-inline-28.js",
+          "sha256": "5240BB6A9999957553F1600052831A0BD2F9ED75CD376461EE77590BBEE4C1D2"
+        },
+        {
+          "file": "0043-inline-29.js",
+          "sha256": "415A1D2B253387419858ABD57F5DAC8A7480C00BBAB9E3F7D663C907C153E744"
+        },
+        {
+          "file": "0044-inline-30.js",
+          "sha256": "E92A6CD2E98B7EC9446A4AB77F1BE3F7D184D3B76776A7AD910310624F9B53AC"
+        },
+        {
+          "file": "0045-mc.yandex.ru-metrika-tag.js",
+          "sha256": "0840945FE24E3329EF4CD016DBCC4FBEEDF387C42BB49BFA49740A076EFB032C"
+        },
+        {
+          "file": "0046-mc.yandex.ru-metrika-tag.js",
+          "sha256": "34B857FF58704E2ECC68785A8DDC57456C498ECAF911E135BA9180124F0E2845"
+        }
+      ],
+      "documentSha256": "FFD7F989D8B9B2CEA5489833AB04F18EAF87C0CBAEC2F96EF652BCC752BCF151"
+    }
+  },
+  "reference": {
+    "browser": "Chrome",
+    "version": "154.0.8037.98",
+    "viewport": [
+      400,
+      700
+    ],
+    "probes": {
+      "gradientPixels": true,
+      "curves": true,
+      "transformState": true,
+      "svgBounds": true,
+      "svgFontMetrics": true,
+      "longWordWrap": true,
+      "resizeUnwrap": true
+    },
+    "fixtureSha256": "331B31D762A5991A18BF487E9D8B46DF07404ACB811F1879B88A10CDCFB64322",
+    "visualParity": false,
+    "fontMetricsDiffer": true
+  },
+  "tests": {
+    "htmlBridgeRelease": {
+      "passed": 2218,
+      "failed": 0,
+      "skipped": 21
+    },
+    "htmlBridgeReleaseVm": {
+      "passed": 2274,
+      "failed": 0,
+      "skipped": 21
+    },
+    "layout": {
+      "failed": 0,
+      "passed": 3021
+    },
+    "browserCli": {
+      "failed": 0,
+      "passed": 227
+    },
+    "browserCore": {
+      "failed": 0,
+      "passed": 319
+    },
+    "traffic": {
+      "failed": 0,
+      "passed": 20
+    },
+    "engineNeutralityTests": 6
+  },
+  "packagePublication": "Local feeds only; no public NuGet upload"
+}

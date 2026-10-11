@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-10-09T21:10:00Z",
+  "slice": "FP-04",
+  "description": "MediaDevices and MediaDeviceInfo WebIDL interfaces, EventTarget inheritance, navigator.mediaDevices accessor, enumerateDevices, getUserMedia, getDisplayMedia, getSupportedConstraints, legacy navigator.getUserMedia, and elimination of live Sannysoft JS failures",
+  "htmlBridgePackageVersion": "0.1.0-preview.29",
+  "tests": {
+    "release": {
+      "total": 2224,
+      "passed": 2203,
+      "skipped": 21,
+      "failed": 0
+    },
+    "releaseVm": {
+      "total": 2280,
+      "passed": 2259,
+      "skipped": 21,
+      "failed": 0
+    },
+    "mediaDevicesInterfaceTests": {
+      "release": { "total": 25, "passed": 25, "failed": 0 },
+      "releaseVm": { "total": 25, "passed": 25, "failed": 0 }
+    },
+    "engineNeutrality": {
+      "tests": 6,
+      "status": "OK"
+    },
+    "browserCoreTests": {
+      "total": 319,
+      "passed": 319,
+      "failed": 0
+    },
+    "browserCliTests": {
+      "total": 224,
+      "passed": 224,
+      "failed": 0
+    },
+    "trafficTests": {
+      "total": 20,
+      "passed": 20,
+      "failed": 0
+    }
+  },
+  "platformProbes": {
+    "url": "docs/repros/sannysoft-platform-probes.html",
+    "mediaDevicesType": "object",
+    "legacyGetUserMediaType": "function",
+    "pluginArrayType": "function",
+    "pluginTag": "[object PluginArray]",
+    "pluginLength": 0,
+    "viewport": [1280, 900],
+    "screen": [1280, 900],
+    "javascriptFailures": 0
+  },
+  "sannysoft": {
+    "url": "https://bot.sannysoft.com/",
+    "exitCode": 0,
+    "javascriptFailures": 0,
+    "unhandledRejections": 0,
+    "resolvedIssues": [
+      "inline-16: 'undefined is not a function' (document.write(navigator.getUserMedia())) completely eliminated",
+      "Unhandled promise rejection: 'TypeError: Cannot get property enumerateDevices of undefined' (navigator.mediaDevices.enumerateDevices()) completely eliminated",
+      "MediaDevices and MediaDeviceInfo WebIDL interfaces exposed on globalThis and window",
+      "MediaDevices prototype correctly inherits from EventTarget.prototype",
+      "navigator.mediaDevices accessor returns cached MediaDevices singleton per Navigator instance",
+      "MediaDevices.prototype.enumerateDevices() returns Promise resolving to empty array []",
+      "MediaDevices.prototype.getUserMedia() returns Promise rejecting with NotFoundError DOMException",
+      "MediaDevices.prototype.getDisplayMedia() returns Promise rejecting with NotAllowedError DOMException",
+      "MediaDevices.prototype.getSupportedConstraints() returns standard supported constraints dictionary",
+      "legacy navigator.getUserMedia() returns undefined when called with 0 arguments and invokes error callback when provided",
+      "WebIDL illegal invocation brand checks strictly enforced on all prototype methods and accessors",
+      "SubWindow mirrors MediaDevices and MediaDeviceInfo constructors"
+    ],
+    "remainingErrors": []
+  },
+  "creepjs": {
+    "url": "https://abrahamjuliot.github.io/creepjs/",
+    "exitCode": 0,
+    "mediaPassed": true,
+    "rectsPassed": true,
+    "navigatorPassed": true,
+    "headlessPassed": true,
+    "featuresPassed": true,
+    "remainingErrors": [
+      "TypeError: undefined is not a function (Canvas2D/SVG - FP-05)",
+      "speech failed (SpeechSynthesis - FP-09)"
+    ]
+  }
+}

@@ -225,6 +225,7 @@ public sealed class PageLoader : IPageLoader
             FinalUrl = response.FinalUrl.AbsoluteUri,
             Html = html,
             StatusCode = response.StatusCode,
+            HttpVersion = response.Message.Version,
             Method = FinalMethod(response.Message, message),
             // A navigation's response is basic, so this is every field but Set-Cookie and Set-Cookie2.
             Headers = response.GetScriptVisibleHeaders(),
@@ -257,6 +258,7 @@ public sealed class PageLoader : IPageLoader
             FinalUrl = finalUrl.AbsoluteUri,
             Html = html,
             StatusCode = (int)response.StatusCode,
+            HttpVersion = response.Version,
             Method = FinalMethod(response, message),
             Headers = FetchHeaders.FilterResponseHeaders([.. fields], ResponseTainting.Basic, credentialed: true),
             RedirectChain = finalUrl == url ? [url] : [url, finalUrl],

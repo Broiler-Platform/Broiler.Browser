@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-10-09T20:03:00Z",
+  "slice": "FP-02",
+  "description": "Window and Navigator interface/prototype contracts, prototype inheritance, illegal constructor WebIDL checks, Navigator.prototype accessors and brand checks",
+  "htmlBridgePackageVersion": "0.1.0-preview.27",
+  "tests": {
+    "release": {
+      "total": 2169,
+      "passed": 2148,
+      "skipped": 21,
+      "failed": 0
+    },
+    "releaseVm": {
+      "total": 2225,
+      "passed": 2204,
+      "skipped": 21,
+      "failed": 0
+    },
+    "engineNeutrality": {
+      "tests": 6,
+      "status": "OK"
+    },
+    "windowAndNavigatorInterfaceTests": {
+      "total": 77,
+      "passed": 77,
+      "failed": 0
+    }
+  },
+  "httpProbeObservations": {
+    "url": "http://localhost:8092/fingerprinting-current-probes.html",
+    "interfaces": {
+      "Window": "function",
+      "Navigator": "function",
+      "windowIsWindow": true,
+      "windowIsEventTarget": true,
+      "navigatorIsNavigator": true,
+      "navigatorIsObject": true,
+      "navigatorOwnPropsCount": 0,
+      "ontouchstartInWindow": false,
+      "windowConstructorThrowsIllegal": true,
+      "navigatorConstructorThrowsIllegal": true,
+      "userAgentDescriptorHasGetter": true,
+      "userAgentIllegalInvocationThrows": true
+    },
+    "childRealm": {
+      "Window": "function",
+      "Navigator": "function",
+      "childIsWindow": true,
+      "childNavigatorIsNavigator": true
+    }
+  },
+  "creepjs": {
+    "exitCode": 0,
+    "navigatorPassed": true,
+    "navigatorDurationMs": 543.85,
+    "navigatorHash": "4d0dfccdd738c37ff53868cde097b1599f1d80ad1f3dc1091edf951c0955ca79",
+    "headlessPassed": true,
+    "headlessDurationMs": 137.67,
+    "headlessHash": "4252ec3a6756eb70a9bcb5ffa17a7be775d2f65bc0425b68fd1b6b01beb4022e",
+    "resolvedIssues": [
+      "ReferenceError: Window is not defined in Headless detector ('ontouchstart' in Window) completely eliminated",
+      "Navigator prototype accessors and brand checks satisfied with 0 own properties on navigator instance",
+      "new Window() and new Navigator() throw TypeError: Illegal constructor",
+      "Sub-windows inherit Window.prototype and mirror Window/Navigator globals"
+    ],
+    "remainingErrors": [
+      "TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom') (FP-03)",
+      "TypeError: undefined is not a function (Canvas/SVG - FP-05)"
+    ]
+  },
+  "sannysoft": {
+    "exitCode": 0,
+    "noRegressions": true,
+    "remainingErrors": [
+      "inline-16: undefined is not a function (MediaDevices - FP-04)",
+      "Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (MediaDevices - FP-04)"
+    ]
+  }
+}

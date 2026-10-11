@@ -206,8 +206,12 @@ internal static class LayoutInspector
             // with it, and would otherwise bury the one element that collapsed. An svg's content is
             // left out: the SVG renderer draws it from its own attributes, not from boxes, and the
             // layout gives each element in it a zero-size box, whether it is drawn, like a <text>, or
-            // is never drawn, like an icon's <title> or <desc>.
+            // is never drawn, like an icon's <title> or <desc>. Apply the same non-content policy
+            // as the unboxed findings: an embedded stylesheet can have a zero-size geometry entry,
+            // but its source is not a collapsed label (CreepJS embeds styles in its result cards).
             if ((border.Width <= 0 || border.Height <= 0)
+                && !NeverBoxed.Contains(tag)
+                && !InsideUnrendered(element)
                 && OwnText(element) is { Length: > 0 } text
                 && !InsideCollapsed(element, geometry)
                 && !InsideSvg(element))

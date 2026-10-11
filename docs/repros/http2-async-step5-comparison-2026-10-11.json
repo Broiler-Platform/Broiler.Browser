@@ -1,0 +1,578 @@
+[
+  {
+    "Protocol": "HTTP/2",
+    "Label": "page-load-round1",
+    "ElapsedMs": 369,
+    "Requests": 15,
+    "PeakConcurrent": 10,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 12936376,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 11,
+    "BusyWorkers": 1,
+    "Detail": "out=data\u002Bdata,protocol=h2"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "page-load-round2",
+    "ElapsedMs": 247,
+    "Requests": 15,
+    "PeakConcurrent": 10,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 11721704,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 11,
+    "BusyWorkers": 1,
+    "Detail": "out=data\u002Bdata,protocol=h2"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "prefetch-12-round1",
+    "ElapsedMs": 209,
+    "Requests": 12,
+    "PeakConcurrent": 12,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 423432,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 11,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "prefetch-12-round2",
+    "ElapsedMs": 213,
+    "Requests": 12,
+    "PeakConcurrent": 12,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 174944,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 12,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "prefetch-16-round1",
+    "ElapsedMs": 215,
+    "Requests": 16,
+    "PeakConcurrent": 16,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 340440,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 12,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "prefetch-16-round2",
+    "ElapsedMs": 216,
+    "Requests": 16,
+    "PeakConcurrent": 16,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 210024,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 12,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "prefetch-24-round1",
+    "ElapsedMs": 429,
+    "Requests": 24,
+    "PeakConcurrent": 16,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 306760,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 14,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "prefetch-24-round2",
+    "ElapsedMs": 415,
+    "Requests": 24,
+    "PeakConcurrent": 16,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 328440,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-fetch-2-round1",
+    "ElapsedMs": 277,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 8994864,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 1,
+    "Detail": "callsReturnedMs=2"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-async-xhr-2-round1",
+    "ElapsedMs": 487,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 12180664,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 2,
+    "Detail": "callsReturnedMs=118"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-beacon-2-round1",
+    "ElapsedMs": 264,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 8542408,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 1,
+    "Detail": "true,true,callsReturnedMs=8"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-fetch-stream-round1",
+    "ElapsedMs": 69,
+    "Requests": 1,
+    "PeakConcurrent": 1,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 8824768,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 2,
+    "Detail": "callReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-fetch-2-round2",
+    "ElapsedMs": 255,
+    "Requests": 2,
+    "PeakConcurrent": 1,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 8943408,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 3,
+    "Detail": "callsReturnedMs=0"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-async-xhr-2-round2",
+    "ElapsedMs": 276,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 9488736,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 1,
+    "Detail": "callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-beacon-2-round2",
+    "ElapsedMs": 252,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 8537432,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 1,
+    "Detail": "true,true,callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/2",
+    "Label": "js-fetch-stream-round2",
+    "ElapsedMs": 47,
+    "Requests": 1,
+    "PeakConcurrent": 1,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/2"
+    ],
+    "AllocatedBytes": 8805840,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 15,
+    "BusyWorkers": 2,
+    "Detail": "callReturnedMs=0"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "page-load-round1",
+    "ElapsedMs": 235,
+    "Requests": 15,
+    "PeakConcurrent": 10,
+    "Connections": 10,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 11960112,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 16,
+    "BusyWorkers": 1,
+    "Detail": "out=data\u002Bdata,protocol=http/1.1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "page-load-round2",
+    "ElapsedMs": 241,
+    "Requests": 15,
+    "PeakConcurrent": 10,
+    "Connections": 10,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 11504192,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 16,
+    "BusyWorkers": 1,
+    "Detail": "out=data\u002Bdata,protocol=http/1.1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "prefetch-12-round1",
+    "ElapsedMs": 216,
+    "Requests": 12,
+    "PeakConcurrent": 12,
+    "Connections": 12,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 208008,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 16,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "prefetch-12-round2",
+    "ElapsedMs": 210,
+    "Requests": 12,
+    "PeakConcurrent": 12,
+    "Connections": 12,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 134984,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 16,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "prefetch-16-round1",
+    "ElapsedMs": 207,
+    "Requests": 16,
+    "PeakConcurrent": 16,
+    "Connections": 16,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 430608,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 3,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "prefetch-16-round2",
+    "ElapsedMs": 207,
+    "Requests": 16,
+    "PeakConcurrent": 16,
+    "Connections": 16,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 188120,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "prefetch-24-round1",
+    "ElapsedMs": 410,
+    "Requests": 24,
+    "PeakConcurrent": 16,
+    "Connections": 16,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 278248,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "prefetch-24-round2",
+    "ElapsedMs": 405,
+    "Requests": 24,
+    "PeakConcurrent": 16,
+    "Connections": 16,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 289608,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done,done"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-fetch-2-round1",
+    "ElapsedMs": 248,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 2,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 8780336,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "callsReturnedMs=0"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-async-xhr-2-round1",
+    "ElapsedMs": 250,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 2,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 9325072,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-beacon-2-round1",
+    "ElapsedMs": 235,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 2,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 8382584,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "true,true,callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-fetch-stream-round1",
+    "ElapsedMs": 40,
+    "Requests": 1,
+    "PeakConcurrent": 1,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 8665208,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "callReturnedMs=0"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-fetch-2-round2",
+    "ElapsedMs": 242,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 2,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 8781968,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-async-xhr-2-round2",
+    "ElapsedMs": 253,
+    "Requests": 2,
+    "PeakConcurrent": 1,
+    "Connections": 2,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 9326624,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-beacon-2-round2",
+    "ElapsedMs": 240,
+    "Requests": 2,
+    "PeakConcurrent": 2,
+    "Connections": 2,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 8372448,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "true,true,callsReturnedMs=1"
+  },
+  {
+    "Protocol": "HTTP/1.1",
+    "Label": "js-fetch-stream-round2",
+    "ElapsedMs": 40,
+    "Requests": 1,
+    "PeakConcurrent": 1,
+    "Connections": 1,
+    "NegotiatedProtocols": [
+      "HTTP/1.1"
+    ],
+    "AllocatedBytes": 8666704,
+    "Gen0Collections": 0,
+    "Gen1Collections": 0,
+    "Gen2Collections": 0,
+    "ThreadCount": 18,
+    "BusyWorkers": 1,
+    "Detail": "callReturnedMs=0"
+  }
+]

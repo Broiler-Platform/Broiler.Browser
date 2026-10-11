@@ -2,8 +2,11 @@
 
 Measured on **2026-10-08**, starting at **17:03 Europe/Berlin**, against
 [bot.sannysoft.com](https://bot.sannysoft.com/).
-**Status: all four P1 items implemented and verified in the local HtmlBridge checkout;
-remaining P2/P3 repairs proposed. Browser's published package reference is unchanged.**
+**Current-package status (2026-10-09):** the four P1 repairs and viewport/screen
+follow-ups are now verified through Browser's current NuGet dependencies, including
+HtmlBridge preview.25. See the [reinvestigation](fingerprinting-reinvestigation-2026-10-09.md)
+and [active roadmap](fingerprinting-compatibility-roadmap.md) for open media,
+graphics, layout and integration TODOs. The observations below are historical.
 
 The investigation below preserves the original baseline. The first P1 follow-up
 is recorded in [the image-loading fix and validation notes](sannysoft-image-fix-2026-10-08.md),
@@ -14,7 +17,7 @@ With the patched local assemblies, the unmodified live page populates its
 fingerprint details, all 20 scanner rows, all detail table cells in-place,
 and displays test result text for `PluginArray` type validation.
 
-Broiler fetches and renders the page, but several result sections remain empty.
+In the original baseline, Broiler fetched and rendered the page, but several result sections remained empty.
 Both `--analyze` and `--capture-image` exit successfully; that means the commands
 completed, not that the page's tests completed. The principal causes are a missing
 `PluginArray` interface, an inert `Image` constructor, and incorrect

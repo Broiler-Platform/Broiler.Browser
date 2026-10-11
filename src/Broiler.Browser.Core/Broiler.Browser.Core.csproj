@@ -49,6 +49,7 @@
     <InternalsVisibleTo Include="Broiler.Browser.Windows" />
     <InternalsVisibleTo Include="Broiler.Browser.Linux" />
     <InternalsVisibleTo Include="Broiler.Browser.Core.Tests" />
+    <InternalsVisibleTo Include="Http2AsyncProbe" />
   </ItemGroup>
 
   <ItemGroup>

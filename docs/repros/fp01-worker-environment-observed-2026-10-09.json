@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-10-09T19:30:00Z",
+  "slice": "FP-01",
+  "description": "Worker-global interfaces (WorkerGlobalScope, DedicatedWorkerGlobalScope, WorkerNavigator, WorkerLocation) and Worker prototype contracts",
+  "htmlBridgePackageVersion": "0.1.0-preview.26",
+  "htmlBridgeCommit": "784cd50f76897a1b8682abd2543f881f546c18b1",
+  "tests": {
+    "release": {
+      "total": 2092,
+      "passed": 2071,
+      "skipped": 21,
+      "failed": 0
+    },
+    "releaseVm": {
+      "total": 2148,
+      "passed": 2127,
+      "skipped": 21,
+      "failed": 0
+    },
+    "engineNeutrality": {
+      "tests": 6,
+      "status": "OK"
+    },
+    "workerInterfaceTests": {
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    }
+  },
+  "httpProbeObservations": {
+    "url": "http://localhost:8092/fingerprinting-current-probes.html",
+    "workerState": "message",
+    "workerData": {
+      "selfIsGlobal": true,
+      "document": "undefined",
+      "navigator": "object",
+      "WorkerNavigator": "function",
+      "WorkerGlobalScope": "function",
+      "DedicatedWorkerGlobalScope": "function",
+      "isWorkerGlobal": true,
+      "crypto": "object",
+      "performance": "object",
+      "platform": "Win32",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Broiler/1.0"
+    },
+    "workerConstructor": {
+      "hasConstructor": true,
+      "isWorker": true,
+      "isEventTarget": true,
+      "toString": "[object Worker]"
+    },
+    "windowWorkerGlobalScope": "undefined"
+  },
+  "creepjs": {
+    "exitCode": 0,
+    "dedicatedWorkerPassed": true,
+    "dedicatedWorkerDurationMs": 1886.20,
+    "workerScopeHash": "36369a925e427e59ef234d56d2ce657096ef168da7bfef9b3836fb7c68ea2835",
+    "workerScopeData": {
+      "platform": "Win32",
+      "hardwareConcurrency": 16,
+      "deviceMemory": 8,
+      "language": "en-US",
+      "languages": "en-US,en",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Broiler/1.0",
+      "system": "Windows",
+      "device": "Windows 10 (64-bit)"
+    },
+    "resolvedIssues": [
+      "Unhandled promise rejection: ReferenceError: navigator is not defined on worker thread eliminated",
+      "TypeError: Cannot get property platform of undefined (evaluating 'workerScope.platform') eliminated",
+      "hasConstructor(dedicatedWorker, 'Worker') check now succeeds"
+    ],
+    "remainingErrors": [
+      "ReferenceError: Window is not defined (FP-02)",
+      "TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom') (FP-03)",
+      "TypeError: undefined is not a function (Canvas/SVG - FP-05)"
+    ]
+  },
+  "sannysoft": {
+    "exitCode": 0,
+    "noRegressions": true,
+    "remainingErrors": [
+      "inline-16: undefined is not a function (MediaDevices - FP-04)",
+      "Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (MediaDevices - FP-04)"
+    ]
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-10-09T20:46:00Z",
+  "slice": "FP-03",
+  "description": "DOMRect/DOMRectList and element/Range geometry, zero-size attached box semantics, subdocument layout geometry propagation, and elimination of live CreepJS domRect.bottom failure",
+  "htmlBridgePackageVersion": "0.1.0-preview.28",
+  "tests": {
+    "release": {
+      "total": 2199,
+      "passed": 2178,
+      "skipped": 21,
+      "failed": 0
+    },
+    "domRectAndGeometryTests": {
+      "release": { "total": 30, "passed": 30, "failed": 0 },
+      "releaseVm": { "total": 30, "passed": 30, "failed": 0 }
+    },
+    "engineNeutrality": {
+      "tests": 6,
+      "status": "OK"
+    },
+    "browserCoreTests": {
+      "total": 319,
+      "passed": 319,
+      "failed": 0
+    },
+    "browserCliTests": {
+      "total": 224,
+      "passed": 224,
+      "failed": 0
+    },
+    "trafficTests": {
+      "total": 20,
+      "passed": 20,
+      "failed": 0
+    }
+  },
+  "httpProbeObservations": {
+    "url": "http://localhost:8093/fingerprinting-current-probes.html",
+    "interfaces": {
+      "DOMRect": "function",
+      "DOMRectList": "function",
+      "Window": "function",
+      "Navigator": "function"
+    },
+    "elementRects": {
+      "length": 1,
+      "item": "function",
+      "tag": "[object DOMRectList]",
+      "first": { "x": 8, "y": 8, "width": 100, "height": 20, "bottom": 28 }
+    },
+    "emptyElementRects": {
+      "length": 1,
+      "item": "function",
+      "tag": "[object DOMRectList]",
+      "first": { "x": 8, "y": 28, "width": 0, "height": 0, "bottom": 28 }
+    },
+    "rangeRects": {
+      "length": 1,
+      "item": "function",
+      "tag": "[object DOMRectList]",
+      "first": { "x": 8, "y": 8, "width": 100, "height": 20, "bottom": 28 }
+    }
+  },
+  "creepjs": {
+    "exitCode": 0,
+    "rectsPassed": true,
+    "rectsDurationMs": 1582.47,
+    "clientRects": {
+      "hasElementClientRects": true,
+      "hasRangeClientRects": true,
+      "domrectSystemSum": 0
+    },
+    "resolvedIssues": [
+      "TypeError: Cannot get property bottom of undefined (evaluating 'domRect.bottom') completely eliminated",
+      "DOMRectReadOnly, DOMRect, and DOMRectList WebIDL interface contracts registered with standard prototype hierarchy and receiver brand checks",
+      "Element.getBoundingClientRect() and Range.getBoundingClientRect() return real DOMRect objects",
+      "Element.getClientRects() and Range.getClientRects() return DOMRectList collections with item() indexing and Symbol.iterator iteration",
+      "Attached zero-size boxes (such as .rect-ghost) return DOMRectList containing (0,0,0,0) rect, satisfying CreepJS ghost dimensions detector",
+      "Detached and display:none elements return empty DOMRectList",
+      "Subdocument layout geometry properly mapped and retained geometry cache invalidated on subdocument mutations"
+    ],
+    "remainingErrors": [
+      "TypeError: undefined is not a function (Canvas2D/SVG - FP-05)",
+      "speech failed (SpeechSynthesis - FP-09)"
+    ]
+  },
+  "sannysoft": {
+    "exitCode": 0,
+    "noRegressions": true,
+    "remainingErrors": [
+      "inline-16: undefined is not a function (MediaDevices - FP-04)",
+      "Unhandled promise rejection: TypeError: Cannot get property enumerateDevices of undefined (MediaDevices - FP-04)"
+    ]
+  }
+}

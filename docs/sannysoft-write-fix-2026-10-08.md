@@ -1,5 +1,11 @@
 # Sannysoft third P1: Nested document.write() insertion point
 
+**Later package verification:** see the [2026-10-09 reinvestigation](fingerprinting-reinvestigation-2026-10-09.md)
+and [active compatibility roadmap](fingerprinting-compatibility-roadmap.md).
+The implementation details, local overlays and test totals below describe this
+historical repair; the new report records the narrower smoke checks run against
+current published packages.
+
 Implemented on 2026-10-08 in `D:\Broiler.HtmlBridge`.
 This completes the third P1 in the [original investigation](sannysoft-investigation-2026-10-08.md).
 

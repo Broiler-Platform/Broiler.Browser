@@ -1,0 +1,91 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fingerprinting compatibility follow-up probes</title>
+<div id="box" style="width:100px;height:20px">visible text</div>
+<div id="empty" style="width:0;height:0"></div>
+<pre id="result"></pre>
+<script>
+// Serve this directory over HTTP so the worker has a normal same-origin URL.
+var observations = { worker: { state: 'pending' } };
+function show() { document.getElementById('result').textContent = JSON.stringify(observations, null, 2); }
+function probe(name, fn) {
+    try { observations[name] = fn(); }
+    catch (e) { observations[name] = { error: e.name, message: e.message }; }
+}
+function rects(list) {
+    return { length: list.length, item: typeof list.item, tag: Object.prototype.toString.call(list),
+        first: list[0] ? { x: list[0].x, y: list[0].y, width: list[0].width,
+            height: list[0].height, bottom: list[0].bottom } : null };
+}
+probe('interfaces', function () {
+    return {
+        Window: typeof Window,
+        Navigator: typeof Navigator,
+        DOMRect: typeof DOMRect,
+        DOMRectList: typeof DOMRectList,
+        WorkerGlobalScope: typeof WorkerGlobalScope,
+        mediaDevices: typeof navigator.mediaDevices,
+        getUserMedia: typeof navigator.getUserMedia,
+        windowIsWindow: typeof Window === 'function' ? window instanceof Window : false,
+        windowIsEventTarget: typeof EventTarget === 'function' ? window instanceof EventTarget : false,
+        navigatorIsNavigator: typeof Navigator === 'function' ? navigator instanceof Navigator : false,
+        navigatorOwnPropsCount: Object.getOwnPropertyNames(navigator).length,
+        ontouchstartInWindow: 'ontouchstart' in Window
+    };
+});
+probe('elementRects', function () { return rects(document.getElementById('box').getClientRects()); });
+probe('emptyElementRects', function () { return rects(document.getElementById('empty').getClientRects()); });
+probe('rangeRects', function () {
+    var range = document.createRange();
+    range.selectNodeContents(document.getElementById('box'));
+    return rects(range.getClientRects());
+});
+probe('childRealm', function () {
+    var frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    var child = frame.contentWindow;
+    child.Object.prototype.__compatProbe = 'child';
+    var result = {
+        sharedFunction: child.Function === Function,
+        sharedObject: child.Object === Object,
+        prototypeLeaks: Object.prototype.__compatProbe === 'child',
+        Window: typeof child.Window,
+        Navigator: typeof child.Navigator,
+        childIsWindow: typeof child.Window === 'function' ? child instanceof child.Window : false
+    };
+    delete child.Object.prototype.__compatProbe;
+    frame.remove();
+    return result;
+});
+var worker;
+var timeout = setTimeout(function () {
+    observations.worker = { state: 'timeout' };
+    if (worker) worker.terminate();
+    show();
+}, 4000);
+try {
+    worker = new Worker('fingerprinting-worker-probe.js');
+    observations.workerConstructor = {
+        hasConstructor: Boolean(worker && worker.__proto__.constructor.name === 'Worker'),
+        isWorker: worker instanceof Worker,
+        isEventTarget: typeof EventTarget === 'function' ? worker instanceof EventTarget : null,
+        toString: Object.prototype.toString.call(worker)
+    };
+    worker.onmessage = function (event) {
+        clearTimeout(timeout);
+        observations.worker = { state: 'message', data: event.data };
+        worker.terminate();
+        show();
+    };
+    worker.onerror = function (event) {
+        clearTimeout(timeout);
+        observations.worker = { state: 'error', message: event.message };
+        worker.terminate();
+        show();
+    };
+} catch (e) {
+    clearTimeout(timeout);
+    observations.worker = { state: 'exception', error: e.name, message: e.message };
+}
+show();
+</script>

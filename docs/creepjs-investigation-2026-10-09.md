@@ -3,13 +3,16 @@
 Investigated on **2026-10-09**, using Broiler.Browser CLI against
 [CreepJS](https://abrahamjuliot.github.io/creepjs/).
 
-**P0 follow-up:** the native proxy-recursion crash is now fixed in the local
-Broiler.JS checkout. The unmodified live site completes CLI analysis, the separate
-BrowserApp window pass, and image capture with the patched assembly. See
-[the P0 fix and validation notes](creepjs-p0-fix-2026-10-09.md). The findings below
-describe the original baseline; the P1/API blockers remain.
+**Current-package follow-up:** JavaScript preview.7 and HtmlBridge preview.25 now
+complete live analysis, the BrowserApp window pass and ordinary image capture
+without assembly overlays. The reduced fragment, frame-indexing, console and
+Crypto cases also pass. See the [current reinvestigation](fingerprinting-reinvestigation-2026-10-09.md)
+and [active roadmap](fingerprinting-compatibility-roadmap.md) for the remaining
+worker, interface, geometry, graphics and realm-isolation work. The
+[P0 implementation notes](creepjs-p0-fix-2026-10-09.md) and findings below preserve
+the original baseline and its repair history.
 
-**The unmodified live site crashes Broiler before an image is written.** Both
+**Original baseline: the unmodified live site crashed Broiler before an image was written.** Both
 `--analyze` and `--capture-image` terminate with Windows stack-overflow status
 `0xC00000FD` (`-1073741571`, or unsigned `3221225725`). The immediate blocker is
 unbounded JavaScript property lookup through a proxy/prototype cycle.

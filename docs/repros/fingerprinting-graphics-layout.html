@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Canvas, SVG and wrapping compatibility</title>
+<style>
+body { margin: 20px; font: 16px Arial; color: #17212b; background: white; }
+.card { width: 160px; border: 1px solid #888; padding: 8px; }
+#wrapped { width: 64px; font: 16px monospace; line-height: 20px; overflow-wrap: break-word; }
+table { width: 180px; table-layout: fixed; border-collapse: collapse; margin-top: 12px; }
+td { border: 1px solid #888; padding: 4px; overflow-wrap: break-word; }
+pre { white-space: pre-wrap; overflow-wrap: break-word; }
+</style>
+<h1>Graphics and layout</h1>
+<canvas id="canvas" width="80" height="80"></canvas>
+<svg width="160" height="80" viewBox="0 0 160 80"><g id="group"><rect id="rect" x="2" y="3" width="10" height="12" fill="red"/><text id="text" x="20" y="30" style="font:20px Arial">Wi</text></g></svg>
+<div class="card"><div id="wrapped">abcdefghijklmnop</div></div>
+<table><tr><td>Long hash</td><td>0123456789abcdef0123456789abcdef</td></tr></table>
+<pre id="result">pending</pre>
+<script>
+(function () {
+  var results = {}, c = document.getElementById('canvas'), ctx = c.getContext('2d');
+  function check(name, run) { try { results[name] = !!run(); } catch (e) { results[name] = e.name + ': ' + e.message; } }
+  check('gradientPixels', function () {
+    var g = ctx.createRadialGradient(40,40,0,40,40,40);
+    g.addColorStop(0,'red'); g.addColorStop(1,'blue'); ctx.fillStyle = g; ctx.fillRect(0,0,80,80);
+    return ctx.getImageData(40,40,1,1).data[0] > 200 && ctx.getImageData(78,40,1,1).data[2] > 200;
+  });
+  check('curves', function () {
+    ctx.beginPath(); ctx.moveTo(5,50); ctx.bezierCurveTo(10,5,70,5,75,50);
+    ctx.quadraticCurveTo(40,75,5,50); ctx.strokeStyle='white'; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(40,40,12,8,0,0,Math.PI*2); ctx.fillStyle='white'; ctx.fill();
+    return ctx.getImageData(40,40,1,1).data[2] === 255;
+  });
+  check('transformState', function () {
+    ctx.save(); ctx.translate(10,8); ctx.scale(2,3); var m=ctx.getTransform(); ctx.restore();
+    return m.a===2 && m.d===3 && m.e===10 && m.f===8 && ctx.getTransform().isIdentity;
+  });
+  check('svgBounds', function () { var r=document.getElementById('rect').getBBox(); return r.x===2&&r.y===3&&r.width===10&&r.height===12; });
+  check('svgFontMetrics', function () { var t=document.getElementById('text'); return t.getSubStringLength(0,1)>t.getSubStringLength(1,1)&&t.getExtentOfChar(1).height>0&&document.getElementById('group').getBBox().width>0; });
+  check('longWordWrap', function () { return document.getElementById('wrapped').getBoundingClientRect().height >= 40; });
+  check('resizeUnwrap', function () { var b=document.getElementById('wrapped'); b.style.width='240px'; var h=b.getBoundingClientRect().height; b.style.width='64px'; return h<=21; });
+  document.getElementById('result').textContent=JSON.stringify(results,null,2);
+})();
+</script>
