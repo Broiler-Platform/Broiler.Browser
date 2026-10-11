@@ -24,20 +24,20 @@
     <PackageVersion Include="Broiler.Layout" Version="0.1.0-preview.23" />
     <PackageVersion Include="Broiler.Net" Version="0.1.0-preview.3" />
     <PackageVersion Include="Broiler.Hosting.Windows" Version="0.1.0-preview.9" />
-    <PackageVersion Include="Broiler.Hosting.Linux" Version="$(BroilerHostingVersion)" />
-    <PackageVersion Include="Broiler.Hosting.Android" Version="$(BroilerHostingVersion)" />
+    <PackageVersion Include="Broiler.Hosting.Linux" Version="0.1.0-preview.9" />
+    <PackageVersion Include="Broiler.Hosting.Android" Version="0.1.0-preview.9" />
     <PackageVersion Include="Broiler.Graphics" Version="0.1.0-preview.12" />
     <PackageVersion Include="Broiler.Graphics.Windows" Version="0.1.0-preview.12" />
-    <PackageVersion Include="Broiler.Graphics.Linux" Version="$(BroilerGraphicsVersion)" />
-    <PackageVersion Include="Broiler.Graphics.Linux.OpenGL" Version="$(BroilerGraphicsVersion)" />
+    <PackageVersion Include="Broiler.Graphics.Linux" Version="0.1.0-preview.12" />
+    <PackageVersion Include="Broiler.Graphics.Linux.OpenGL" Version="0.1.0-preview.12" />
     <PackageVersion Include="Broiler.Input.Keyboard" Version="0.1.0-preview.6" />
     <PackageVersion Include="Broiler.Input.Mouse" Version="0.1.0-preview.6" />
     <PackageVersion Include="Broiler.Input.Touch" Version="0.1.0-preview.6" />
     <PackageVersion Include="Broiler.Input.Keyboard.Windows" Version="0.1.0-preview.6" />
     <PackageVersion Include="Broiler.Input.Mouse.Windows" Version="0.1.0-preview.6" />
-    <PackageVersion Include="Broiler.Input.Linux" Version="$(BroilerInputVersion)" />
-    <PackageVersion Include="Broiler.Input.Keyboard.Linux" Version="$(BroilerInputVersion)" />
-    <PackageVersion Include="Broiler.Input.Mouse.Linux" Version="$(BroilerInputVersion)" />
+    <PackageVersion Include="Broiler.Input.Linux" Version="0.1.0-preview.6" />
+    <PackageVersion Include="Broiler.Input.Keyboard.Linux" Version="0.1.0-preview.6" />
+    <PackageVersion Include="Broiler.Input.Mouse.Linux" Version="0.1.0-preview.6" />
     <PackageVersion Include="Broiler.UI.Button.Standard" Version="0.1.0-preview.20" />
     <PackageVersion Include="Broiler.UI.CheckBox.Standard" Version="0.1.0-preview.20" />
     <PackageVersion Include="Broiler.UI.Dialog.Standard" Version="0.1.0-preview.20" />
