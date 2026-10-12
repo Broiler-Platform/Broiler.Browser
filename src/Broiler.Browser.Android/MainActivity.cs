@@ -70,7 +70,11 @@ public sealed class MainActivity : Activity
                 _view.AnimationActive = active;
                 _view.InvalidateFrame();
             },
-            Profile.Value);
+            Profile.Value)
+        {
+            // The system print UI picks the printer and previews the pages; the page is laid out for the paper it chooses.
+            PrintHost = new AndroidPrintHost(this),
+        };
 
         _view.RenderFrame = _app.RenderFrame;
         _view.DispatchInput = _app.Dispatch;

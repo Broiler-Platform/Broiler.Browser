@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <PackageReference Include="Broiler.Hosting.Linux" />
+    <!-- CUPS is handed PDF; the head composes the spool writer so Hosting needs no codec. -->
+    <PackageReference Include="Broiler.Documents.Pdf" />
     <PackageReference Include="Broiler.Graphics.Linux" />
     <PackageReference Include="Broiler.Graphics.Linux.OpenGL" />
     <PackageReference Include="Broiler.Input.Keyboard.Linux" />

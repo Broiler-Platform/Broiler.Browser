@@ -53,7 +53,7 @@ internal sealed class BrowserWindow : Direct2DWindow, IWindowsInputHost
             PostToUiThread,
             ReadClipboardText,
             WriteClipboardText);
-        _app = new BrowserApp(_host, () => Renderer, initialUrl, SetAnimationActive, profile);
+        _app = new BrowserApp(_host, () => Renderer, initialUrl, SetAnimationActive, profile) { PrintHost = new WindowsPrintHost() };
         _inputDispatcher = new WindowsInputMessageDispatcher(this);
         _keyboardProvider = new WindowsKeyboardProvider();
         _mouseProvider = new WindowsMouseProvider();

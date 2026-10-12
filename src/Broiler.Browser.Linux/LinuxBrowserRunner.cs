@@ -74,7 +74,11 @@ internal static class LinuxBrowserRunner
             text => clipboard?.SetText(text));
         // The run's one profile, declared before the app so it is disposed after it.
         using BrowserProfile profile = BrowserProfile.CreateDefault();
-        using BrowserApp app = new(host, () => cpuReplay ?? (IBroilerRenderer)renderer, options.InitialUrl, static _ => { }, profile);
+        using BrowserApp app = new(host, () => cpuReplay ?? (IBroilerRenderer)renderer, options.InitialUrl, static _ => { }, profile)
+        {
+            // Without libcups there is nothing to print to, and Ctrl+P says so.
+            PrintHost = LinuxCupsPrintHost.IsAvailable ? new LinuxCupsPrintHost(new Broiler.Documents.Pdf.Writing.PdfRasterPageWriter()) : null,
+        };
 
         await using LinuxInputCoordinator input = new(
             canUseEvdev,
