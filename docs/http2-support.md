@@ -20,29 +20,25 @@ timing and the CLI network recorder already use the response version.
 
 ## Dependency packages
 
-HTTP/2 transport is published in `Broiler.Net`. The asynchronous JavaScript binding
-follow-up currently uses a distinct local HtmlBridge package:
+HTTP/2 transport is published in `Broiler.Net`, and the asynchronous JavaScript
+binding follow-up in `Broiler.HtmlBridge` 0.1.0-preview.28 (built from HtmlBridge
+commit `07dfca0`). Both restore from nuget.org:
 
 | Package | Selected version | Source |
 | --- | --- | --- |
 | Broiler.Net | 0.1.0-preview.3 | nuget.org |
-| Broiler.HtmlBridge.* | 0.1.0-preview.28-http2.2 | local development feed |
+| Broiler.HtmlBridge.* | 0.1.0-preview.28 | nuget.org |
 
-The local packages are already built on this machine. For a fresh checkout, build
-them from the modified sibling `Broiler.HtmlBridge` checkout before restoring Browser:
-
-```powershell
-.\eng\build-http2-packages.ps1
-dotnet build src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj -c Release
-```
-
-The helper builds only dependencies selected with a distinct `-http2.N` suffix in
-`Directory.Packages.props`; published Net stays on nuget.org. `-BridgePath` overrides
-the sibling path. Existing package versions cannot be overwritten: increment the
-local suffix after source changes. `NuGet.config` maps HtmlBridge's family to
-`artifacts/http2/packages`, and other packages to nuget.org. These HtmlBridge
-packages have not been published. When the change is released, select the published
-family version and remove the local family mapping.
+The follow-up was developed against local `0.1.0-preview.28-http2.N` packages; the
+published preview.28 has the same types and members as the last of them, `-http2.6`.
+`eng/build-http2-packages.ps1` stays for the next change that has to be tried before
+it is released: select a distinct `-http2.N` version of `Broiler.Net` or the
+`$(BroilerHtmlBridgeVersion)` family in `Directory.Packages.props`, run the helper to
+pack it from the sibling checkout into `artifacts/http2/packages`, and map that family
+to the feed in `NuGet.config` for the build. `-BridgePath` and `-NetPath` override the
+sibling paths. Existing package versions cannot be overwritten: increment the local
+suffix after source changes. Once the change is released, select the published
+version again and drop the mapping.
 
 See [the async implementation report](http2-async-implementation.md) for behavior,
 measurements and remaining streaming work.
@@ -62,6 +58,15 @@ from nuget.org. Obsolete local-source mappings were removed too. The Windows
 Release build then passed with zero warnings and errors. Never pack local changes
 under the same version as a published package; a unique development suffix avoids
 this collision. Clearing every NuGet cache is unnecessary for this problem.
+
+The same thing happened again with preview.28: a local build of commit `784cd50` had
+been packed as `0.1.0-preview.28` two days before the real preview.28 was published,
+and again it was the missing `RecordResponseVersion` that gave it away. A cached
+package's origin is the `source` in its `.nupkg.metadata` beside it in the global
+packages folder (`%UserProfile%\.nuget\packages\<id>\<version>\`); anything other
+than `https://api.nuget.org/v3/index.json` there is a local build. To check a build
+against nuget.org alone, without touching the global cache, point `NUGET_PACKAGES`
+at an empty directory for that one build.
 
 ## Validation on 2026-10-10
 

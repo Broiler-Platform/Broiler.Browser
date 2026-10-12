@@ -34,10 +34,8 @@ plain clone normally contains the browser checkout:
 git clone https://github.com/Broiler-Platform/Broiler.Browser.git
 ```
 
-This working tree includes the HTTP/2 async follow-up and selects local
-`Broiler.HtmlBridge.*` version `0.1.0-preview.28-http2.2`. On a fresh machine, build
-that version from the modified sibling HtmlBridge checkout with
-`./eng/build-http2-packages.ps1` before building Browser. See
+The HTTP/2 async follow-up ships in the published `Broiler.HtmlBridge.*`
+`0.1.0-preview.28`, so nothing has to be built locally first. See
 [HTTP/2 dependencies](docs/http2-support.md#dependency-packages).
 
 Build and run the Windows head:

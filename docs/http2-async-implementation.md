@@ -2,7 +2,8 @@
 
 All 5 steps (1, 2, 3, 4 and 5) of the [HTTP/2 async audit](http2-async-audit.md) are implemented in the sibling
 `Broiler.HtmlBridge` and `Broiler.HTML` checkouts and integrated into Browser through local packages
-`0.1.0-preview.28-http2.6`. `Broiler.Net` remains published preview.3.
+`0.1.0-preview.28-http2.6`. `Broiler.Net` remains published preview.3. The HtmlBridge side has since
+been published as `0.1.0-preview.28`, which Browser now restores from nuget.org.
 
 ## Behavior
 
@@ -188,8 +189,8 @@ dotnet test tests/Broiler.HtmlBridge.Tests/Broiler.HtmlBridge.Tests.csproj -c Re
 # In Broiler.HTML
 dotnet test tests/Broiler.HTML.Tests/Broiler.HTML.Tests.csproj -c Release
 
-# In Broiler.Browser (packages already exist on this machine)
-# For a fresh checkout with the matching modified sibling sources:
+# In Broiler.Browser (the HtmlBridge packages are published; this step was needed
+# only while they were local -http2.N builds)
 .\eng\build-http2-packages.ps1 -BridgePath "..\Broiler.HtmlBridge" -NetPath "..\Broiler.Net"
 dotnet build Broiler.Windows.Browser.slnx -c Release
 dotnet test src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj -c Release
