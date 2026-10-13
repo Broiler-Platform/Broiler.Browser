@@ -108,6 +108,22 @@ dotnet build Broiler.Windows.Browser.slnx -c Debug-VM
 See [docs/vm-javascript-profile.md](docs/vm-javascript-profile.md) for what that changes — and for
 the two things it does **not**: it does not remove Broiler.JS, and no page load runs on the VM yet.
 
+## Printing
+
+Ctrl+P prints the page as it is now - the live document, with what the user typed into its
+fields. `BrowserPrintDocument` lays it out again in a container of its own, for print media
+(`@media print` applies) on the page area the print dialog chooses, with
+`HtmlContainer.PageSize` set so forced breaks, unbreakable boxes and straddling lines move
+to the next page. It shares the view's subresource cache, so nothing is fetched again. The
+document is drawn once as a vector render list and each page is the band of it one page
+area tall, with its images carried along. The print dialog previews exactly those pages and
+the job sends them; the Windows head prints through the spooler, the Linux head through
+CUPS when libcups is installed, and the Android head through the system print UI.
+
+Not printed yet: the contents of iframes, `@page` sizes and margins (the dialog's page setup
+decides instead), running headers and footers, and `window.print()`, which the scripting
+bridge does not route to the window yet.
+
 ## Solutions
 
 Each head has a focused solution containing exactly its transitive closure, so opening one

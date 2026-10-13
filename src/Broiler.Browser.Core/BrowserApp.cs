@@ -5,6 +5,7 @@ using Broiler.App.Rendering;
 using Broiler.Graphics;
 using Broiler.Graphics.Color;
 using Broiler.Graphics.Geometry;
+using Broiler.Graphics.Paging;
 using Broiler.Graphics.Rendering;
 using Broiler.Graphics.RenderList;
 using Broiler.Graphics.Text;
@@ -28,6 +29,8 @@ using Broiler.UI.FileDialog;
 using Broiler.UI.FileDialog.Standard;
 using Broiler.UI.Label;
 using Broiler.UI.Label.Standard;
+using Broiler.UI.PrintDialog;
+using Broiler.UI.PrintDialog.Standard;
 using Broiler.UI.Standard;
 using Broiler.UI.Window.Standard;
 using Broiler.HTML.Image;
@@ -224,6 +227,25 @@ internal sealed partial class BrowserApp : IDisposable
     public string Status => _status.Text;
 
     /// <summary>
+    /// How this window prints, or null where it cannot; Ctrl+P then says so rather than failing.
+    /// The head sets it: the spooler on Windows, CUPS on Linux, the system print UI on Android.
+    /// </summary>
+    public IUiPrintHost? PrintHost { get; set; }
+
+    /// <summary>True while a print dialog is open or its job is being handed to the printer.</summary>
+    internal bool IsPrinting => _printing;
+
+    private bool _printing;
+
+    /// <summary>
+    /// A finished print job waiting to be reported: it ends on a worker thread, the status line is
+    /// the UI thread's, and the next frame picks it up.
+    /// </summary>
+    private Task<UiPrintResult>? _finishedPrint;
+
+    private static readonly BSize PrintDialogPreferredSize = new(760, 520);
+
+    /// <summary>
     /// Paints a frame, and lets a load in flight publish its next one.
     /// </summary>
     /// <remarks>
@@ -236,6 +258,7 @@ internal sealed partial class BrowserApp : IDisposable
     /// </remarks>
     public BRenderList RenderFrame()
     {
+        ReportFinishedPrint();
         BRenderList frame = _session.RenderFrame();
 
         LoadProgress? painted = _progressAwaitingPaint;
@@ -441,6 +464,13 @@ internal sealed partial class BrowserApp : IDisposable
             return true;
         }
 
+        if ((input.KeyModifiers & (KeyboardModifierState.Control | KeyboardModifierState.Shift | KeyboardModifierState.Alt)) == KeyboardModifierState.Control &&
+            IsKey(input, VirtualKeyP, "P"))
+        {
+            Print();
+            return true;
+        }
+
         if (input.KeyModifiers.HasFlag(KeyboardModifierState.Alt))
         {
             if (IsKey(input, BVirtualKey.Left, "Left"))
@@ -457,6 +487,82 @@ internal sealed partial class BrowserApp : IDisposable
         }
 
         return false;
+    }
+
+    /// <summary>The Win32 virtual-key code for P.</summary>
+    private const int VirtualKeyP = 0x50;
+
+    /// <summary>
+    /// Prints the page as it is now: laid out again for print media on the pages the print dialog
+    /// - or the platform's own print UI - asks for, and handed to <see cref="PrintHost"/>.
+    /// </summary>
+    internal void Print()
+    {
+        if (_printing)
+            return;
+
+        if (PrintHost is not IUiPrintHost host)
+        {
+            SetStatus("Printing is not available here");
+            return;
+        }
+
+        string title = string.IsNullOrWhiteSpace(_address.Text) ? "Web page" : _address.Text;
+        IBPagedDocument document = _viewport.CreatePrintDocument(title, _network);
+
+        Task<UiPrintResult> printing;
+        try
+        {
+            printing = UiPrintDialog.PrintAsync(host, document, CreatePrintDialog, _rootWindow, GetPrintDialogPlacement());
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            SetStatus("Could not print: " + exception.Message);
+            return;
+        }
+
+        _printing = true;
+        SetStatus("Print");
+        printing.ContinueWith(task =>
+        {
+            Volatile.Write(ref _finishedPrint, task);
+            _host.RequestInvalidate();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    private static UiPrintDialog CreatePrintDialog() =>
+        new StandardPrintDialog
+        {
+            PreferredSize = PrintDialogPreferredSize,
+            TitleFont = new BFontStyle("Segoe UI", 14, BFontWeight.SemiBold),
+            LabelFont = new BFontStyle("Segoe UI", 13),
+        };
+
+    private BRect GetPrintDialogPlacement()
+    {
+        BSize viewport = _host.ViewportSize;
+        double width = Math.Min(PrintDialogPreferredSize.Width, Math.Max(420, viewport.Width - 24));
+        double height = Math.Min(PrintDialogPreferredSize.Height, Math.Max(320, viewport.Height - 64));
+        return new BRect(Math.Max(12, (viewport.Width - width) / 2), Math.Max(42, (viewport.Height - height) / 2), width, height);
+    }
+
+    /// <summary>Shows on the status line how the last print job ended.</summary>
+    private void ReportFinishedPrint()
+    {
+        Task<UiPrintResult>? finished = Interlocked.Exchange(ref _finishedPrint, null);
+        if (finished is null)
+            return;
+
+        _printing = false;
+        UiPrintResult result = finished.IsFaulted
+            ? UiPrintResult.Failed(finished.Exception?.GetBaseException().Message ?? "the job failed")
+            : finished.IsCanceled ? UiPrintResult.Cancelled : finished.Result;
+        SetStatus(result.Outcome switch
+        {
+            UiPrintOutcome.Printed => result.PagesPrinted == 1 ? "Printed 1 page" : $"Printed {result.PagesPrinted} pages",
+            UiPrintOutcome.Cancelled => "Printing cancelled",
+            _ => "Could not print: " + (result.Message ?? "the printer refused the job"),
+        });
     }
 
     private void NavigateTo(string url) => NavigateTo(PageRequest.ForUrl(url));
@@ -3757,6 +3863,28 @@ internal sealed partial class BrowserApp : IDisposable
         /// committed are already in it. Empty when the page cannot be serialized,
         /// which only costs the caller its fallback.
         /// </summary>
+        /// <summary>
+        /// The page as it is now - the live document, values the user committed included - as
+        /// something a print dialog can lay out again for print media. It shares this view's
+        /// subresource cache, so printing fetches nothing the page already has.
+        /// </summary>
+        public IBPagedDocument CreatePrintDocument(string title, IBrowserRequestTransport network)
+        {
+            // The serialization writes no doctype; a standards-mode page laid out again from it would
+            // fall into quirks, where the body fills the viewport and the page prints differently.
+            string html = GetPageHtml();
+            if (!_container.IsQuirksMode && !html.TrimStart().StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase))
+                html = "<!DOCTYPE html>" + html;
+            string baseUrl = BaseUrl;
+            DocumentRequestContext? document = DocumentContext;
+            HtmlContainer view = _container;
+            Func<Uri, bool>? visited = VisitedLinkPredicate;
+            // The view's own transport, so the print container shares its cache; see ShareSubresourceCacheWith.
+            IBrowserRequestTransport transport = view.RequestTransport ?? network;
+            return new BrowserPrintDocument(title, viewport =>
+                CreateContentContainer(html, baseUrl, transport, document, view, viewport, visited));
+        }
+
         private string GetPageHtml()
         {
             try

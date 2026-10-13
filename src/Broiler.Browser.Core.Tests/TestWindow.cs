@@ -192,6 +192,29 @@ internal sealed class TestWindow : IDisposable
         _app.Dispatch(KeyEvent(name, virtualKey, KeyboardKeyTransition.Up, modifiers));
     }
 
+    /// <summary>The window's print host: what Ctrl+P prints through.</summary>
+    public IUiPrintHost? PrintHost
+    {
+        set => _app.PrintHost = value;
+    }
+
+    /// <summary>The window's UI session, to find the print dialog Ctrl+P opens.</summary>
+    public UiSession Session => _app.Session;
+
+    /// <summary>True while a print dialog is open or its job is being handed over.</summary>
+    public bool IsPrinting => _app.IsPrinting;
+
+    /// <summary>What the status line says.</summary>
+    public string Status => _app.Status;
+
+    /// <summary>Presses and releases Ctrl+P.</summary>
+    public void PressPrint()
+    {
+        const KeyboardModifierState control = KeyboardModifierState.Control | KeyboardModifierState.LeftControl;
+        _app.Dispatch(KeyEvent("KeyP", 0x50, KeyboardKeyTransition.Down, control));
+        _app.Dispatch(KeyEvent("KeyP", 0x50, KeyboardKeyTransition.Up, control));
+    }
+
     /// <summary>Types <paramref name="text"/>, a letter key at a time, as the keyboard layer reports each.</summary>
     public void Type(string text)
     {

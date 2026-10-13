@@ -82,6 +82,7 @@
     <PackageReference Include="Broiler.UI.Dialog.Standard" />
     <PackageReference Include="Broiler.UI.FileDialog.Standard" />
     <PackageReference Include="Broiler.UI.Label.Standard" />
+    <PackageReference Include="Broiler.UI.PrintDialog.Standard" />
     <PackageReference Include="Broiler.UI.RadioButton.Standard" />
     <PackageReference Include="Broiler.UI.Window.Standard" />
   </ItemGroup>
