@@ -13,16 +13,16 @@
     <BroilerGraphicsVersion>0.1.0-preview.11</BroilerGraphicsVersion>
     <BroilerHostingVersion>0.1.0-preview.8</BroilerHostingVersion>
     <!-- Printing: HtmlContainer.PageSize is in Broiler.HTML 0.1.0-preview.29, the print dialog in
-         Broiler.UI 0.1.0-preview.21, the page model in Broiler.Graphics 0.1.0-preview.13, the print
+         Broiler.UI 0.1.0-preview.22, the page model in Broiler.Graphics 0.1.0-preview.13, the print
          hosts in Broiler.Hosting 0.1.0-preview.10 and the CUPS spool writer in Broiler.Documents.Pdf
-         0.1.0-preview.23. Properties, so a build against local packs can name them. -->
+         0.1.0-preview.25. Properties, so a build against local packs can name them. -->
     <BroilerHtmlPackageVersion Condition="'$(BroilerHtmlPackageVersion)' == ''">0.1.0-preview.29</BroilerHtmlPackageVersion>
-    <BroilerUiPackageVersion Condition="'$(BroilerUiPackageVersion)' == ''">0.1.0-preview.21</BroilerUiPackageVersion>
+    <BroilerUiPackageVersion Condition="'$(BroilerUiPackageVersion)' == ''">0.1.0-preview.22</BroilerUiPackageVersion>
     <BroilerGraphicsPackageVersion Condition="'$(BroilerGraphicsPackageVersion)' == ''">0.1.0-preview.13</BroilerGraphicsPackageVersion>
     <BroilerHostingPackageVersion Condition="'$(BroilerHostingPackageVersion)' == ''">0.1.0-preview.10</BroilerHostingPackageVersion>
     <!-- Unchanged at 0.1.0-preview.28; a property only so a local verification build can name a pack. -->
     <BroilerHtmlBridgePackageVersion Condition="'$(BroilerHtmlBridgePackageVersion)' == ''">0.1.0-preview.28</BroilerHtmlBridgePackageVersion>
-    <BroilerDocumentsPackageVersion Condition="'$(BroilerDocumentsPackageVersion)' == ''">0.1.0-preview.23</BroilerDocumentsPackageVersion>
+    <BroilerDocumentsPackageVersion Condition="'$(BroilerDocumentsPackageVersion)' == ''">0.1.0-preview.25</BroilerDocumentsPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Broiler.HTML.Graphics" Version="$(BroilerHtmlPackageVersion)" />
