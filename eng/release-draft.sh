@@ -66,6 +66,11 @@ with zipfile.ZipFile(target, 'w') as z:
             info.external_attr = ((0o100000 | mode) << 16)
             with open(path, 'rb') as f:
                 z.writestr(info, f.read())
+    for license_name in ('LICENSE', 'LICENSE.md', 'LICENSE.txt'):
+        if os.path.isfile(license_name):
+            if 'LICENSE' not in z.namelist():
+                z.write(license_name, 'LICENSE')
+            break
 PY
   echo "$zip"
 }
@@ -122,7 +127,9 @@ if [ ${#android_assets[@]} -gt 0 ]; then
   } >> "$out/notes.md"
 fi
 
-gh release create "$tag" "${desktop_assets[@]}" "${android_assets[@]}" \
+"$python" eng/write-component-manifest.py --directory "$out" --product browser --version "$version" --repository Broiler-Platform/Broiler.Browser --tag "$tag" --commit "$(git rev-parse HEAD)" --self-contained-mode self-contained --additional "${android_assets[@]}"
+
+gh release create "$tag" "${desktop_assets[@]}" "${android_assets[@]}" "$out/component-release.json" "$out/SHA256SUMS.txt" \
   --verify-tag \
   --draft \
   --prerelease \

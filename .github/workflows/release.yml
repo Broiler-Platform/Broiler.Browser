@@ -393,9 +393,19 @@ jobs:
           path: artifacts/android/signed/*
           if-no-files-found: error
 
+  release-tests:
+    name: Product release regression tests
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-broiler
+      - name: Test product before release
+        run: dotnet test src/Broiler.Browser.Core.Tests/Broiler.Browser.Core.Tests.csproj -c Release
+
   release:
     name: Tag and draft release ${{ needs.version.outputs.tag }}
-    needs: [version, build, android]
+    needs: [version, build, android, release-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write
