@@ -77,7 +77,7 @@ env:
 jobs:
   version:
     name: Resolve preview version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
       version-code: ${{ steps.version.outputs.version-code }}
@@ -130,7 +130,7 @@ jobs:
             assembly: Broiler.Browser.Windows
           # The Linux head is plain net10.0 and could be published from anywhere; publishing
           # it on Linux keeps the host that builds it the one it runs on.
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             rid: linux-x64
             project: src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj
             configuration: Release-Linux
@@ -231,7 +231,7 @@ jobs:
   android:
     name: android (signed .aab + arm64 .apk)
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     outputs:
       # The signing certificate's fingerprint, for the release notes. A certificate is public
@@ -406,7 +406,7 @@ jobs:
   release:
     name: Tag and draft release ${{ needs.version.outputs.tag }}
     needs: [version, build, android, release-tests]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:

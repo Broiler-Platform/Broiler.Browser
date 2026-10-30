@@ -46,7 +46,7 @@ jobs:
   # and fails before the long jobs do.
   graph:
     name: Component graph
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -238,7 +238,7 @@ jobs:
   # without regenerating leaves the new project out of every solution.
   solutions:
     name: Solution manifest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -275,7 +275,7 @@ jobs:
           # The Linux head is plain net10.0 with P/Invoke into X11 and GL, so it
           # compiles anywhere; building it on Linux keeps that honest.
           - name: Linux head
-            os: ubuntu-latest
+            os: ubuntu-24.04
             solution: Broiler.Linux.Browser.slnx
             configuration: Release
             test: false
@@ -283,7 +283,7 @@ jobs:
           # shared chrome does clipboard and file-dialog work that is easy to make
           # accidentally platform-specific.
           - name: Tests (Linux)
-            os: ubuntu-latest
+            os: ubuntu-24.04
             solution: Broiler.Browser.Tests.slnx
             configuration: Release
             test: true
@@ -302,7 +302,7 @@ jobs:
           # is a configuration that rots, and this one changes the package graph
           # rather than just a runtime identifier.
           - name: Tests (Linux, VM profile)
-            os: ubuntu-latest
+            os: ubuntu-24.04
             solution: Broiler.Browser.Tests.slnx
             configuration: Release-VM
             test: true
@@ -334,7 +334,7 @@ jobs:
   # the other jobs should not pay for.
   android:
     name: Android head
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
@@ -398,7 +398,7 @@ jobs:
             project: src/Broiler.Browser.Windows/Broiler.Browser.Windows.csproj
             configuration: Release-Windows
           - rid: linux-x64
-            os: ubuntu-latest
+            os: ubuntu-24.04
             project: src/Broiler.Browser.Linux/Broiler.Browser.Linux.csproj
             configuration: Release-Linux
 
